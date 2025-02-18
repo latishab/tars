@@ -146,25 +146,12 @@ top_k = 5
 enabled = True
 servers = [
     {
-        "name": "filesystem-server",
-        "command": "python",
-        "args": ["-m", "fs_mcp_server"],
+        "name": "filesystem",
+        "command": "node",
+        "args": ["fs-mcp-server.js"],
+        "script_type": "node",
         "risk_level": "high",
         "requires_confirmation": true
-    },
-    {
-        "name": "email-server",
-        "command": "python",
-        "args": ["-m", "email_mcp_server"],
-        "risk_level": "medium",
-        "requires_confirmation": true
-    },
-    {
-        "name": "weather-server",
-        "command": "python",
-        "args": ["-m", "weather_mcp_server"],
-        "risk_level": "low",
-        "requires_confirmation": false
     }
 ]
 

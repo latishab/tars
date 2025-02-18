@@ -46,6 +46,9 @@ def init_app():
     
     queue_message(f"LOAD: Script running from: {BASE_DIR}")
     #queue_message(f"DEBUG: init_app() called")
+
+    # Initialize MCP 
+    await initialize_mcp()  
     
     # Load the configuration
     CONFIG = load_config()
@@ -78,7 +81,7 @@ if __name__ == "__main__":
     stt_manager.set_utterance_callback(utterance_callback)
     stt_manager.set_post_utterance_callback(post_utterance_callback)
 
-    #DISCORD Callback
+    # DISCORD Callback
     if CONFIG['DISCORD']['enabled'] == 'True':
         start_discord_in_thread()
 

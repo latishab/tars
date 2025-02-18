@@ -120,7 +120,6 @@ class MCPClient:
         self.server_processes: Dict[str, Process] = {}
         self.conversation_context: Dict[str, List[Dict[str, str]]] = {}
         self.server_configs: Dict[str, MCPServerConfig] = {}
-        self.current_user: str = "unknown"
 
     async def __aenter__(self):
         return self
@@ -195,7 +194,7 @@ class MCPClient:
 
             # Safety verification
             approved, reason = await SafetyVerifier.verify_operation(
-                query, kwargs, config.risk_level, self.current_user
+                query, kwargs, config.risk_level
             )
             
             if not approved:
@@ -211,7 +210,6 @@ class MCPClient:
             self.conversation_context[server_name].append({
                 "query": query,
                 "timestamp": datetime.utcnow().isoformat(),
-                "user": self.current_user,
                 "parameters": kwargs,
                 "result": result
             })
@@ -250,10 +248,6 @@ class MCPClient:
              query in capability.description.lower())
         )
 
-    def set_current_user(self, username: str):
-        """Set the current user for operation tracking"""
-        self.current_user = username
-
 # Global client instance
 _mcp_client: Optional[MCPClient] = None
 
@@ -262,7 +256,6 @@ async def initialize_mcp(username: str = "unknown"):
     try:
         config = load_config()
         _mcp_client = MCPClient()
-        _mcp_client.set_current_user(username)
         await _mcp_client.__aenter__()
         
         servers = json.loads(config['MCP'].get('servers', '[]'))
