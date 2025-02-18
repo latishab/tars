@@ -1,142 +1,154 @@
 """
 module_mcp.py
-
-Safe MCP (Model Context Protocol) client implementation for TARS.
-Includes verification layer for secure execution of MCP server capabilities.
+Core MCP implementation with safety protocols and resource management.
 """
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-from typing import Dict, Any, Optional, List, Tuple
 import asyncio
 import json
+import sys
+from typing import Dict, Any, Optional, List, Tuple
 from dataclasses import dataclass
+from datetime import datetime
+from contextlib import AsyncExitStack
+from asyncio.subprocess import Process
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 from modules.module_messageQue import queue_message
 from modules.module_config import load_config
 from modules.module_llm import raw_complete_llm
 
 @dataclass
 class MCPServerConfig:
-    """Configuration for an MCP server"""
     name: str
     command: str
     args: Optional[List[str]] = None
     env: Optional[Dict[str, str]] = None
     working_dir: Optional[str] = None
-    risk_level: str = "medium"  # low, medium, high
+    script_type: str = "python"
+    risk_level: str = "medium"
     requires_confirmation: bool = True
+    allowed_directories: Optional[List[str]] = None
 
 class SafetyVerifier:
-    """Handles safety verification for MCP operations"""
-
     RISK_LEVELS = {
-        "low": ["read", "list", "get", "query"],
-        "medium": ["write", "update", "modify", "send"],
+        "low": ["read", "list", "get", "query", "view"],
+        "medium": ["write", "update", "modify", "send", "create"],
         "high": ["delete", "remove", "execute", "run", "system"]
     }
 
     @staticmethod
-    def analyze_risk(operation: str, params: Dict[str, Any]) -> Tuple[str, str]:
-        """
-        Analyze the risk level of an operation and generate a safety message.
-        
-        Returns:
-            Tuple[risk_level, safety_message]
-        """
-        risk_level = "low"
+    async def verify_operation(
+        operation: str, 
+        params: Dict[str, Any], 
+        risk_level: str,
+        user: str = "unknown"
+    ) -> Tuple[bool, str]:
+        # Auto-approve low-risk operations on low-risk servers
+        if risk_level == "low" and any(kw in operation.lower() 
+                                      for kw in SafetyVerifier.RISK_LEVELS["low"]):
+            return True, "Auto-approved low-risk operation"
+
+        # Determine operation risk
+        operation_risk = "low"
         for level, keywords in SafetyVerifier.RISK_LEVELS.items():
             if any(kw in operation.lower() for kw in keywords):
-                risk_level = level
+                operation_risk = level
                 break
 
+        current_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+        
         safety_message = f"""
 SAFETY CHECK - MCP Operation Request
+Time: {current_time} UTC
+User: {user}
 Operation: {operation}
-Risk Level: {risk_level.upper()}
+Risk Level: {operation_risk.upper()}
+Server Risk Level: {risk_level.upper()}
 Parameters: {json.dumps(params, indent=2)}
 
 Would you like to:
 1. Proceed with the operation
-2. Modify parameters
+2. Show preview (if available)
 3. Cancel operation
 
-Please respond with the number of your choice (1-3):"""
+Please respond with the number of your choice (1-3): """
 
-        return risk_level, safety_message
-
-    @staticmethod
-    async def verify_operation(operation: str, params: Dict[str, Any], risk_level: str) -> bool:
-        """Verify if an operation should proceed based on its risk level"""
-        risk, message = SafetyVerifier.analyze_risk(operation, params)
-        
-        # Always allow low-risk operations from low-risk servers
-        if risk == "low" and risk_level == "low":
-            return True
-
-        queue_message(message)
-        
-        # Get user confirmation before performing further actions
+        queue_message(safety_message)
         response = raw_complete_llm("Based on the safety check above, what is your choice (1-3)?")
-        
+
         try:
             choice = int(response.strip())
-            return choice == 1
+            if choice == 2:
+                preview = await SafetyVerifier._generate_preview(operation, params)
+                queue_message(f"Preview of operation:\n{preview}")
+                queue_message("\nWould you like to proceed now? (1: Yes, 3: No): ")
+                response = raw_complete_llm("Enter your choice (1 or 3): ")
+                choice = int(response.strip())
+            
+            return (choice == 1, "User approved" if choice == 1 else "User cancelled")
+            
         except (ValueError, TypeError):
-            queue_message("Invalid choice. Operation cancelled for safety.")
-            return False
+            return False, "Invalid choice received"
 
-class MCPCapabilityManager:
-    """Manages MCP server capabilities with safety verification"""
-    
-    def __init__(self):
-        self.servers: Dict[str, Dict[str, Any]] = {}
-        self.safety_verifier = SafetyVerifier()
+    @staticmethod
+    async def _generate_preview(operation: str, params: Dict[str, Any]) -> str:
+        preview = ["Operation Preview:"]
+        preview.append(f"- Operation: {operation}")
+        preview.append("- Parameters:")
+        for key, value in params.items():
+            preview.append(f"  {key}: {value}")
+        preview.append("\nPotential Effects:")
         
-    def register_server_capabilities(self, server_name: str, capabilities: Dict[str, Any], risk_level: str):
-        """Register server capabilities with risk level"""
-        self.servers[server_name] = {
-            "capabilities": capabilities,
-            "risk_level": risk_level
-        }
-        
-    def find_capability(self, query: str) -> Optional[Tuple[str, str, str, str]]:
-        """
-        Find a capability across all servers that matches the query.
-        Returns (server_name, capability_type, capability_name, risk_level) if found.
-        """
-        for server_name, server_info in self.servers.items():
-            capabilities = server_info["capabilities"]
-            risk_level = server_info["risk_level"]
+        if "write" in operation.lower() or "create" in operation.lower():
+            preview.append("- Will create or modify existing content")
+            if "content" in params:
+                preview.append("- Content to be written:")
+                preview.append(f"```\n{params['content']}\n```")
+        elif "delete" in operation.lower():
+            preview.append("- Will permanently remove content")
+            preview.append("- This operation cannot be undone")
+        elif "execute" in operation.lower():
+            preview.append("- Will execute commands or code")
+            preview.append("- May have system-level effects")
             
-            for cap_type in ['tools', 'resources', 'prompts']:
-                if cap_type not in capabilities:
-                    continue
-                    
-                for cap in capabilities[cap_type]:
-                    if (query.lower() in cap.name.lower() or 
-                        (hasattr(cap, 'description') and 
-                         query.lower() in cap.description.lower())):
-                        return (server_name, cap_type, cap.name, risk_level)
-        return None
+        return "\n".join(preview)
 
-class TARSMCPClient:
-    """MCP client with safety verification"""
-    
+class MCPClient:
     def __init__(self):
+        self.exit_stack = AsyncExitStack()
         self.sessions: Dict[str, ClientSession] = {}
-        self.capability_manager = MCPCapabilityManager()
-        
-    async def connect_to_servers(self, config: Dict[str, Any]):
-        """Connect to configured MCP servers"""
-        if not config.get('MCP', {}).get('enabled'):
-            return
+        self.server_processes: Dict[str, Process] = {}
+        self.conversation_context: Dict[str, List[Dict[str, str]]] = {}
+        self.server_configs: Dict[str, MCPServerConfig] = {}
+        self.current_user: str = "unknown"
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.cleanup()
+
+    async def cleanup(self):
+        try:
+            for name, session in self.sessions.items():
+                try:
+                    await session.close()
+                except Exception as e:
+                    queue_message(f"Warning: Error closing session {name}: {e}")
+
+            for name, process in self.server_processes.items():
+                try:
+                    process.terminate()
+                    await process.wait()
+                except Exception as e:
+                    queue_message(f"Warning: Error terminating server {name}: {e}")
+
+            await self.exit_stack.aclose()
             
-        servers = json.loads(config['MCP']['servers'])
-        for server_cfg in servers:
-            await self.connect_to_server(MCPServerConfig(**server_cfg))
-    
-    async def connect_to_server(self, config: MCPServerConfig):
-        """Connect to an MCP server and discover its capabilities"""
+        except Exception as e:
+            queue_message(f"Error during cleanup: {e}")
+
+    async def connect_to_server(self, config: MCPServerConfig) -> bool:
         try:
             params = StdioServerParameters(
                 command=config.command,
@@ -144,92 +156,151 @@ class TARSMCPClient:
                 env=config.env,
                 cwd=config.working_dir
             )
-            
+
             read_stream, write_stream = await stdio_client(params)
-            session = ClientSession(read_stream, write_stream)
+            session = await self.exit_stack.enter_async_context(
+                ClientSession(read_stream, write_stream)
+            )
+
             await session.initialize()
-            
             self.sessions[config.name] = session
+            self.server_configs[config.name] = config
+
+            capabilities = await self._get_server_capabilities(session)
+            queue_message(f"Connected to MCP server '{config.name}' (Risk Level: {config.risk_level})")
             
-            # Discover capabilities
-            capabilities = {
+            return True
+
+        except Exception as e:
+            queue_message(f"Error connecting to server {config.name}: {e}")
+            return False
+
+    async def _get_server_capabilities(self, session: ClientSession) -> Dict[str, Any]:
+        try:
+            return {
                 'tools': await session.list_tools(),
                 'resources': await session.list_resources(),
                 'prompts': await session.list_prompts()
             }
-            
-            self.capability_manager.register_server_capabilities(
-                config.name, 
-                capabilities,
-                config.risk_level
-            )
-            
-            queue_message(f"Connected to MCP server '{config.name}' with capabilities:")
-            for cap_type, caps in capabilities.items():
-                queue_message(f"- {cap_type}: {[c.name for c in caps]}")
-                
         except Exception as e:
-            queue_message(f"Error connecting to MCP server '{config.name}': {e}")
+            queue_message(f"Error getting server capabilities: {e}")
+            return {}
 
-    async def execute_capability(self, query: str, **kwargs) -> Any:
-        """Execute a capability with safety verification"""
-        capability = self.capability_manager.find_capability(query)
-        if not capability:
-            return f"No matching capability found for: {query}"
-            
-        server_name, cap_type, cap_name, risk_level = capability
-        session = self.sessions.get(server_name)
-        if not session:
-            return f"Server '{server_name}' not connected"
-            
+    async def process_query(self, query: str, server_name: str, **kwargs) -> Any:
         try:
-            # Verify operation safety before proceeding
-            verified = await SafetyVerifier.verify_operation(
-                f"{cap_type}:{cap_name}", 
-                kwargs,
-                risk_level
+            session = self.sessions.get(server_name)
+            config = self.server_configs.get(server_name)
+            if not session or not config:
+                raise ValueError(f"No connection to server: {server_name}")
+
+            # Safety verification
+            approved, reason = await SafetyVerifier.verify_operation(
+                query, kwargs, config.risk_level, self.current_user
             )
             
-            if not verified:
-                return "Operation cancelled by user."
-                
-            if cap_type == 'tools':
-                return await session.call_tool(cap_name, arguments=kwargs)
-            elif cap_type == 'resources':
-                return await session.read_resource(cap_name.format(**kwargs))
-            elif cap_type == 'prompts':
-                return await session.get_prompt(cap_name, arguments=kwargs)
-                
+            if not approved:
+                return f"Operation cancelled: {reason}"
+
+            # Execute operation
+            result = await self._execute_capability(session, query, **kwargs)
+            
+            # Log in conversation context
+            if server_name not in self.conversation_context:
+                self.conversation_context[server_name] = []
+            
+            self.conversation_context[server_name].append({
+                "query": query,
+                "timestamp": datetime.utcnow().isoformat(),
+                "user": self.current_user,
+                "parameters": kwargs,
+                "result": result
+            })
+            
+            return result
+
         except Exception as e:
-            return f"Error executing {cap_type} '{cap_name}' on server '{server_name}': {e}"
+            error_msg = f"Error processing query: {e}"
+            queue_message(error_msg)
+            return error_msg
 
-    async def close(self):
-        """Close all server connections"""
-        for name, session in self.sessions.items():
-            try:
-                await session.close()
-            except Exception as e:
-                queue_message(f"Error closing connection to '{name}': {e}")
+    async def _execute_capability(self, session: ClientSession, query: str, **kwargs) -> Any:
+        try:
+            capabilities = await self._get_server_capabilities(session)
+            
+            for cap_type in ['tools', 'resources', 'prompts']:
+                for cap in capabilities.get(cap_type, []):
+                    if self._matches_capability(query, cap):
+                        if cap_type == 'tools':
+                            return await session.call_tool(cap.name, arguments=kwargs)
+                        elif cap_type == 'resources':
+                            return await session.read_resource(cap.name.format(**kwargs))
+                        elif cap_type == 'prompts':
+                            return await session.get_prompt(cap.name, arguments=kwargs)
 
-# Global MCP client instance
-_mcp_client: Optional[TARSMCPClient] = None
+            raise ValueError(f"No matching capability found for query: {query}")
 
-async def initialize_mcp():
-    """Initialize the global MCP client"""
+        except Exception as e:
+            raise Exception(f"Error executing capability: {e}")
+
+    def _matches_capability(self, query: str, capability: Any) -> bool:
+        query = query.lower()
+        return (
+            query in capability.name.lower() or
+            (hasattr(capability, 'description') and 
+             query in capability.description.lower())
+        )
+
+    def set_current_user(self, username: str):
+        """Set the current user for operation tracking"""
+        self.current_user = username
+
+# Global client instance
+_mcp_client: Optional[MCPClient] = None
+
+async def initialize_mcp(username: str = "unknown"):
     global _mcp_client
-    config = load_config()
-    _mcp_client = TARSMCPClient()
-    await _mcp_client.connect_to_servers(config)
-
-def handle_mcp_request(user_input: str, config: Dict[str, Any]) -> str:
-    """Handle MCP requests with safety verification"""
     try:
-        return asyncio.run(execute_mcp_command(user_input))
+        config = load_config()
+        _mcp_client = MCPClient()
+        _mcp_client.set_current_user(username)
+        await _mcp_client.__aenter__()
+        
+        servers = json.loads(config['MCP'].get('servers', '[]'))
+        for server_cfg in servers:
+            await _mcp_client.connect_to_server(MCPServerConfig(**server_cfg))
+            
     except Exception as e:
-        return f"Error processing MCP request: {e}"
+        queue_message(f"Error initializing MCP: {e}")
+        if _mcp_client:
+            await _mcp_client.__aexit__(type(e), e, e.__traceback__)
+        _mcp_client = None
 
-async def execute_mcp_command(query: str, **kwargs) -> Any:
-    """Execute an MCP command with safety checks"""
+async def cleanup_mcp():
+    global _mcp_client
+    if _mcp_client:
+        await _mcp_client.__aexit__(None, None, None)
+        _mcp_client = None
+
+def handle_mcp_request(query: str, config: Dict[str, Any]) -> str:
+    try:
+        return asyncio.run(_process_mcp_request(query, config))
+    except Exception as e:
+        return f"Error handling MCP request: {e}"
+
+async def _process_mcp_request(query: str, config: Dict[str, Any]) -> Any:
     if not _mcp_client:
         return "MCP client not initialized"
-    return await _mcp_client.execute_capability(query, **kwargs)
+        
+    try:
+        for server_name in _mcp_client.sessions:
+            result = await _mcp_client.process_query(query, server_name)
+            if result and "Error" not in str(result):
+                return result
+        return "No server could handle the query"
+        
+    except Exception as e:
+        return f"Error processing request: {e}"
+
+# Ensure cleanup on program exit
+import atexit
+atexit.register(lambda: asyncio.run(cleanup_mcp()))
