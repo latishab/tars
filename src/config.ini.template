@@ -142,6 +142,32 @@ strategy = hybrid
 top_k = 5
 # Number of documents to retrieve
 
+[MCP]
+enabled = True
+servers = [
+    {
+        "name": "filesystem-server",
+        "command": "python",
+        "args": ["-m", "fs_mcp_server"],
+        "risk_level": "high",
+        "requires_confirmation": true
+    },
+    {
+        "name": "email-server",
+        "command": "python",
+        "args": ["-m", "email_mcp_server"],
+        "risk_level": "medium",
+        "requires_confirmation": true
+    },
+    {
+        "name": "weather-server",
+        "command": "python",
+        "args": ["-m", "weather_mcp_server"],
+        "risk_level": "low",
+        "requires_confirmation": false
+    }
+]
+
 [HOME_ASSISTANT] # HA Module
 enabled = False
 # If set to False, the Stable Diffusion module will be disabled.
