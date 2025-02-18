@@ -59,11 +59,11 @@ Each server configuration requires:
 For more information on how to create an MCP server, please check [MCP Server Documentation](https://modelcontextprotocol.io/quickstart/server)
 
 ### 4. Security Considerations
-Always validate inputs and paths
-Implement proper access controls
-Use risk_level appropriately
-Enable confirmations for dangerous operations
-Limit server capabilities to necessary functions
+ - Always validate inputs and paths
+ - Implement proper access controls
+ - Use risk_level appropriately
+ - Enable confirmations for dangerous operations
+ - Limit server capabilities to necessary functions
 
 ### 5. Pre-built MCP Servers in TARS
 
