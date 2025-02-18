@@ -54,15 +54,9 @@ Each server configuration requires:
  - Create a new directory in src/mcp/servers/ 
  - Implement the server following the MCP protocol 
  - Add server configuration to config.ini
-   Install dependencies if required
+ - Install dependencies if required
 
-Example for Node.js server:
-
-    bash
-    mkdir -p src/mcp/servers/myserver
-    cd src/mcp/servers/myserver
-    npm init
-    npm install @modelcontextprotocol/sdk
+For more information on how to create an MCP server, please check [MCP Server Documentation](https://modelcontextprotocol.io/quickstart/server)
 
 ### 4. Security Considerations
 Always validate inputs and paths
@@ -81,3 +75,5 @@ The filesystem server provides secure access to the file system with the followi
  - Search files 
  - Move/rename files 
  - Get file metadata
+
+For more information on how to setup MCP client (for connecting to MCP servers), please check [MCP Client Documentation](https://modelcontextprotocol.io/quickstart/client)
