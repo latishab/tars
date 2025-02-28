@@ -33,6 +33,14 @@ import requests
 
 from modules.module_messageQue import queue_message
 from modules.module_config import load_config
+from modules.module_turn_detector import EOUDetector
+from modules.audio_utils import (
+    find_default_mic_sample_rate,
+    amplify_audio,
+    prepare_audio_data,
+    play_beep,
+    init_progress_bar
+)
 
 CONFIG = load_config()
 
@@ -80,7 +88,7 @@ class STTManager:
         else:
             # If VAD is disabled, use system default
             self.DEFAULT_SAMPLE_RATE = 16000
-            self.SAMPLE_RATE = self.find_default_mic_sample_rate()
+            self.SAMPLE_RATE = find_default_mic_sample_rate()
 
         self.amp_gain = amp_gain  # Microphone amplification multiplier
         self.silence_margin = 3.5  # Noise floor multiplier
@@ -104,6 +112,10 @@ class STTManager:
         self._initialize_models()
         self.vadmethod = CONFIG['STT']['vad_method']
         self.DEBUG = False
+
+        # Initialize buffer and turn detector.
+        self.conversation = []
+        self.turn_detector = EOUDetector()
 
     def _initialize_models(self):
         """
@@ -273,11 +285,13 @@ class STTManager:
                 queue_message(f"ERROR: Failed to load Silero VAD with torch.hub: {e}")
 
     # === Transcription Methods ===
-
     def _transcribe_utterance(self):
-        """Transcribe the user's utterance using the selected STT processor."""
+        """
+        Transcribe the user's utterance using the selected STT processor.
+        After transcription, update the conversation buffer and compute the
+        End-of-Turn (EOU) probability via the turn detector (only if there are at least 3 turns).
+        """
         try:
-            # Map "whisper" to faster-whisper as well.
             processor = self.config["STT"].get("stt_processor", "vosk")
             if processor in ["whisper", "faster-whisper"]:
                 result = self._transcribe_with_faster_whisper()
@@ -288,8 +302,30 @@ class STTManager:
             else:
                 result = self._transcribe_with_vosk()
 
-            if self.post_utterance_callback and result:
-                self.post_utterance_callback()
+            if result and "text" in result:
+                # Update the conversation buffer with the latest user's utterance.
+                # If it's the first interaction, prefill with the wakeword response from detect_wake_word.
+                if not self.conversation:
+                    if hasattr(self, "last_wake_response") and self.last_wake_response:
+                        self.conversation.append({
+                            "role": "assistant",
+                            "content": self.last_wake_response
+                        })
+                self.conversation.append({"role": "user", "content": result["text"]})
+                # Keep only the last three turns (user - assistant - user)
+                if len(self.conversation) > 3:
+                    self.conversation = self.conversation[-3:]
+                
+                # Only perform turn detection if we have a complete three-turn context.
+                if len(self.conversation) >= 3:
+                    eou_prob = self.turn_detector(self.conversation)
+                    queue_message(f"DEBUG: Turn detector EOU probability: {eou_prob:.4f}")
+                    threshold = self.config.get("TURN_DETECTOR_THRESHOLD", 0.5)
+                    if eou_prob > threshold and self.post_utterance_callback:
+                        self.post_utterance_callback()
+
+            if self.utterance_callback and result:
+                self.utterance_callback(json.dumps(result))
         except Exception as e:
             queue_message(f"ERROR: Transcription failed: {e}")
 
@@ -315,7 +351,7 @@ class STTManager:
                     break
                 
                 #write the audio data
-                data = self.amplify_audio(data) #amp the sound
+                data = amplify_audio(data, self.amp_gain) #amp the sound
 
 
                 if recognizer.AcceptWaveform(data.tobytes()):
@@ -494,7 +530,7 @@ class STTManager:
         Detect the wake word using enhanced false-positive filtering.
         """
         if self.config["STT"].get("use_indicators"):
-            self.play_beep(400, 0.1, 44100, 0.6)
+            play_beep(400, 0.1, 44100, 0.6)
 
         character_path = self.config.get("CHAR", {}).get("character_card_path")
         character_name = os.path.splitext(os.path.basename(character_path))[0]
@@ -530,7 +566,7 @@ class STTManager:
                 if self.WAKE_WORD in text:
                     silent_frames = 0
                     if self.config["STT"].get("use_indicators"):
-                        self.play_beep(1200, 0.1, 44100, 0.8)
+                        play_beep(1200, 0.1, 44100, 0.8)
                     try:
                         requests.get("http://127.0.0.1:5012/start_talking", timeout=1)
                     except Exception:
@@ -550,7 +586,7 @@ class STTManager:
                         queue_message("DEBUG: Maximum iterations reached for wake word detection.")
                         break
                     data, _ = stream.read(4000)
-                    rms = self.prepare_audio_data(self.amplify_audio(data))
+                    rms = prepare_audio_data(amplify_audio(data, self.amp_gain))
                     if rms > self.silence_threshold:
                         detected_speech = True
                         silent_frames = 0
@@ -563,35 +599,6 @@ class STTManager:
             queue_message(f"ERROR: Wake word detection failed: {e}")
 
         return False
-
-    def _init_progress_bar(self):
-        """Initialize progress bar settings and functions"""
-        bar_length = 10  
-        show_progress = True
-
-        def flush_all():
-            """Ensure all buffers are completely flushed"""
-            sys.stdout.flush()
-            sys.stderr.flush()
-            time.sleep(0.01)  # Small delay to allow the terminal to catch up
-
-        def update_progress_bar(frames, max_frames):
-            if show_progress:
-                progress = int((frames / max_frames) * bar_length)
-                filled = "#" * progress
-                empty = "-" * (bar_length - progress)
-                
-                bar = f"\r[SILENCE: {filled}{empty}] {frames}/{max_frames}"
-                sys.stdout.write(bar)
-                sys.stdout.flush()
-                flush_all()  # 🔹 Ensure everything is flushed immediately
-
-        def clear_progress_bar():
-            if show_progress:
-                sys.stdout.write("\r" + " " * (bar_length + 30) + "\r")
-                sys.stdout.flush()
-                flush_all()  # 🔹 Ensure everything is flushed immediately
-        return update_progress_bar, clear_progress_bar
     
     # === VAD Methods ===
 
@@ -615,7 +622,7 @@ class STTManager:
         Check if the provided audio data represents silence using VAD.
         Always returns a tuple of (is_silence, detected_speech, silent_frames).
         """
-        update_bar, clear_bar = self._init_progress_bar()
+        update_bar, clear_bar = init_progress_bar()
         self.DEBUG = False
 
         try:
@@ -676,9 +683,9 @@ class STTManager:
     def _is_silence_detected_rms(self, data, detected_speech, silent_frames):
         """RMS-based silence detection with visual progress bar"""
         try:
-            update_bar, clear_bar = self._init_progress_bar()
+            update_bar, clear_bar = init_progress_bar()
             self.DEBUG = False
-            rms = self.prepare_audio_data(self.amplify_audio(data))
+            rms = prepare_audio_data(amplify_audio(data, self.amp_gain))
             self.silence_threshold_margin = self.silence_threshold * self.silence_margin
 
             if rms is None:
@@ -726,7 +733,7 @@ class STTManager:
         ) as stream:
             for _ in range(total_frames):
                 data, _ = stream.read(4000)
-                rms = self.prepare_audio_data(data)
+                rms = prepare_audio_data(data)
                 if rms is not None:
                     background_rms_values.append(rms)
                 time.sleep(0.1)
@@ -749,58 +756,6 @@ class STTManager:
             queue_message(f"INFO: Silence threshold: {db:.2f} dB and {self.silence_threshold}")
         else:
             queue_message("WARNING: Background noise measurement failed; using default threshold.")
-
-    def prepare_audio_data(self, data: np.ndarray) -> Optional[float]:
-        """
-        Compute the RMS of the audio data.
-        Returns:
-            float or None: RMS value or None if invalid.
-        """
-        if data.size == 0:
-            queue_message("WARNING: Empty audio data received.")
-            return None
-        data = data.reshape(-1).astype(np.float64)
-        data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
-        data = np.clip(data, -32000, 32000)
-        if np.all(data == 0):
-            queue_message("WARNING: Audio data is silent or all zeros.")
-            return None
-        try:
-            return np.sqrt(np.mean(np.square(data)))
-        except Exception as e:
-            queue_message(f"ERROR: RMS calculation failed: {e}")
-            return None
-
-    def amplify_audio(self, data: np.ndarray) -> np.ndarray:
-        """
-        Amplify the input audio data using the configured amplification gain.
-        """
-        return np.clip(data * self.amp_gain, -32768, 32767).astype(np.int16)
-
-    def find_default_mic_sample_rate(self):
-        """
-        Retrieve the default microphone's sample rate.
-        Returns:
-            int: The sample rate.
-        """
-        try:
-            default_index = sd.default.device[0]
-            if default_index is None:
-                raise ValueError("No default microphone detected.")
-            device_info = sd.query_devices(default_index, kind="input")
-            return int(device_info.get("default_samplerate", 16000))
-        except Exception as e:
-            queue_message(f"ERROR: {e}")
-            return self.DEFAULT_SAMPLE_RATE
-
-    def play_beep(self, frequency: int, duration: float, sample_rate: int, volume: float):
-        """
-        Play a beep sound to indicate state changes.
-        """
-        t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
-        sine_wave = volume * np.sin(2 * np.pi * frequency * t)
-        sd.play(sine_wave, samplerate=sample_rate)
-        sd.wait()
 
     # === Callback Setters ===
 
