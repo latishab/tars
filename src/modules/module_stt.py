@@ -288,10 +288,11 @@ class STTManager:
     def _transcribe_utterance(self):
         """
         Transcribe the user's utterance using the selected STT processor.
-        After transcription, update the conversation buffer and compute the
-        End-of-Turn (EOU) probability via the turn detector (only if there are at least 3 turns).
+        This integrated function first uses VAD to segment the audio and then
+        leverages turn detection on the conversation context to decide if TARS should reply.
         """
         try:
+            # Select and execute the appropriate transcription method.
             processor = self.config["STT"].get("stt_processor", "vosk")
             if processor in ["whisper", "faster-whisper"]:
                 result = self._transcribe_with_faster_whisper()
@@ -302,9 +303,9 @@ class STTManager:
             else:
                 result = self._transcribe_with_vosk()
 
+            # If transcription yields text, update the conversation buffer.
             if result and "text" in result:
-                # Update the conversation buffer with the latest user's utterance.
-                # If it's the first interaction, prefill with the wakeword response from detect_wake_word.
+                # For the first interaction, prefill with the wake-word response (if available).
                 if not self.conversation:
                     if hasattr(self, "last_wake_response") and self.last_wake_response:
                         self.conversation.append({
@@ -312,15 +313,16 @@ class STTManager:
                             "content": self.last_wake_response
                         })
                 self.conversation.append({"role": "user", "content": result["text"]})
-                # Keep only the last three turns (user - assistant - user)
+                # Keep only the last three turns.
                 if len(self.conversation) > 3:
                     self.conversation = self.conversation[-3:]
-                
-                # Only perform turn detection if we have a complete three-turn context.
+
+                # If we have a complete conversation context, perform turn detection.
                 if len(self.conversation) >= 3:
                     eou_prob = self.turn_detector(self.conversation)
                     queue_message(f"DEBUG: Turn detector EOU probability: {eou_prob:.4f}")
                     threshold = self.config.get("TURN_DETECTOR_THRESHOLD", 0.5)
+                    # Trigger reply only if the turn detector signals an end-of-turn.
                     if eou_prob > threshold and self.post_utterance_callback:
                         self.post_utterance_callback()
 
@@ -637,7 +639,7 @@ class STTManager:
                     
                     # Get VAD configuration with defaults
 
-                    noise_gate = 0.01 * self.silence_threshold #adjust for bgnoise
+                    noise_gate = 0.01 * self.silence_threshold # adjust for bgnoise
 
                     # Skip very low amplitude signals 
                     #if np.max(np.abs(audio_norm)) < noise_gate:
@@ -648,11 +650,10 @@ class STTManager:
                         self.silero_vad_model,
                         sampling_rate=self.SAMPLE_RATE,
                         threshold=0.3,
-                        min_speech_duration_ms=100,
+                        min_silence_duration_ms=400,
+                        min_speech_duration_ms=150,
                         return_seconds=True
                     ) or []
-                    
-             
 
                     if len(speech_ts) > 0:
                         detected_speech = True

@@ -10,8 +10,7 @@ from modules.module_messageQue import queue_message
 CONFIG = load_config()
 
 # ✅ Initialize ElevenLabs client globally
-elevenlabs_client = ElevenLabs(api_key=CONFIG['TTS']['elevenlabs_api_key'])
-
+elevenlabs_client = ElevenLabs(api_key=CONFIG['TTS']['elevenlabs_api_key'], base_url="https://api.deepinfra.com")
 
 async def synthesize_elevenlabs(chunk):
     """
