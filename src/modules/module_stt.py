@@ -288,8 +288,33 @@ class STTManager:
             else:
                 result = self._transcribe_with_vosk()
 
-            if self.post_utterance_callback and result:
-                self.post_utterance_callback()
+            if result and "text" in result:
+                # Always stream the user message first
+                queue_message(f"USER: {result['text']}", stream=True)
+
+                # Update conversation buffer
+                self.conversation.append({"role": "user", "content": result["text"]})
+                if len(self.conversation) > 3:
+                    self.conversation = self.conversation[-3:]
+
+                # Calculate turn detection probability
+                if len(self.conversation) >= 3:
+                    eou_prob = self.turn_detector(self.conversation)
+                    self._current_eou_prob = eou_prob
+                    
+                    if eou_prob > 0.6:  # Threshold for end of turn
+                        if self.utterance_callback:
+                            self.utterance_callback(json.dumps(result))
+                else:
+                    # When insufficient context, respond to the message
+                    self._current_eou_prob = 0.5
+                    if self.utterance_callback:
+                        self.utterance_callback(json.dumps(result))
+
+                # Get back to utterance
+                if self.post_utterance_callback:
+                    self.post_utterance_callback()
+                        
         except Exception as e:
             queue_message(f"ERROR: Transcription failed: {e}")
 
@@ -684,6 +709,11 @@ class STTManager:
             if rms is None:
                 # Even if RMS calculation fails, return proper tuple
                 return False, detected_speech, silent_frames
+
+            # Calculate RMS values in dB and get EOU probability before using them
+            current_eou_prob = getattr(self, '_current_eou_prob', 0.5)
+            db_rms = 20 * np.log10(rms) if rms > 0 else -100
+            db_threshold = 20 * np.log10(self.silence_threshold_margin)
 
             if rms > self.silence_threshold_margin:
                 detected_speech = True
