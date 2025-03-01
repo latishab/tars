@@ -35,6 +35,10 @@ import requests
 
 from modules.module_messageQue import queue_message
 from modules.module_config import load_config
+from modules.audio_utils import (
+    prepare_audio_data, amplify_audio, find_default_mic_sample_rate,
+    play_beep, format_speech_indicator, clear_indicator
+)
 
 CONFIG = load_config()
 
@@ -282,18 +286,12 @@ class STTManager:
                 queue_message(f"ERROR: Failed to load Silero VAD with torch.hub: {e}")
 
     # === Transcription Methods ===
-<<<<<<< HEAD
-
-    def _transcribe_utterance(self):
-        """Transcribe the user's utterance using the selected STT processor."""
-        try:
-            # Map "whisper" to faster-whisper as well.
-=======
     def _transcribe_utterance(self):
         """Transcribe speech and handle turn completion."""
         try:
+            clear_indicator()  # Clear any existing indicator
+
             # Get transcription from speech
->>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
             processor = self.config["STT"].get("stt_processor", "vosk")
             if processor in ["whisper", "faster-whisper"]:
                 result = self._transcribe_with_faster_whisper()
@@ -305,13 +303,7 @@ class STTManager:
                 result = self._transcribe_with_vosk()
 
             if result and "text" in result:
-<<<<<<< HEAD
-                # Always stream the user message first
-=======
-                # Display user's message
-                self.clear_indicator()
-                queue_message("")  # Add newline
->>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
+                clear_indicator()  # Clear the indicator before displaying transcription
                 queue_message(f"USER: {result['text']}", stream=True)
 
                 # Update conversation buffer
@@ -319,27 +311,6 @@ class STTManager:
                 if len(self.conversation) > 3:
                     self.conversation = self.conversation[-3:]
 
-<<<<<<< HEAD
-                # Calculate turn detection probability
-                if len(self.conversation) >= 3:
-                    eou_prob = self.turn_detector(self.conversation)
-                    self._current_eou_prob = eou_prob
-                    
-                    if eou_prob > 0.6:  # Threshold for end of turn
-                        if self.utterance_callback:
-                            self.utterance_callback(json.dumps(result))
-                else:
-                    # When insufficient context, respond to the message
-                    self._current_eou_prob = 0.5
-                    if self.utterance_callback:
-                        self.utterance_callback(json.dumps(result))
-
-                # Get back to utterance
-                if self.post_utterance_callback:
-                    self.post_utterance_callback()
-                        
-        except Exception as e:
-=======
                 # Handle turn completion
                 should_respond = True
                 if len(self.conversation) >= 3:
@@ -350,14 +321,13 @@ class STTManager:
                 if should_respond and self.utterance_callback:
                     self.utterance_callback(json.dumps(result))
 
-            # Always ensure clean state before next iteration
-            self.clear_indicator()
+            # Clean up display
+            clear_indicator()
             if self.post_utterance_callback:
                 self.post_utterance_callback()
 
         except Exception as e:
-            self.clear_indicator()
->>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
+            clear_indicator()
             queue_message(f"ERROR: Transcription failed: {e}")
 
     def _transcribe_with_vosk(self):
@@ -568,13 +538,8 @@ class STTManager:
         Returns:
             bool: True if wake word is detected, otherwise False.
         """
-<<<<<<< HEAD
-        if self.config["STT"].get("use_indicators"):
-            self.play_beep(400, 0.1, 44100, 0.6)
-=======
         if self.config["STT"]["use_indicators"]:
             play_beep(400, 0.1, 44100, 0.6)
->>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
 
         character_path = self.config.get("CHAR", {}).get("character_card_path")
         character_name = os.path.splitext(os.path.basename(character_path))[0]
@@ -658,36 +623,6 @@ class STTManager:
 
         return False
 
-<<<<<<< HEAD
-    def _init_progress_bar(self):
-        """Initialize progress bar settings and functions"""
-        bar_length = 10  
-        show_progress = True
-
-        def flush_all():
-            """Ensure all buffers are completely flushed"""
-            sys.stdout.flush()
-            sys.stderr.flush()
-            time.sleep(0.01)  # Small delay to allow the terminal to catch up
-
-        def update_progress_bar(frames, max_frames):
-            if show_progress:
-                progress = int((frames / max_frames) * bar_length)
-                filled = "#" * progress
-                empty = "-" * (bar_length - progress)
-                
-                bar = f"\r[SILENCE: {filled}{empty}] {frames}/{max_frames}"
-                sys.stdout.write(bar)
-                sys.stdout.flush()
-                flush_all()  # 🔹 Ensure everything is flushed immediately
-
-        def clear_progress_bar():
-            if show_progress:
-                sys.stdout.write("\r" + " " * (bar_length + 30) + "\r")
-                sys.stdout.flush()
-                flush_all()  # 🔹 Ensure everything is flushed immediately
-        return update_progress_bar, clear_progress_bar
-=======
     def _detect_wake_word_picovoice(self) -> bool:
         """
         Detect the wake word using enhanced false-positive filtering.
@@ -745,26 +680,10 @@ class STTManager:
         #         pass
 
         return False
->>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
     
     # === VAD Methods ===
 
     def voice_activity_detection_main(self, data, detected_speech, silent_frames=0):
-<<<<<<< HEAD
-        """
-        Determines if the current audio frame contains silence using VAD or RMS.
-        Returns a tuple: (is_silence, detected_speech, silent_frames)
-        """
-        # Get the vad_method from the configuration, defaulting to "rms" if not set.
-        #print(self.vadmethod)
-    
-        if self.vadmethod == "silero":
-            return self._is_silence_detected_silero(data, detected_speech, silent_frames)
-        elif self.vadmethod == "rms":
-            return self._is_silence_detected_rms(data, detected_speech, silent_frames)
-        else:
-            return self._is_silence_detected_rms(data, detected_speech, silent_frames)
-=======
         """Unified VAD with configurable backend."""
         try:
             # Calculate normalized RMS for volume indication
@@ -789,7 +708,6 @@ class STTManager:
         except Exception as e:
             queue_message(f"WARNING: VAD error: {e}")
             return False, detected_speech, silent_frames
->>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
 
     def _is_silence_detected_silero(self, data, detected_speech, silent_frames):
         """
@@ -810,36 +728,8 @@ class STTManager:
                         self.silero_vad_model.reset_states()
                     
                     # Get VAD configuration with defaults
+                    noise_gate = 0.01 * self.silence_threshold 
 
-                    noise_gate = 0.01 * self.silence_threshold #adjust for bgnoise
-
-                    # Skip very low amplitude signals 
-                    #if np.max(np.abs(audio_norm)) < noise_gate:
-                        #return True, detected_speech, silent_frames
-
-<<<<<<< HEAD
-                    speech_ts = self.get_speech_timestamps(
-                        audio_tensor, 
-                        self.silero_vad_model,
-                        sampling_rate=self.SAMPLE_RATE,
-                        threshold=0.3,
-                        min_speech_duration_ms=100,
-                        return_seconds=True
-                    ) or []
-                    
-             
-
-                    if len(speech_ts) > 0:
-                        detected_speech = True
-                        silent_frames = 0
-                        clear_bar()
-                    else:
-                        silent_frames += 1
-                        update_bar(silent_frames, self.MAX_SILENT_FRAMES)
-
-                    if silent_frames > self.MAX_SILENT_FRAMES:
-                        clear_bar()
-=======
                 if len(speech_ts) > 0:
                     detected_speech = True
                     silent_frames = 0
@@ -849,7 +739,6 @@ class STTManager:
                     silent_frames += 1
                     self._show_speech_indicator(is_speaking=False)
                     if silent_frames > self.SPEECH_END_SILENCE:
->>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
                         return True, detected_speech, silent_frames
                     
                     return False, detected_speech, silent_frames
@@ -862,10 +751,6 @@ class STTManager:
             
         
         except Exception as e:
-<<<<<<< HEAD
-            queue_message(f"ERROR: Silence detection failed: {e}")
-            # Return safe default values
-=======
             queue_message(f"WARNING: VAD error, falling back to RMS: {e}")
             return self._is_silence_detected_rms(data, detected_speech, silent_frames)
 
@@ -896,7 +781,6 @@ class STTManager:
 
         except Exception as e:
             queue_message(f"ERROR: RMS silence detection failed: {e}")
->>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
             return False, detected_speech, silent_frames
 
     def _is_silence_detected_rms(self, data, detected_speech, silent_frames):
@@ -908,7 +792,6 @@ class STTManager:
             self.silence_threshold_margin = self.silence_threshold * self.silence_margin
 
             if rms is None:
-                # Even if RMS calculation fails, return proper tuple
                 return False, detected_speech, silent_frames
 
             # Calculate RMS values in dB and get EOU probability before using them
@@ -936,12 +819,10 @@ class STTManager:
                     clear_bar()
                     return True, detected_speech, silent_frames
 
-            
             return False, detected_speech, silent_frames
         
         except Exception as e:
             queue_message(f"ERROR: RMS silence detection failed: {e}")
-            # Return safe default values
             return False, detected_speech, silent_frames
   
     # === Audio adjustments ===
@@ -981,57 +862,10 @@ class STTManager:
         else:
             queue_message("WARNING: Background noise measurement failed; using default threshold.")
 
-    def prepare_audio_data(self, data: np.ndarray) -> Optional[float]:
-        """
-        Compute the RMS of the audio data.
-        Returns:
-            float or None: RMS value or None if invalid.
-        """
-        if data.size == 0:
-            queue_message("WARNING: Empty audio data received.")
-            return None
-        data = data.reshape(-1).astype(np.float64)
-        data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
-        data = np.clip(data, -32000, 32000)
-        if np.all(data == 0):
-            queue_message("WARNING: Audio data is silent or all zeros.")
-            return None
-        try:
-            return np.sqrt(np.mean(np.square(data)))
-        except Exception as e:
-            queue_message(f"ERROR: RMS calculation failed: {e}")
-            return None
-
-    def amplify_audio(self, data: np.ndarray) -> np.ndarray:
-        """
-        Amplify the input audio data using the configured amplification gain.
-        """
-        return np.clip(data * self.amp_gain, -32768, 32767).astype(np.int16)
-
-    def find_default_mic_sample_rate(self):
-        """
-        Retrieve the default microphone's sample rate.
-        Returns:
-            int: The sample rate.
-        """
-        try:
-            default_index = sd.default.device[0]
-            if default_index is None:
-                raise ValueError("No default microphone detected.")
-            device_info = sd.query_devices(default_index, kind="input")
-            return int(device_info.get("default_samplerate", 16000))
-        except Exception as e:
-            queue_message(f"ERROR: {e}")
-            return self.DEFAULT_SAMPLE_RATE
-
-    def play_beep(self, frequency: int, duration: float, sample_rate: int, volume: float):
-        """
-        Play a beep sound to indicate state changes.
-        """
-        t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
-        sine_wave = volume * np.sin(2 * np.pi * frequency * t)
-        sd.play(sine_wave, samplerate=sample_rate)
-        sd.wait()
+    def _show_speech_indicator(self, is_speaking: bool, rms_level: float = 0.0):
+        """Display speech activity indicator with spectrum."""
+        if self.config["STT"].get("use_indicators", True):
+            format_speech_indicator(is_speaking, rms_level) 
 
     # === Callback Setters ===
 
