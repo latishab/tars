@@ -178,3 +178,14 @@ memory/initial_memory.json
 memory/initial_memory.loaded
 ./tars.sh
 character/persona.ini
+
+# Miniconda installers
+Miniconda3-latest-MacOSX-*.sh
+
+# FlashRank cache
+memory/flashrank_cache/
+**/flashrank_cache/
+
+# Large model files
+src/tts/TARS.onnx
+**/TARS.onnx
