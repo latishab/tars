@@ -29,6 +29,8 @@ import soundfile as sf
 from vosk import Model, KaldiRecognizer, SetLogLevel
 from pocketsphinx import LiveSpeech
 from faster_whisper import WhisperModel
+import pvporcupine
+from pvrecorder import PvRecorder
 import requests
 
 from modules.module_messageQue import queue_message
@@ -119,6 +121,13 @@ class STTManager:
             self._load_silero_model()
         else:
             self._load_vosk_model()
+
+        # Use Picovoice instead of Pocketsphinx (if configured)
+        if self.config["STT"]["wake_word_processor"] == "picovoice":
+            self.porcupine = pvporcupine.create(
+                access_key=self.config["STT"]["picovoice_api_key"],
+                keyword_paths=[self.config["STT"]["picovoice_keyword_path"]]
+            )
 
         # Use Silero VAD instead of RMS (if configured)
         if self.config["STT"].get("vad_enabled", False):
@@ -273,11 +282,18 @@ class STTManager:
                 queue_message(f"ERROR: Failed to load Silero VAD with torch.hub: {e}")
 
     # === Transcription Methods ===
+<<<<<<< HEAD
 
     def _transcribe_utterance(self):
         """Transcribe the user's utterance using the selected STT processor."""
         try:
             # Map "whisper" to faster-whisper as well.
+=======
+    def _transcribe_utterance(self):
+        """Transcribe speech and handle turn completion."""
+        try:
+            # Get transcription from speech
+>>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
             processor = self.config["STT"].get("stt_processor", "vosk")
             if processor in ["whisper", "faster-whisper"]:
                 result = self._transcribe_with_faster_whisper()
@@ -289,7 +305,13 @@ class STTManager:
                 result = self._transcribe_with_vosk()
 
             if result and "text" in result:
+<<<<<<< HEAD
                 # Always stream the user message first
+=======
+                # Display user's message
+                self.clear_indicator()
+                queue_message("")  # Add newline
+>>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
                 queue_message(f"USER: {result['text']}", stream=True)
 
                 # Update conversation buffer
@@ -297,6 +319,7 @@ class STTManager:
                 if len(self.conversation) > 3:
                     self.conversation = self.conversation[-3:]
 
+<<<<<<< HEAD
                 # Calculate turn detection probability
                 if len(self.conversation) >= 3:
                     eou_prob = self.turn_detector(self.conversation)
@@ -316,6 +339,25 @@ class STTManager:
                     self.post_utterance_callback()
                         
         except Exception as e:
+=======
+                # Handle turn completion
+                should_respond = True
+                if len(self.conversation) >= 3:
+                    eou_prob = self.turn_detector(self.conversation)
+                    should_respond = eou_prob > 0.6
+
+                # Trigger response if appropriate
+                if should_respond and self.utterance_callback:
+                    self.utterance_callback(json.dumps(result))
+
+            # Always ensure clean state before next iteration
+            self.clear_indicator()
+            if self.post_utterance_callback:
+                self.post_utterance_callback()
+
+        except Exception as e:
+            self.clear_indicator()
+>>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
             queue_message(f"ERROR: Transcription failed: {e}")
 
     def _transcribe_with_vosk(self):
@@ -516,15 +558,38 @@ class STTManager:
 
     def _detect_wake_word(self) -> bool:
         """
-        Detect the wake word using enhanced false-positive filtering.
+        Detect a wake word using the selected method.
+        
+        Args:
+            config (dict): Configuration dictionary.
+            method (str): The detection method to use. Options: 'picovoice' or 'simple'.
+            timeout (float): Maximum time (seconds) to listen for the wake word.
+            
+        Returns:
+            bool: True if wake word is detected, otherwise False.
         """
+<<<<<<< HEAD
         if self.config["STT"].get("use_indicators"):
             self.play_beep(400, 0.1, 44100, 0.6)
+=======
+        if self.config["STT"]["use_indicators"]:
+            play_beep(400, 0.1, 44100, 0.6)
+>>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
 
         character_path = self.config.get("CHAR", {}).get("character_card_path")
         character_name = os.path.splitext(os.path.basename(character_path))[0]
+        
         queue_message(f"{character_name}: Sleeping...")
 
+        if self.config["STT"]["wake_word_processor"] == 'pocketsphinx':
+            return self._detect_wake_word_pocketsphinx()
+        else:
+            return self._detect_wake_word_picovoice()
+
+    def _detect_wake_word_pocketsphinx(self) -> bool:
+        """
+        Detect the wake word using enhanced false-positive filtering.
+        """
         # Notify external service to stop talking.
         try:
             requests.get("http://127.0.0.1:5012/stop_talking", timeout=1)
@@ -549,7 +614,7 @@ class STTManager:
             }
             kws_threshold = threshold_map.get(int(self.config["STT"]["sensitivity"]), 1)
             speech = LiveSpeech(lm=False, keyphrase=self.WAKE_WORD, kws_threshold=kws_threshold)
-
+            
             for phrase in speech:
                 text = phrase.hypothesis().lower()
                 if self.WAKE_WORD in text:
@@ -561,6 +626,10 @@ class STTManager:
                     except Exception:
                         pass
                     wake_response = random.choice(self.WAKE_WORD_RESPONSES)
+
+                    character_path = self.config.get("CHAR", {}).get("character_card_path")
+                    character_name = os.path.splitext(os.path.basename(character_path))[0]
+                    
                     queue_message(f"{character_name}: {wake_response}", stream=True)
                     if self.wake_word_callback:
                         self.wake_word_callback(wake_response)
@@ -589,6 +658,7 @@ class STTManager:
 
         return False
 
+<<<<<<< HEAD
     def _init_progress_bar(self):
         """Initialize progress bar settings and functions"""
         bar_length = 10  
@@ -617,10 +687,70 @@ class STTManager:
                 sys.stdout.flush()
                 flush_all()  # 🔹 Ensure everything is flushed immediately
         return update_progress_bar, clear_progress_bar
+=======
+    def _detect_wake_word_picovoice(self) -> bool:
+        """
+        Detect the wake word using enhanced false-positive filtering.
+        """
+        # Notify external service to stop talking.
+        try:
+            requests.get("http://127.0.0.1:5012/stop_talking", timeout=1)
+        except Exception:
+            pass
+
+        silent_frames = 0
+        max_iterations = 100  # Prevent infinite loops
+        recorder = None
+
+        try:
+            recorder = PvRecorder(frame_length=512, device_index=-1)
+            recorder.start()
+            while True:
+                audio_chunk = recorder.read()  # Read 512 frames per buffer
+                audio_chunk = np.array(audio_chunk, dtype=np.int16)
+                if audio_chunk.ndim != 1:
+                    audio_chunk = audio_chunk.flatten()  # Make sure it's a 1D array
+
+                # Use Porcupine to process the audio chunk and detect the wake word
+                keyword_index = self.porcupine.process(audio_chunk)
+
+                if keyword_index >= 0:
+                    try:
+                        if self.config["STT"].get("use_indicators"):
+                            play_beep(1200, 0.1, 44100, 0.8)
+                        requests.get("http://127.0.0.1:5012/start_talking", timeout=1)
+                    except Exception:
+                        pass
+
+                    character_path = self.config.get("CHAR", {}).get("character_card_path")
+                    character_name = os.path.splitext(os.path.basename(character_path))[0] if character_path else "TARS"
+                    wake_response = random.choice(self.WAKE_WORD_RESPONSES)
+                    queue_message(f"{character_name}: {wake_response}", stream=True)
+                    if self.wake_word_callback:
+                        self.wake_word_callback(wake_response)
+                    return True
+                    
+        except Exception as e:
+            queue_message(f"ERROR: Wake word detection failed: {e}")
+            return False
+        # finally:
+        #     try:
+        #         if recorder is not None:
+        #             recorder.delete()
+        #     except Exception:
+        #         pass
+        #     try:
+        #         self.porcupine.delete()
+        #     except Exception:
+        #         pass
+
+        return False
+>>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
     
     # === VAD Methods ===
 
     def voice_activity_detection_main(self, data, detected_speech, silent_frames=0):
+<<<<<<< HEAD
         """
         Determines if the current audio frame contains silence using VAD or RMS.
         Returns a tuple: (is_silence, detected_speech, silent_frames)
@@ -634,6 +764,32 @@ class STTManager:
             return self._is_silence_detected_rms(data, detected_speech, silent_frames)
         else:
             return self._is_silence_detected_rms(data, detected_speech, silent_frames)
+=======
+        """Unified VAD with configurable backend."""
+        try:
+            # Calculate normalized RMS for volume indication
+            rms = prepare_audio_data(amplify_audio(data, self.amp_gain))
+            normalized_rms = min(rms / self.silence_threshold, 1.0) if rms is not None else 0.0
+            
+            # Get silence detection from configured VAD method
+            is_silence, detected_speech, silent_frames = (
+                self._is_silence_detected_silero(data, detected_speech, silent_frames)
+                if self.vadmethod == "silero" else
+                self._is_silence_detected_rms(data, detected_speech, silent_frames)
+            )
+            
+            # Update speech activity indicator
+            self._show_speech_indicator(
+                is_speaking=not is_silence and rms > self.silence_threshold,
+                rms_level=normalized_rms
+            )
+            
+            return is_silence, detected_speech, silent_frames
+            
+        except Exception as e:
+            queue_message(f"WARNING: VAD error: {e}")
+            return False, detected_speech, silent_frames
+>>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
 
     def _is_silence_detected_silero(self, data, detected_speech, silent_frames):
         """
@@ -661,6 +817,7 @@ class STTManager:
                     #if np.max(np.abs(audio_norm)) < noise_gate:
                         #return True, detected_speech, silent_frames
 
+<<<<<<< HEAD
                     speech_ts = self.get_speech_timestamps(
                         audio_tensor, 
                         self.silero_vad_model,
@@ -682,6 +839,17 @@ class STTManager:
 
                     if silent_frames > self.MAX_SILENT_FRAMES:
                         clear_bar()
+=======
+                if len(speech_ts) > 0:
+                    detected_speech = True
+                    silent_frames = 0
+                    self._show_speech_indicator(is_speaking=True, rms_level=normalized_rms)
+                    return False, detected_speech, silent_frames
+                else:
+                    silent_frames += 1
+                    self._show_speech_indicator(is_speaking=False)
+                    if silent_frames > self.SPEECH_END_SILENCE:
+>>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
                         return True, detected_speech, silent_frames
                     
                     return False, detected_speech, silent_frames
@@ -694,8 +862,41 @@ class STTManager:
             
         
         except Exception as e:
+<<<<<<< HEAD
             queue_message(f"ERROR: Silence detection failed: {e}")
             # Return safe default values
+=======
+            queue_message(f"WARNING: VAD error, falling back to RMS: {e}")
+            return self._is_silence_detected_rms(data, detected_speech, silent_frames)
+
+    def _is_silence_detected_rms(self, data, detected_speech, silent_frames):
+        """
+        RMS-based silence detection with continuous listening and speech activity indication.
+        Returns tuple: (is_silence, detected_speech, silent_frames)
+        """
+        try:
+            rms = prepare_audio_data(amplify_audio(data, self.amp_gain))
+            if rms is None:
+                return False, detected_speech, silent_frames
+
+            # Calculate normalized RMS for volume indicator
+            normalized_rms = min(rms / self.silence_threshold, 1.0)
+            
+            if rms > self.silence_threshold:
+                detected_speech = True
+                silent_frames = 0
+                self._show_speech_indicator(is_speaking=True, rms_level=normalized_rms)
+                return False, detected_speech, silent_frames
+            else:
+                silent_frames += 1
+                self._show_speech_indicator(is_speaking=False)
+                if silent_frames > self.SPEECH_END_SILENCE:
+                    return True, detected_speech, silent_frames
+                return False, detected_speech, silent_frames
+
+        except Exception as e:
+            queue_message(f"ERROR: RMS silence detection failed: {e}")
+>>>>>>> 7bb3f84 (feat: readd flashranker and porcupine)
             return False, detected_speech, silent_frames
 
     def _is_silence_detected_rms(self, data, detected_speech, silent_frames):

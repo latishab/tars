@@ -16,6 +16,7 @@ Run this script directly to start the application.
 import os
 import sys
 import threading
+import time
 from datetime import datetime
 
 # === Custom Modules ===
@@ -24,11 +25,12 @@ from modules.module_character import CharacterManager
 from modules.module_memory import MemoryManager
 from modules.module_stt import STTManager
 from modules.module_tts import update_tts_settings
-from modules.module_btcontroller import *
+# from modules.module_btcontroller import *
 from modules.module_main import initialize_managers, wake_word_callback, utterance_callback, post_utterance_callback, start_bt_controller_thread, start_discord_bot, process_discord_message_callback
 from modules.module_vision import initialize_blip
 from modules.module_llm import initialize_manager_llm
 import modules.module_chatui
+from modules.module_messageQue import queue_message
 
 # === Constants and Globals ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -87,9 +89,9 @@ if __name__ == "__main__":
     initialize_manager_llm(memory_manager, char_manager)
 
     # Start necessary threads
-    if CONFIG['CONTROLS']['enabled'] == 'True':
-        bt_controller_thread = threading.Thread(target=start_bt_controller_thread, name="BTControllerThread", daemon=True)
-        bt_controller_thread.start()
+    # if CONFIG['CONTROLS']['enabled'] == 'True':
+    #     bt_controller_thread = threading.Thread(target=start_bt_controller_thread, name="BTControllerThread", daemon=True)
+    #     bt_controller_thread.start()
 
     # Create a thread for the Flask app
     if CONFIG['CHATUI']['enabled'] == "True":
@@ -116,5 +118,5 @@ if __name__ == "__main__":
 
     finally:
         stt_manager.stop()
-        bt_controller_thread.join()
+        # bt_controller_thread.join()
         queue_message(f"INFO: All threads and executor stopped gracefully.")

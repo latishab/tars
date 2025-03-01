@@ -40,19 +40,30 @@ MODEL = None
 # === Helper Functions ===
 
 def initialize_blip():
-    """
-    Initialize BLIP model and processor for detailed captions.
-    Ensures the model is loaded from the cache directory.
-    """
-    global PROCESSOR, MODEL
-    if not PROCESSOR or not MODEL:
-        queue_message(f"INFO: Initializing BLIP model...")
-        PROCESSOR = BlipProcessor.from_pretrained(MODEL_NAME, cache_dir=str(CACHE_DIR))
-        MODEL = BlipForConditionalGeneration.from_pretrained(MODEL_NAME, cache_dir=str(CACHE_DIR)).to(DEVICE)
-        MODEL = torch.quantization.quantize_dynamic(
-            MODEL, {torch.nn.Linear}, dtype=torch.qint8
-        )
-        queue_message(f"INFO: BLIP model initialized.")
+    """Initialize BLIP model for vision tasks."""
+    global MODEL, PROCESSOR
+    
+    try:
+        import platform
+        is_macos = platform.system() == 'Darwin'
+        
+        MODEL = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+        
+        # Skip quantization on macOS
+        if not is_macos:
+            MODEL = torch.quantization.quantize_dynamic(
+                MODEL, {torch.nn.Linear}, dtype=torch.qint8
+            )
+        
+        MODEL.eval()
+        PROCESSOR = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+        
+        queue_message("INFO: BLIP model initialized successfully.")
+        
+    except Exception as e:
+        queue_message(f"ERROR: Failed to initialize BLIP model: {e}")
+        MODEL = None
+        PROCESSOR = None
 
 
 def capture_image() -> BytesIO:

@@ -5,7 +5,6 @@ sentence-transformers   # Sentence embeddings and semantic search
 
 # TTS (Text-to-Speech) Tools
 elevenlabs              # External TTS using 11Labs API
-piper-tts              # Local TTS with voice cloning support
 azure-cognitiveservices-speech  # Azure TTS API
 
 # STT (Speech-to-Text) & VAD Tools
@@ -36,13 +35,10 @@ librosa                 # Audio analysis and feature extraction
 configobj               # Maintain comments in config.ini during updates
 python-dotenv           # Load environment variables from a .env file
 pygame                  # Game development & multimedia support
-evdev                   # Handle Linux input devices (keyboards, mice, controllers)
 moviepy                 # Video editing and playback support
-adafruit-pca9685        # Servo driver for hardware integration
 selenium                # Web automation for browser control
 discord.py              # Discord bot API
 discord.py[voice]       # Voice chat functionality for Discord bots
 requests                # HTTP library for API interactions
 pandas                  # Data analysis and manipulation
 joblib                  # Efficient serialization of Python objects
-adafruit-pca9685

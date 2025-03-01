@@ -18,7 +18,7 @@ import soundfile as sf
 
 # === Custom Modules ===
 from modules.module_config import load_config
-from modules.module_btcontroller import start_controls
+# from modules.module_btcontroller import start_controls
 from modules.module_discord import *
 from modules.module_llm import process_completion
 from modules.module_tts import play_audio_chunks

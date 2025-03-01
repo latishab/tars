@@ -20,7 +20,7 @@ import soundfile as sf
 from io import BytesIO
 import asyncio
 
-from modules.module_piper import text_to_speech_with_pipelining_piper
+# from modules.module_piper import text_to_speech_with_pipelining_piper
 from modules.module_silero import text_to_speech_with_pipelining_silero
 from modules.module_espeak import text_to_speech_with_pipelining_espeak
 from modules.module_alltalk import text_to_speech_with_pipelining_alltalk
