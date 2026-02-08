@@ -1,9 +1,7 @@
 # ============================================
-# TARS Movement Service - Minimal Dependencies
+# TARS Hardware Service - Dependencies
 # ============================================
-# Target size: ~250MB (vs. 1.3GB with AI dependencies)
-# For Raspberry Pi 5 servo control and camera capture only
-# Compatible with Servo Controller V3.1
+# For Raspberry Pi 5: servo control, camera, and audio I/O
 
 # ============================================
 # Servo Control (I2C/PCA9685)
@@ -15,18 +13,24 @@ adafruit-circuitpython-ina260==1.4.7
 lgpio==0.2.2.0
 
 # ============================================
-# Camera (Picamera2 for Raspberry Pi 5)
+# Camera (Picamera2 + OpenCV)
 # ============================================
 picamera2==0.3.17
-opencv-python==4.9.0.80
-numpy==1.26.4
+opencv-python-headless==4.9.0.80
 Pillow==10.2.0
 
 # ============================================
-# FastAPI Service (HTTP API)
+# Audio (USB Soundcard)
 # ============================================
-fastapi==0.109.2
-uvicorn[standard]==0.27.1
+sounddevice==0.4.6
+scipy==1.11.4
+
+# ============================================
+# FastAPI Service (HTTP API + WebSocket)
+# ============================================
+fastapi==0.109.0
+uvicorn==0.27.0
+websockets==12.0
 pydantic==2.6.1
 
 # ============================================
@@ -34,29 +38,4 @@ pydantic==2.6.1
 # ============================================
 configobj==5.0.8
 python-dotenv==1.0.1
-
-# ============================================
-# Audio Playback (Basic beeps/sound effects)
-# ============================================
-pygame==2.5.2
-
-# ============================================
-# Input Devices (Bluetooth Gamepad Support)
-# ============================================
-evdev==1.6.1
-
-# ============================================
-# REMOVED AI/ML Dependencies (Now on MacBook)
-# ============================================
-# - torch (500+ MB)
-# - transformers (100+ MB)
-# - faster-whisper (STT)
-# - sentence-transformers (embeddings)
-# - piper-tts (TTS)
-# - silero (VAD)
-# - openai (API client - no longer needed on Pi)
-# - discord.py (bot integration)
-# - flask (web UI)
-#
-# Total removed: ~1.0GB
-# Total kept: ~250MB
+numpy==1.26.4
