@@ -30,6 +30,17 @@
 
 ---
 
+> **📋 Repository Status: TARS Control System V3**
+>
+> This repository contains the **TARS Control System V3** - an input/output system for Raspberry Pi 5.
+> - **What it does**: Servo control + camera capture via HTTP API + 57+ pre-programmed movements
+> - **What moved**: AI processing (STT, TTS, LLM, Vision) now runs on a separate MacBook via tars-omni
+>
+> 📖 **Documentation**: See [README-MOVEMENT-SERVICE.md](./README-MOVEMENT-SERVICE.md) for API reference and usage
+> 🔄 **Rollback**: Original AI components preserved in git history
+
+---
+
 ## 🚀 Getting Started
 
 - See the documentation:  

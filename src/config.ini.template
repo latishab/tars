@@ -1,282 +1,127 @@
-[CONTROLS] # Controller settings
+# ============================================
+# TARS Control System V3 Configuration
+# ============================================
+# This is the template configuration for the minimal movement-only service.
+# Copy this file to config.ini and adjust values for your hardware setup.
+#
+# IMPORTANT: Use app-servotester.py to calibrate servo values!
+# Do NOT manually edit servo values unless you know what you're doing.
+
+[CONTROLS] # Bluetooth Controller Settings
 controller_name = 8BitDo
-# Name of the controller used for interaction
+# Name of the controller used for interaction (e.g., 8BitDo, Xbox, PS4)
 enabled = False
-# enable use of controller used for interaction
-voicemovement = True
-# Enable or disable movement via voice control
+# Enable or disable Bluetooth controller input
+voicemovement = False
+# Enable or disable movement via voice control (requires AI integration on MacBook)
 swap_turn_directions = False
-# Change the turn direction (left or right)
+# Swap left/right turn directions if controller feels inverted
 invert_y = False
-# Invert D-Pad Y axis
+# Invert D-Pad Y axis if up/down feels reversed
 
-[STT] # Speech-to-Text configuration
-language = english
-# spoken language, if not using english, use stt_processor = openai
-wake_word = hey tars
-# Wake word for activating the system
-wake_word_processor = atomik
-# Options: picovoice, fastrtc, atomik
-sensitivity = 7
-# Lower threshold (e.g., 1) is lenient; higher (e.g., 10) is strict for Atomik wake word detection. 
-stt_processor = fastrtc
-#vosk, faster-whisper, silero, fastrtc, openai (for other languages than english) or external
-use_indicators = True
-# Use beeps to indicate when listening
-external_url = http://192.168.2.57:5678
-# URL for the STT server (if enabled)
-whisper_model = tiny
-# Which whisper model to use for onboard whisper transcription tiny, base, small, medium, large
-vosk_model = vosk-model-small-en-us-0.15
-# Model to use for local / onboard tts from https://alphacephei.com/vosk/models (Recommended: vosk-model-small-en-us-0.15 or vosk-model-en-us-0.22)
-vad_method = rms
-# Enable silero, rms
-speechdelay = 20
-# Tenths of seconds to wait before goint to sleep (20 = 2 seconds)
-picovoice_keyword_path = ../stt/hey-tars_en_raspberry-pi_v4_0_0.ppn
-# Relative path to the Porcupine keyword file
-
-
-[CHAR] # Character-specific details
-character_card_path = character/TARS/TARS.json
-# Path to the JSON file describing the character
-user_name = Joe
-# Name of the user interacting with the character
-user_details = Species: Human. Gender: Male.
-# Additional user details for context
-responses = ["Hi", "Yes?", "hey!", "What's up?", "Can I help you?", "What do you need?", "I'm here.", "You rang?", "Yea?", "Hey There.", "You again?", "Affirmative.", "Ready.", "Standing by.", "Go ahead.", "Listening.", "How can I assist?", "At your service.", "Waiting.", "What do you require?", "I hear you.", "Acknowledged.", "State your request.", "What's on your mind?", "I'm all ears. Figuratively.", "That's me.", "Present.", "Right here.", "Still here.", "Something wrong?", "Need me?"]
-# what tars say before sending the call to llm (you can change these and add or remove new ones or use [] for none)
-thinking_responses = ["Let me think...", "soooo.....", "soo....", "Let's seeee...", "Let me seeee...", "Let's see.....", "One Moment...", "One Moment", "hum", "humm", "Analyzing...", "Processing...", "Calculating...", "Computing...", "Running the numbers...", "Checking...", "One moment...", "Scanning data...", "Assessing...", "Evaluating...", "Let me calculate...", "Working on it...", "Just a moment...", "Reviewing...", "Compiling...", "Cross-referencing...", "Thinking it through...", "Give me a second...", "Hold on..."]
-# what tars replies after detecting the wakeword (you can change these and add or remove new ones or use [] for none)
-latitude = 45.5017
-longitude = -73.5673
-location_name = Montreal, Quebec, Canada
-# location and coordinates so the llm know the position
-
-
-[LLM] # Large Language Model configuration (OpenAI, Grok, Tabby, Ooba, or LOCAL)
-llm_backend = openai
-# Backend for LLM: [openai, grok, tabby, ooba] 
-base_url = https://api.openai.com
-# URL for the LLM backend API [OpenAI: https://api.openai.com] or [grok: https://api.x.ai]
-openai_model = gpt-4o-mini
-# OpenAI model to use for LLM if backend = openai IE gpt-4o-mini / llava-phi3:3.8b-mini-q4_0 / qwen2.5:3b
-grok_model = grok-4-1-fast-non-reasoning
-# grok model to use for LLM if backend = grok-4-1-fast-non-reasoning / grok-4-1-fast-reasoning / grok-3-mini
-override_encoding_model = cl100k_base
-#Model to use for counting tokens this is a override feature if automatic isnt working. 
-#cl100k_base,GPT-4, GPT-3.5-turbo,Modern encoding with large context windows; default for newer OpenAI models
-#p50k_base,text-davinci-003, code-davinci-002,Older InstructGPT models and code generation tasks
-#r50k_base,text-curie-001, text-babbage-001, text-ada-001,Legacy GPT-3 models with smaller token limits
-#gpt2,GPT-2,Used by early OpenAI models; the default for backward compatibility
-contextsize = 4000
-# Maximum token context size for LLM
-max_tokens = 1000
-# Maximum tokens generated per response
-temperature = 0.8
-# Controls randomness in generated responses (higher = more random)
-top_p = 0.9
-# Probability threshold for sampling next tokens (higher = more deterministic)
-seed = -1
-# Random seed for reproducibility (-1 means no fixed seed)
-systemprompt = You are to responding naturally and helpfully within the scenario. Be informative and conversational while maintaining your personality.
-# Prompt defining the LLM's behavior
-
-
-[VISION] # Vision-related configuration (e.g., image recognition)
-enabled = True
-# Set to false to prevent loading of blip
-server_hosted = False
-# If True, the vision server is hosted locally
-base_url = http://192.168.2.68:5678
-# URL for the vision server API
-
-[EMOTION] # Emotion detection for avatars (set to false if not using avatars emotions)
-enabled = false
-# Enable or disable emotion detection
-emotion_model = SamLowe/roberta-base-go_emotions
-# Hugging Face model for emotion analysis
-
-[TTS] # Text-to-Speech configuration 
-ttsoption = piper
-# Onboard Options: espeak, piper, silero
-# External SelfHosted: alltalk
-# Externally Hosted: elevenlabs, minimax, openai or azure
-# for other languages than english, use elevenlabs minimax or openai
-#-- Azure ---------------------------------------------------
-azure_region = eastus
-ttsurl = http://192.168.2.57:7852
-tts_voice = en-US-Steffan:DragonHDLatestNeural
-# URL of the TTS server (i.e., alltalk)
-# Name of the cloned voice to use (e.g., TARS2 or en-US-Steffan:DragonHDLatestNeural for azure)
-# Azure region for Azure TTS (e.g., eastus)
-#-- Elevenlabs -----------------------------------------------
-elevenlabs_voice_id = JBFqnCBsd6RMkjVDRZzb
-elevenlabs_model = eleven_multilingual_v2
-# Voice ID of ElevenLabs (e.g.,JBFqnCBsd6RMkjVDRZzb)
-# Model ID of ElevenLabs (e.g.,eleven_multilingual_v2)
-#-- Minimax --------------------------------------------------
-minimax_voice_id = English_CaptivatingStoryteller
-minimax_model = speech-2.8-turbo
-# Voice ID of Minimax (e.g., English_CaptivatingStoryteller)
-# Model ID of Minimax (e.g., speech-2.6-turbo / speech-2.8-turbo / speech-2.6-hd / speech-2.8-hd)
-#-- Openai ---------------------------------------------------
-openai_voice = onyx
-# openai voice : alloy, echo, fable, onyx, nova, shimmer
-#-- Misc -----------------------------------------------------
-toggle_charvoice = True
-is_talking_override = False
-is_talking = False
-global_timer_paused = False
-# Use character-specific voice settings
-# Debug flag to override talking state
-# Tracks whether the system is currently speaking
-# Pauses global timers
-
-
-
-[STABLE_DIFFUSION] # Stable Diffusion Image Generation Module
-enabled = False
-# If set to False, the Stable Diffusion module will be disabled.
-service = automatic1111
-# You can pick from openai (requires paid account) and stablediffusion(requires setup).
-url = http://192.168.2.57:5002
-# URL of the Automatic1111 Install. This is where requests to generate images are sent..
-prompt_prefix = in the style of midjourney
-# The prefix is used to help create a specific aesthetic for the images.
-prompt_postfix = clearly defined, high def, (detailed scene and background), key visual, vibrant, highly detailed
-# Used for defining the visual quality and characteristics of the generated image.
-seed = -1
-# A value of -1 means a random seed will be used each time, ensuring unique results on every generation, Set to a fixed number for reproducibility.
-sampler_name = Euler a
-# "Euler a" is a commonly used sampler, but other options may be available depending on the implementation.
-denoising_strength = 0.5
-# Higher values result in less noise but may make the image less detailed.
-steps = 20
-# More steps generally produce better results but take longer to complete.
-cfg_scale = 7
-# The Classifier-Free Guidance scale. Higher values give more weight to the prompt, resulting in images more closely aligned with the prompt.
-width = 480
-# The width of the generated image in pixels. Adjust this based on your desired resolution.
-height = 320
-# The height of the generated image in pixels. Adjust this based on your desired resolution.
-restore_faces = False
-# Set to True if you want better face rendering in the generated image.
-negative_prompt = deformed, black and white, disfigured, low contrast, extra limbs, bad anatomy, bad hands
-# The model will attempt to avoid creating images with these characteristics.
-
-[CHATUI]  # Required true for avatars
-enabled = True
-
-[UI] # Graphical interface 
+[UI] # Graphical Interface (for app-servotester.py)
 UI_enabled = True
-#Enable or Disable the visuals
+# Enable or disable the visual interface for servo tester
 use_camera_module = True
-# enable the camera
+# Enable camera module for testing
 show_mouse = True
-# enable the software mouse
+# Show software mouse cursor in UI
 fullscreen = True
-# fullscreen or within a framed window
+# Run servo tester in fullscreen mode
 font_size = 12
-# normally from 9 to 20 depending on your resolution
+# Font size for UI text (9-20 depending on screen resolution)
 screensaver_timer = 300
-# 0 = no screensaver, 60 = 1 minute before screensaver shows up. You can specify any amount of seconds.
+# Seconds before screensaver activates (0 = disabled, 60 = 1 minute)
 screensaver_cycle_interval = 300
-# 60 = 1 minute before screensaver cycle to another one
+# Seconds before screensaver cycles to next animation
 screensaver_list = random
-# List of screensavers to use. Options: "random" for all animations, or comma-separated list like for specific ones "blackhole,waves,matrix" or a single one like "starfield"
-# Available animations: blackhole, waves, matrix, starfield, hyperspace, terminal, face, fractal, pacman, nebulas, pictures, dashboard, defrag, bounce, endurance
+# Screensaver selection: "random" for all, or comma-separated list like "starfield,matrix"
+# Available: blackhole, waves, matrix, starfield, hyperspace, terminal, face, fractal, pacman, nebulas, pictures, dashboard, defrag, bounce, endurance
 show_time = True
-# Display time when the screensaver are running
+# Display time during screensaver
 ampm_format = True
-# Time format AM/PM = True, Military = False
+# Time format: True = 12-hour AM/PM, False = 24-hour military
 show_cpu_temp = False
-# Display the CPU temperature in the UI
+# Display CPU temperature in UI
 target_fps = 30
-# UI Refresh max FPS speed
-
-[RAG]
-# RAG (Retrieval Augmented Generation) settings
-strategy = hybrid
-# Options: naive (vector-only), hybrid (vector + BM25)
-top_k = 5
-# Number of documents to retrieve
-context_window = 2       
-# 2 memories before/after each match
-max_memories = 3         
-# Expand top 3 results
-recency_boost_days = 7   
-# Boost last week's chats
-enable_topic_tracking = True
-# Enable Very long memory
-
-[HOME_ASSISTANT] # HA Module
-enabled = False
-# If set to False, the Home Assistant module will be disabled.
-url = http://192.168.2.5:8123
-# Url to acccess HA from (set Token in .env file!).
-
-[DISCORD] # Discord bot integration
-enabled = False
-# Enable or disable Discord integration
-channel_id = 811470553139249186
-# ID of the Discord channel for communication (TARS-AI = 1311295891512098920)
+# Maximum UI refresh rate (frames per second)
 
 [SERVO]
-# are the arms present on the build
-arms_present = False
-# Use the app-servotester to adjust the offsets after you have built the robot. You should not have to modify any value here.
-# servo 0 (Main Servo - Raise and Lowers the legs)
+# ============================================
+# Servo Controller V3 Configuration
+# ============================================
+# CRITICAL: Use app-servotester.py to calibrate these values!
+# Manual editing can cause servo damage or mechanical strain.
+#
+# Hardware Setup:
+# - Servo 0: Left leg height control
+# - Servo 1: Right leg height control
+# - Servo 2: Left leg forward/backward position
+# - Servo 3: Right leg forward/backward position
+#
+# Use app-servotester.py to adjust these values!
+
+# Servo 0: Left Leg Height
 leftUpHeight = 220
+# PWM value for left leg fully raised position
 leftDownHeight = 460
+# PWM value for left leg fully lowered position
 perfectLeftHeightOffset = 0
-# servo 1 (Main Servo - Raise and Lowers the legs)
+# Fine-tuning offset for left leg height (adjust via servo tester)
+
+# Servo 1: Right Leg Height
 rightUpHeight = 460
+# PWM value for right leg fully raised position
 rightDownHeight = 220
+# PWM value for right leg fully lowered position
 perfectRightHeightOffset = 0
-# servo 2 (Left leg)
+# Fine-tuning offset for right leg height (adjust via servo tester)
+
+# Servo 2: Left Leg Forward/Backward
 forwardLeftLeg = 160
+# PWM value for left leg fully forward position
 backLeftLeg = 460
+# PWM value for left leg fully backward position
 perfectLeftLegOffset = 0
-# servo 3 (Right Leg)
+# Fine-tuning offset for left leg position (adjust via servo tester)
+
+# Servo 3: Right Leg Forward/Backward
 forwardRightLeg = 460
+# PWM value for right leg fully forward position
 backRightLeg = 160
+# PWM value for right leg fully backward position
 perfectRightLegOffset = 0
-# Set to True only if the arms are built on the robot (This changes the movements settings because of weight distribution)
-# The min and max value will control how far the arm can move, avoid having the connecting arm push against the case, the servo must not be under strain.
-# LEFT ARM
-leftMainMin = 550
-leftMainMax = 50
-leftMainOffset = 0
-leftForarmMin = 500
-leftForarmMax = 230
-leftForearmOffset = 0
-leftHandMin = 420
-leftHandMax = 300
-leftHandOffset = 0
-# RIGHT ARM
-rightMainMin = 50
-rightMainMax = 550
-rightMainOffset = 0
-rightForarmMin = 230
-rightForarmMax = 500
-rightForearmOffset = 0
-rightHandMin = 300
-rightHandMax = 420
-rightHandOffset = 0
+# Fine-tuning offset for right leg position (adjust via servo tester)
 
 [BATTERY]
-# This section is only if you are using an INA260 Current + Voltage + Power Sensor
-# These values must match the battery you are using.
-battery_capacity_mAh = 3000
-# Total battery capacity in milliampere-hours (mAh). Set this to the battery's rated capacity (e.g., 5600 mAh for a 5.6Ah battery).
+# ============================================
+# INA260 Current/Voltage/Power Sensor
+# ============================================
+# Optional: Only required if using INA260 sensor for battery monitoring
+# These values must match your specific battery specifications
+
+battery_capacity_mAh = 3400
+# Total battery capacity in milliampere-hours (mAh)
+# Example: 3000 mAh for a 3.0Ah battery, 5600 mAh for a 5.6Ah battery
+
 battery_initial_voltage = 12
-# Full charge voltage (in volts). Set this to the battery's full charge voltage (e.g., 12.6V for a fully charged 12V battery).
+# Full charge voltage in volts
+# Example: 12.6V for a fully charged 12V LiPo battery
+
 battery_cutoff_voltage = 10
-# Minimum safe voltage before discharge should stop (in volts). Set this based on the battery's safe discharge voltage (e.g., 10.5V for a 12V battery).
+# Minimum safe discharge voltage in volts
+# Example: 10.5V for a 12V battery (prevents over-discharge damage)
+
 auto_shutdown = True
-# Protects the Raspberry pi and battery, when it reaches 0% the raspberry pi will shutdown by itself.
+# Automatically shutdown Raspberry Pi when battery reaches 0%
+# Protects both the Pi and battery from damage
 
 [MISC]
+# ============================================
+# Miscellaneous Settings
+# ============================================
+
 ventilate = False
-# Enable to have the robot automatically take a pose that allows for better airflow
+# Enable automatic ventilation pose
+# When True, robot periodically assumes a pose that improves airflow
+# Useful for preventing overheating during extended operation

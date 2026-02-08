@@ -30,6 +30,7 @@ class CameraModule:
         self.use_camera_module = use_camera_module
         self.apply_corrections = apply_corrections
         self.frame = None
+        self.raw_frame = None  # Numpy array for HTTP API access
         self.running = False
         self.save_next_frame = False
         self.lock = threading.Lock()
@@ -137,6 +138,11 @@ class CameraModule:
                     frame = np.rot90(frame, k=2)
                 elif self.rotation == 270:
                     frame = np.rot90(frame, k=3)
+
+                # Store raw frame for HTTP API (BGR format for cv2.imencode)
+                with self.lock:
+                    self.raw_frame = frame.copy()
+
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 self.frame = pygame.surfarray.make_surface(frame)
 
@@ -190,3 +196,14 @@ class CameraModule:
             self.thread.join()
         if self.use_camera_module and self.picam2:
             self.picam2.stop()
+
+    def capture_raw_frame(self):
+        """
+        Return current frame as numpy array (BGR format) for HTTP API.
+        This is used by the FastAPI service to capture frames for encoding to JPEG.
+
+        Returns:
+            numpy.ndarray: Current frame in BGR format, or None if no frame available
+        """
+        with self.lock:
+            return self.raw_frame.copy() if self.raw_frame is not None else None
