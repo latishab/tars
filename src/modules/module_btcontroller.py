@@ -24,7 +24,7 @@ from evdev import InputDevice, list_devices
 
 from modules.module_config import load_config
 from modules.module_messageQue import queue_message
-from modules.module_movement_registry import MOVEMENTS, get_legs_only, get_has_arms
+from modules.module_movement_registry import MOVEMENTS
 import modules.module_movements as movements
 
 config = load_config()
@@ -121,13 +121,11 @@ def start_controls():
                 
                 if event.value == 1:
                     if event.code == evdev.ecodes.BTN_SOUTH:
-                        if r2_held:
-                            execute_movement("right_hi")
-                        elif r1_held:
+                        if r1_held:
                             execute_movement("wave_right")
                         else:
                             execute_movement("pose")
-                    
+
                     elif event.code == evdev.ecodes.BTN_EAST:
                         if r2_held:
                             execute_movement("side_side")
@@ -135,19 +133,15 @@ def start_controls():
                             execute_movement("wave_left")
                         else:
                             execute_movement("bow")
-                    
+
                     elif event.code == evdev.ecodes.BTN_NORTH:
-                        if r2_held:
-                            execute_movement("monster")
-                        elif r1_held:
+                        if r1_held:
                             execute_movement("tilt_right")
                         else:
                             execute_movement("laugh")
-                    
+
                     elif event.code == evdev.ecodes.BTN_WEST:
-                        if r2_held:
-                            execute_movement("pezz_dispenser")
-                        elif r1_held:
+                        if r1_held:
                             execute_movement("tilt_left")
                         else:
                             execute_movement("excited")

@@ -34,7 +34,6 @@ NEUTRAL_RIGHT_HEIGHT = 350
 NEUTRAL_LEFT_LEG = 300
 NEUTRAL_RIGHT_LEG = 300
 
-global_arm_speed = 0.5
 global_easing_strength = 0.6
 
 SERVO_POSITIONS_FILE = os.path.expanduser("~/.servo_positions.json")
@@ -101,44 +100,6 @@ def initialize_pca9685():
 if not initialize_pca9685():
     queue_message("WARNING: PCA9685 initialization failed - check hardware")
 
-leftMainMin = int(config["SERVO"]["leftMainMin"])
-leftMainMax = int(config["SERVO"]["leftMainMax"])
-leftForarmMin = int(config["SERVO"]["leftForarmMin"])
-leftForarmMax = int(config["SERVO"]["leftForarmMax"])
-leftHandMin = int(config["SERVO"]["leftHandMin"])
-leftHandMax = int(config["SERVO"]["leftHandMax"])
-
-rightMainMin = int(config["SERVO"]["rightMainMin"])
-rightMainMax = int(config["SERVO"]["rightMainMax"])
-rightForarmMin = int(config["SERVO"]["rightForarmMin"])
-rightForarmMax = int(config["SERVO"]["rightForarmMax"])
-rightHandMin = int(config["SERVO"]["rightHandMin"])
-rightHandMax = int(config["SERVO"]["rightHandMax"])
-
-leftMainOffset = int(config["SERVO"]["leftMainOffset"])
-leftMainMin = leftMainMin + leftMainOffset
-leftMainMax = leftMainMax + leftMainOffset
-
-leftForearmOffset = int(config["SERVO"]["leftForearmOffset"])
-leftForarmMin = leftForarmMin + leftForearmOffset
-leftForarmMax = leftForarmMax + leftForearmOffset
-
-leftHandOffset = int(config["SERVO"]["leftHandOffset"])
-leftHandMin = leftHandMin + leftHandOffset
-leftHandMax = leftHandMax + leftHandOffset
-
-rightMainOffset = int(config["SERVO"]["rightMainOffset"])
-rightMainMin = rightMainMin + rightMainOffset
-rightMainMax = rightMainMax + rightMainOffset
-
-rightForearmOffset = int(config["SERVO"]["rightForearmOffset"])
-rightForarmMin = rightForarmMin + rightForearmOffset
-rightForarmMax = rightForarmMax + rightForearmOffset
-
-rightHandOffset = int(config["SERVO"]["rightHandOffset"])
-rightHandMin = rightHandMin + rightHandOffset
-rightHandMax = rightHandMax + rightHandOffset
-
 perfectLeftHeightOffset = int(config["SERVO"]["perfectLeftHeightOffset"])
 leftUpHeight = int(config["SERVO"]["leftUpHeight"]) + perfectLeftHeightOffset
 leftNeutralHeight = NEUTRAL_LEFT_HEIGHT + perfectLeftHeightOffset
@@ -161,7 +122,6 @@ backRightLeg = int(config["SERVO"]["backRightLeg"]) + perfectRightLegOffset
 
 MOVING = False
 HOLD = -1
-ARMS_PRESENT = config["SERVO"]["arms_present"]
 
 if not servo_positions:
     print("[SERVO] No saved positions - initializing to neutral estimates")
@@ -169,12 +129,6 @@ if not servo_positions:
     servo_positions[1] = rightNeutralHeight
     servo_positions[2] = neutralLeftLeg
     servo_positions[3] = neutralRightLeg
-    servo_positions[4] = leftMainMin
-    servo_positions[5] = leftForarmMin
-    servo_positions[6] = leftHandMin
-    servo_positions[7] = rightMainMin
-    servo_positions[8] = rightForarmMin
-    servo_positions[9] = rightHandMin
 else:
     print(f"[SERVO] Loaded saved positions")
 
@@ -280,28 +234,19 @@ def disable_all_servos():
 
 def reset_positions():
     global servo_positions
-    
+
     servo_positions[0] = leftNeutralHeight
     servo_positions[1] = rightNeutralHeight
     servo_positions[2] = neutralLeftLeg
     servo_positions[3] = neutralRightLeg
-    servo_positions[4] = leftMainMin
-    servo_positions[5] = leftForarmMin
-    servo_positions[6] = leftHandMin
-    servo_positions[7] = rightMainMin
-    servo_positions[8] = rightForarmMin
-    servo_positions[9] = rightHandMin
-    
+
     disable_all_servos()
-    
+
     move_legs(30, 30, 50, 50, 0.5)
     time.sleep(0.2)
     move_legs(50, 50, 50, 50, 0.5)
     time.sleep(0.3)
-    
-    move_arm(1, 1, 1, 1, 1, 1, 0.3)
-    time.sleep(0.5)
-    
+
     disable_all_servos()
 
 def move_servos_synchronized(movements, speed_factor, easing_strength=None):
@@ -339,12 +284,6 @@ def move_servos_synchronized(movements, speed_factor, easing_strength=None):
                 1: rightNeutralHeight,
                 2: neutralLeftLeg,
                 3: neutralRightLeg,
-                4: leftMainMin,
-                5: leftForarmMin,
-                6: leftHandMin,
-                7: rightMainMin,
-                8: rightForarmMin,
-                9: rightHandMin,
             }
             current_value = neutral_positions.get(channel, 300)
             servo_positions[channel] = current_value
@@ -460,57 +399,6 @@ def move_legs(left_height_percent=None, right_height_percent=None, left_leg_perc
 
     move_servos_synchronized(movements, speed_factor)
 
-def move_arm(left_main=None, left_forearm=None, left_hand=None,
-             right_main=None, right_forearm=None, right_hand=None, speed_factor=1.0):
-    """
-    Move arm servos to specified positions.
-    
-    Parameters:
-    - left_main: Left main arm position (1-100, None to skip, -1 to hold)
-    - left_forearm: Left forearm position (1-100, None to skip, -1 to hold)
-    - left_hand: Left hand position (1-100, None to skip, -1 to hold)
-    - right_main: Right main arm position (1-100, None to skip, -1 to hold)
-    - right_forearm: Right forearm position (1-100, None to skip, -1 to hold)
-    - right_hand: Right hand position (1-100, None to skip, -1 to hold)
-    - speed_factor: Speed multiplier (0.0-1.0, higher is faster)
-    """
-    
-    arm_speed_curve = 0.2
-    adjusted_speed = speed_factor ** arm_speed_curve
-    arm_easing_strength = 0.85
-    
-    def percentage_to_value(percent, min_val, max_val):
-        if percent == 0:
-            return None
-        if percent == -1:
-            return -1
-        if percent == 1:
-            return min_val
-        if percent == 100:
-            return max_val
-        if max_val > min_val:
-            value = min_val + ((max_val - min_val) * (percent - 1) / 99)
-        else:
-            value = min_val - ((min_val - max_val) * (percent - 1) / 99)
-        return int(round(value))
-
-    def get_value(val, min_val, max_val):
-        if val is None or val == 0:
-            return None
-        if val == -1:
-            return -1
-        return percentage_to_value(val, min_val, max_val)
-
-    movements = [
-        (4, get_value(left_main, leftMainMin, leftMainMax)),
-        (5, get_value(left_forearm, leftForarmMin, leftForarmMax)),
-        (6, get_value(left_hand, leftHandMin, leftHandMax)),
-        (7, get_value(right_main, rightMainMin, rightMainMax)),
-        (8, get_value(right_forearm, rightForarmMin, rightForarmMax)),
-        (9, get_value(right_hand, rightHandMin, rightHandMax)),
-    ]
-
-    move_servos_synchronized(movements, adjusted_speed, easing_strength=arm_easing_strength)
 
 def cleanup():
     
@@ -525,14 +413,9 @@ from modules.module_movements import (
     turn_right_slow,
     turn_left,
     turn_left_slow,
-    right_hi,
-    left_hi,
     laugh,
     excited,
     swing_legs,
-    left_pezz_dispenser,
-    right_pezz_dispenser,
-    monster,
     pose,
     bow,
     tilt_right,
@@ -543,30 +426,15 @@ from modules.module_movements import (
     neutral_legs,
     ventilate_on,
     ventilate_off,
-    set_swap_turn_directions,
-    left_point,
-    right_point,
-    left_poke,
-    right_poke,
-    left_wave_open,
-    right_wave_open,
-    left_shy_wave,
-    right_shy_wave,
-    happy_dance
+    set_swap_turn_directions
 )
 
 set_swap_turn_directions(config["CONTROLS"]["swap_turn_directions"])
 
 from modules.module_movement_registry import (
     MOVEMENTS,
-    LEGS_ONLY,
-    HAS_ARMS,
     get_all,
-    get_by_type,
-    get_legs_only,
-    get_has_arms,
-    get_names,
-    get_names_by_type
+    get_names
 )
 
 if __name__ == "__main__":
