@@ -1,50 +1,66 @@
-# TARS-AI
+# TARS
 
-<p align="center">
-    <a href="https://discord.gg/AmE2Gv9EUt">
-      <img alt="Discord Invitation Link" src="https://img.shields.io/discord/1311295890182508605" align="center" />
-    </a>
-    <a href="https://www.youtube.com/@TARS-AI.py.youtube">
-        <img src="https://img.shields.io/badge/YouTube-red?style=flat-square&logo=youtube&logoColor=white" alt="YouTube" align="center" />
-    </a>
-    <a href="https://www.instagram.com/tars_ai.py">
-        <img src="https://img.shields.io/badge/Instagram-purple?style=flat-square&logo=instagram&logoColor=white" alt="Instagram" align="center" />
-    </a>
-    <a href="https://www.tiktok.com/@tars.ai.py">
-        <img src="https://img.shields.io/badge/TikTok-black?style=flat-square&logo=tiktok&logoColor=white" alt="TikTok" align="center" />   
-    </a>
-    <a href="https://github.com/TARS-AI-Community/TARS-AI/wiki/Home">
-        <img src="https://img.shields.io/badge/Docs-grey?style=flat-square&logo=readthedocs&logoColor=white" alt="Documentation" align="center" />
-    </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/TARS-AI-Community/TARS-AI">
-    <img width=90% alt="" src="https://github.com/TARS-AI-Community/TARS-AI/blob/V2/media/tars-banner.png" />
-  </a>
-</p>
-
-<p align="center">
-  A recreation of the robot TARS from <i>Interstellar</i>, featuring AI capabilities.
-</p>
+> **⚠️ Note to Visitors**
+>
+> This repository is a **personal fork** for experimenting with a new distributed architecture.
+> If you're looking for the **main TARS-AI project**, please visit:
+>
+> 👉 **https://github.com/TARS-AI-Community/TARS-AI**
+>
+> This fork splits TARS into a dual-machine setup:
+> - **MacBook (tars-omni)**: Handles all AI processing (STT, TTS, LLM, Vision)
+> - **Raspberry Pi 5**: Handles all hardware I/O (servos, camera, audio)
 
 ---
 
-> **📋 Repository Status: TARS Control System V3**
->
-> This repository contains the **TARS Control System V3** - an input/output system for Raspberry Pi 5.
-> - **What it does**: Servo control + camera capture via HTTP API + 57+ pre-programmed movements
-> - **What moved**: AI processing (STT, TTS, LLM, Vision) now runs on a separate MacBook via tars-omni
->
-> 📖 **Documentation**: See [README-MOVEMENT-SERVICE.md](./README-MOVEMENT-SERVICE.md) for API reference and usage
-> 🔄 **Rollback**: Original AI components preserved in git history
+## Architecture Overview
+
+```
+MacBook (tars-omni)                       RPi 5 (tars)
+┌──────────────────────┐                  ┌──────────────────────┐
+│ AI PROCESSING ONLY   │                  │ ALL HARDWARE I/O     │
+│                      │                  │                      │
+│ pipecat_service.py   │    Tailscale     │ main.py (FastAPI)    │
+│                      │ ◄──────────────► │                      │
+│ Receives from RPi:   │   WebSocket +    │ Hardware:            │
+│ - Audio stream (mic) │   HTTP REST      │ - USB Soundcard      │
+│ - Camera frames      │                  │   - Microphone in    │
+│                      │                  │   - Speaker out      │
+│ Processes:           │                  │ - Camera (CSI/USB)   │
+│ - Deepgram STT       │                  │ - PCA9685 + Servos   │
+│ - GPT-OSS LLM        │                  │                      │
+│ - Moondream Vision   │                  │ Endpoints:           │
+│ - ElevenLabs TTS     │                  │ - /audio/stream (WS) │
+│                      │                  │ - /audio/play (POST) │
+│ Sends to RPi:        │                  │ - /camera/capture    │
+│ - TTS audio bytes    │                  │ - /move              │
+│ - Movement commands  │                  │ - /reset             │
+└──────────────────────┘                  └──────────────────────┘
+                                           │
+                                           │ I2C + USB + CSI
+                                           ▼
+                                          ┌──────────────────┐
+                                          │ Hardware         │
+                                          │ - Servos         │
+                                          │ - USB Soundcard  │
+                                          │ - Camera         │
+                                          └──────────────────┘
+```
 
 ---
 
-## 🚀 Getting Started
+## What This Repo Contains
 
-- See the documentation:  
-  👉 https://github.com/TARS-AI-Community/TARS-AI/wiki/Home
+- **FastAPI-based control system** for Raspberry Pi 5
+- **19 pre-programmed movements** for servo control
+- **Camera capture endpoints** (Pi Camera or USB webcam)
+- **Audio I/O endpoints** (USB soundcard)
+- **Minimal footprint**: ~250MB dependencies (AI processing moved to MacBook)
+
+## Documentation
+
+- **[MOVEMENTS.md](./docs/MOVEMENTS.md)** - Servo control and movement API
+- **[HARDWARE_IO.md](./docs/HARDWARE_IO.md)** - Camera, audio, and system status API
 
 ---
 

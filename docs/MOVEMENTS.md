@@ -1,91 +1,41 @@
-# TARS Control System V3
+# Movement Control API
 
-FastAPI-based control system for servo control and camera capture on Raspberry Pi 5. Provides HTTP endpoints for controlling TARS robot movements (57+ pre-programmed movements) and capturing camera frames, with AI processing handled by a separate MacBook via tars-omni.
-
-## Architecture
-
-```
-┌─────────────────────────────────────────┐
-│     MacBook (tars-omni)                 │
-│  ┌───────────────────────────────────┐  │
-│  │  - Speech-to-Text (Whisper)       │  │
-│  │  - Text-to-Speech (ElevenLabs)    │  │
-│  │  - LLM (GPT-4o)                   │  │
-│  │  - Vision Processing (GPT-4V)     │  │
-│  └───────────────┬───────────────────┘  │
-└──────────────────┼──────────────────────┘
-                   │ HTTP API
-                   │
-┌──────────────────▼──────────────────────┐
-│  Raspberry Pi 5 (TARS Control System)   │
-│  ┌───────────────────────────────────┐  │
-│  │  FastAPI Server (port 8001)       │  │
-│  │  ├── Servo Control (PCA9685)      │  │
-│  │  ├── Camera (Pi/USB Auto-detect)  │  │
-│  │  ├── Movement Registry (57+)      │  │
-│  │  └── Movement Endpoints           │  │
-│  └───────────────────────────────────┘  │
-└─────────────────────────────────────────┘
-```
+Servo control system for TARS robot on Raspberry Pi 5. Provides 19 pre-programmed movements via HTTP API with V3 dual-leg independent control.
 
 ## Features
 
 - **Servo Control V3**: Dual-leg independent control with improved servo management
-- **57+ Pre-programmed Movements**: From basic locomotion to complex choreography
+- **19 Pre-programmed Movements**: From basic locomotion to complex choreography
 - **Movement Registry**: Organized library of all available movements
-- **Camera Capture**: Auto-detects Pi Camera or USB webcam (1280x720 JPEG)
 - **HTTP API**: RESTful endpoints with OpenAPI documentation
-- **CORS Enabled**: Cross-origin requests supported for MacBook integration
-- **Minimal Footprint**: ~250MB dependencies (vs. 1.3GB with AI components)
+- **Real-time Calibration**: Servo Tester GUI for fine-tuning
 
-## Essential Tools
+## Quick Start
 
-### 1. TARS Control API (main.py)
-FastAPI HTTP server for robot control and camera capture
+### Start the Service
+
 ```bash
+# Option 1: Using startup script
+./start_movement_service.sh
+
+# Option 2: Manual start
+source venv/bin/activate
 python main.py
-# Access: http://localhost:8001
-# Docs: http://localhost:8001/docs
 ```
 
-### 2. Servo Tester GUI (app-servotester.py)
-Interactive servo calibration and movement testing tool - **CRITICAL for setup**
+The service will start on `http://0.0.0.0:8001`
+
+### Test Movement
+
 ```bash
-python src/app-servotester.py
+# Get available movements
+curl http://localhost:8001/movements
+
+# Execute a movement
+curl -X POST http://localhost:8001/move \
+  -H "Content-Type: application/json" \
+  -d '{"movements": ["step_forward"]}'
 ```
-
-**Features:**
-- Individual servo testing (channels 0-15)
-- Test all 57+ pre-programmed movements
-- Real-time calibration offset adjustment
-- Visual feedback for safe testing
-- Auto-saves calibration to config.ini
-
-**Use this for:**
-- Initial servo calibration after assembly
-- Testing movements before deploying API
-- Debugging servo issues
-- Fine-tuning movement performance
-
-### 3. Configuration Manager (app-cms.py) - Optional
-Synchronizes config.ini with config.ini.template
-```bash
-python src/app-cms.py
-```
-
-**Features:**
-- Compares config.ini with template
-- Adds new sections/fields from template updates
-- Preserves existing values (especially servo calibration!)
-- Creates backup before making changes
-- Shows preview of changes before applying
-
-**Use this when:**
-- Updating TARS software (git pull)
-- New configuration options are added to template
-- Need to restore missing config sections while preserving calibration
-
-**⚠️ IMPORTANT**: This tool preserves servo values - it does NOT recalibrate servos. Use app-servotester.py for calibration.
 
 ## Installation
 
@@ -127,7 +77,7 @@ python app-servotester.py
 
 The Servo Tester GUI provides:
 - **Individual Servo Testing**: Test each servo (0-15) independently
-- **Movement Testing**: Test all 57+ pre-programmed movements
+- **Movement Testing**: Test all 19 pre-programmed movements
 - **Calibration Adjustment**: Fine-tune offsets with real-time visual feedback
 - **Safe Limits**: Prevents setting values that could damage servos
 - **Auto-save**: Saves calibration values directly to config.ini
@@ -145,93 +95,9 @@ The Servo Tester GUI provides:
 6. Verify all movements execute smoothly
 7. Calibration saves automatically to config.ini
 
-## Usage
+## Movement API Endpoints
 
-### Start the Service
-
-#### Option 1: Using Startup Script
-
-```bash
-./start_movement_service.sh
-```
-
-#### Option 2: Manual Start
-
-```bash
-source venv/bin/activate
-python main.py
-```
-
-The service will start on `http://0.0.0.0:8001`
-
-### Test the Service
-
-```bash
-# Health check
-curl http://localhost:8001/health
-
-# Get available movements
-curl http://localhost:8001/movements
-
-# Execute a movement
-curl -X POST http://localhost:8001/move \
-  -H "Content-Type: application/json" \
-  -d '{"movements": ["step_forward"]}'
-```
-
-## API Endpoints
-
-### Service Endpoints
-
-#### `GET /`
-Root endpoint - service info
-
-**Response:**
-```json
-{
-  "service": "TARS Control System",
-  "version": "3.0.0",
-  "servo_controller": "V3",
-  "status": "running",
-  "camera_available": true,
-  "moving": false,
-  "arms_present": false,
-  "available_movements": 20
-}
-```
-
-#### `GET /health`
-Health check
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "moving": false,
-  "camera": true,
-  "arms_present": false
-}
-```
-
-#### `GET /state`
-Get current servo positions and movement state
-
-**Response:**
-```json
-{
-  "positions": {
-    "0": 350,
-    "1": 350,
-    "2": 300,
-    "3": 300
-  },
-  "moving": false,
-  "camera_running": true,
-  "arms_present": false
-}
-```
-
-#### `GET /movements`
+### `GET /movements`
 List all available movements
 
 **Response:**
@@ -239,25 +105,18 @@ List all available movements
 {
   "movements": {
     "step_forward": {
-      "display_name": "Step Forward",
-      "type": "legs_only",
-      "available": true
+      "display_name": "Step Forward"
     },
-    "right_hi": {
-      "display_name": "Right Hi",
-      "type": "has_arms",
-      "available": false
+    "turn_left": {
+      "display_name": "Turn Left"
     }
   },
-  "total": 57,
-  "legs_only": ["step_forward", "walk_forward", "turn_left", ...],
-  "requires_arms": ["right_hi", "left_hi", "monster", ...]
+  "total": 19,
+  "available": ["step_forward", "walk_forward", "turn_left", "bow", "pose", ...]
 }
 ```
 
-### Movement Endpoints
-
-#### `POST /move`
+### `POST /move`
 Execute a sequence of movements
 
 **Request:**
@@ -299,7 +158,7 @@ curl -X POST http://localhost:8001/move \
   -d '{"movements": ["step_forward", "step_forward", "bow"]}'
 ```
 
-#### `POST /move/legs`
+### `POST /move/legs`
 Manual leg control (advanced - for custom choreography)
 
 **Request:**
@@ -333,58 +192,18 @@ curl -X POST http://localhost:8001/move/legs \
   -d '{"left_height": 50, "right_height": 50, "left_leg": 50, "right_leg": 50, "speed": 0.8}'
 ```
 
-#### `POST /reset`
+### `POST /reset`
 Reset all servos to neutral position
 
 ```bash
 curl -X POST http://localhost:8001/reset
 ```
 
-#### `POST /disable`
+### `POST /disable`
 Disable all servos (power off)
 
 ```bash
 curl -X POST http://localhost:8001/disable
-```
-
-### Camera Endpoints
-
-#### `GET /camera/status`
-Get camera status
-
-**Response:**
-```json
-{
-  "available": true,
-  "running": true,
-  "camera_type": "picamera2"
-}
-```
-
-**Note:** `camera_type` can be `"picamera2"` (Pi Camera), `"opencv"` (USB webcam), or `null` (no camera available)
-
-#### `GET /camera/capture`
-Capture current camera frame as base64-encoded JPEG
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "image": "base64-encoded-jpeg-data...",
-  "format": "jpeg",
-  "width": 1280,
-  "height": 720
-}
-```
-
-**Example (save to file):**
-```bash
-curl http://localhost:8001/camera/capture | jq -r '.image' | base64 -d > frame.jpg
-```
-
-**Example (from MacBook):**
-```bash
-curl http://raspberrypi.local:8001/camera/capture | jq -r '.image' | base64 -d > frame.jpg
 ```
 
 ## Configuration
@@ -394,39 +213,80 @@ curl http://raspberrypi.local:8001/camera/capture | jq -r '.image' | base64 -d >
 The `[SERVO]` section uses the V3 format with separate left/right controls:
 
 **Key parameters:**
-- `arms_present`: Boolean - whether arms are installed
 - Left/right leg heights: `leftUpHeight`, `leftDownHeight`, `rightUpHeight`, `rightDownHeight`
 - Left/right leg positions: `forwardLeftLeg`, `backLeftLeg`, `forwardRightLeg`, `backRightLeg`
 - Calibration offsets: `perfectLeftHeightOffset`, `perfectRightHeightOffset`, etc.
-- Arm ranges (if arms_present): `leftMainMin`, `leftMainMax`, etc.
 
-### Camera Configuration
-
-The simplified camera module (`src/modules/module_camera.py`) automatically detects and uses available cameras:
-
-1. **Pi Camera** (preferred) - Uses picamera2 for Raspberry Pi Camera Module v2
-2. **USB Webcam** (fallback) - Uses OpenCV for standard USB webcams
-
-The module automatically tries Pi Camera first, then falls back to USB webcam if Pi Camera is not available. No manual configuration required - just connect your camera and the system will detect it.
-
-**Configuration in `src/config.ini`:**
+**Example V3 config:**
 ```ini
-[UI]
-use_camera_module = True  # Enable/disable camera in servo tester
+[SERVO]
+# Left leg
+leftUpHeight = 250
+leftDownHeight = 450
+forwardLeftLeg = 200
+backLeftLeg = 400
+perfectLeftHeightOffset = 0
+perfectLeftLegOffset = 0
+
+# Right leg
+rightUpHeight = 250
+rightDownHeight = 450
+forwardRightLeg = 200
+backRightLeg = 400
+perfectRightHeightOffset = 0
+perfectRightLegOffset = 0
 ```
 
-**Testing camera:**
+**⚠️ WARNING**: Do NOT manually edit these values. Use the Servo Tester GUI (`app-servotester.py`) for calibration.
+
+## Essential Tools
+
+### 1. Servo Tester GUI (app-servotester.py)
+Interactive servo calibration and movement testing tool - **CRITICAL for setup**
+
 ```bash
-python test_camera.py  # Captures test frames and saves as test_frame.jpg
+python src/app-servotester.py
 ```
+
+**Features:**
+- Individual servo testing (channels 0-15)
+- Test all 19 pre-programmed movements
+- Real-time calibration offset adjustment
+- Visual feedback for safe testing
+- Auto-saves calibration to config.ini
+
+**Use this for:**
+- Initial servo calibration after assembly
+- Testing movements before deploying API
+- Debugging servo issues
+- Fine-tuning movement performance
+
+### 2. Configuration Manager (app-cms.py) - Optional
+Synchronizes config.ini with config.ini.template
+
+```bash
+python src/app-cms.py
+```
+
+**Features:**
+- Compares config.ini with template
+- Adds new sections/fields from template updates
+- Preserves existing values (especially servo calibration!)
+- Creates backup before making changes
+- Shows preview of changes before applying
+
+**Use this when:**
+- Updating TARS software (git pull)
+- New configuration options are added to template
+- Need to restore missing config sections while preserving calibration
+
+**⚠️ IMPORTANT**: This tool preserves servo values - it does NOT recalibrate servos. Use app-servotester.py for calibration.
 
 ## Hardware Requirements
 
 - **Raspberry Pi 5** (4GB+ RAM recommended)
 - **PCA9685 PWM Driver** (I2C address 0x40)
-- **Servos**: 4x servos minimum (2 leg heights + 2 leg positions)
-  - Optional: 6x additional servos for arms (when arms_present=True)
-- **Camera**: Pi Camera Module v2 (preferred) or USB webcam (fallback)
+- **Servos**: 4x servos (2 leg heights + 2 leg positions)
 - **Power**: 12V battery with INA260 sensor (optional but recommended)
 - **Bluetooth Gamepad** (optional, for manual control)
 
@@ -444,7 +304,7 @@ python app-servotester.py
 
 **Features:**
 - Test individual servos (channels 0-15)
-- Test all 57+ pre-programmed movements
+- Test all 19 pre-programmed movements
 - Adjust calibration offsets in real-time
 - View servo positions and PWM values
 - Safe testing with visual feedback
@@ -452,9 +312,6 @@ python app-servotester.py
 ### API Testing
 
 ```bash
-# Health check
-curl http://localhost:8001/health
-
 # List all movements
 curl http://localhost:8001/movements
 
@@ -463,8 +320,13 @@ curl -X POST http://localhost:8001/move \
   -H "Content-Type: application/json" \
   -d '{"movements": ["step_forward"]}'
 
-# Capture camera frame
-curl http://localhost:8001/camera/capture | jq -r '.image' | base64 -d > frame.jpg
+# Test manual control
+curl -X POST http://localhost:8001/move/legs \
+  -H "Content-Type: application/json" \
+  -d '{"left_height": 50, "right_height": 50, "speed": 0.8}'
+
+# Reset to neutral
+curl -X POST http://localhost:8001/reset
 ```
 
 ## Troubleshooting
@@ -478,45 +340,65 @@ sudo i2cdetect -y 1
 # Should show device at 0x40 (PCA9685)
 ```
 
+**If PCA9685 not detected:**
+1. Check I2C is enabled: `sudo raspi-config` → Interface Options → I2C → Enable
+2. Check wiring: SDA to GPIO 2, SCL to GPIO 3, VCC to 3.3V, GND to GND
+3. Reboot: `sudo reboot`
+
 ### Servo Not Moving
 
 1. **Use Servo Tester GUI**: `python src/app-servotester.py`
 2. Test individual servos in "Servo Testing" tab
 3. Verify power supply is connected and charged
-4. Check servo wiring to PCA9685 channels
+4. Check servo wiring to PCA9685 channels:
+   - Channel 0: Left leg height
+   - Channel 1: Right leg height
+   - Channel 2: Left leg position
+   - Channel 3: Right leg position
 5. Verify calibration values in config.ini (via GUI)
 6. Test with manual commands: `curl -X POST http://localhost:8001/reset`
 
-### Camera Not Available
+**Common issues:**
+- **Servo jittering**: Adjust calibration offsets in Servo Tester GUI
+- **Limited range**: Check servo min/max values in config.ini
+- **No movement**: Verify power supply voltage (should be 12V)
+- **Erratic movement**: Check for loose wiring or weak battery
 
-The camera module tries Pi Camera first, then USB webcam. Check which camera type you're using:
+### Movement Not Working
 
-**For Pi Camera:**
-```bash
-# Check camera detection
-libcamera-hello --list-cameras
+1. Check if movement is available:
+   ```bash
+   curl http://localhost:8001/movements
+   ```
+2. Test movement in Servo Tester GUI first
+3. Check logs for error messages
+4. Ensure robot is not already in motion (only one movement at a time)
 
-# Test camera
-libcamera-hello -t 5000
-```
+### Calibration Issues
 
-**For USB Webcam:**
-```bash
-# List video devices
-ls -l /dev/video*
+**Servos not centering properly:**
+1. Use Servo Tester GUI offset adjustment sliders
+2. Test each servo individually
+3. Fine-tune until neutral position is correct
+4. Save and verify changes persist
 
-# Test with fswebcam
-fswebcam test.jpg
-```
+**Movements look wrong:**
+1. Re-calibrate all servos from scratch
+2. Verify servo channels are connected correctly
+3. Check for mechanical binding or obstruction
+4. Test with slower speeds first
 
-**Test with TARS camera module:**
-```bash
-python test_camera.py  # Should show which camera type is detected
-```
+## Safety Notes
 
-## Development
+- **Always test movements in a safe area with clearance**
+- Keep emergency stop accessible (Bluetooth controller or `POST /disable`)
+- Monitor battery voltage to prevent over-discharge
+- Calibrate servos carefully to avoid mechanical strain
+- Start with slow speeds when testing new movements
+- Never manually move servos while powered
+- Disconnect power before changing wiring
 
-### API Documentation
+## API Documentation
 
 FastAPI automatically generates interactive documentation:
 
@@ -525,41 +407,11 @@ FastAPI automatically generates interactive documentation:
 
 ## Dependencies
 
-See `requirements-minimal.txt` for the complete list. Key dependencies:
+Movement control dependencies (from `requirements.txt`):
 
 - **Servo Control**: adafruit-circuitpython-pca9685, lgpio
-- **Camera**: picamera2, opencv-python
 - **API**: fastapi, uvicorn
-- **Audio**: pygame (for basic beeps/sounds)
 - **Input**: evdev (for Bluetooth gamepad)
-
-**Total size**: ~250MB (vs. 1.3GB with AI dependencies)
-
-## Rollback to Full AI Version
-
-If you need to restore the original AI-enabled version:
-
-```bash
-# Restore files from git
-git checkout HEAD -- src/modules/
-git checkout HEAD -- src/config.ini
-
-# Reinstall full dependencies
-pip install -r requirements.txt
-
-# Start original app
-python src/app.py
-```
-
-All removed AI modules are preserved in git history.
-
-## Safety Notes
-
-- Always test movements in a safe area with clearance
-- Keep emergency stop accessible (Bluetooth controller or `POST /disable`)
-- Monitor battery voltage to prevent over-discharge
-- Calibrate servos carefully to avoid mechanical strain
-- Start with slow speeds when testing new movements
 
 ## License
 
