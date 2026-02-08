@@ -21,7 +21,7 @@ FastAPI-based control system for servo control and camera capture on Raspberry P
 │  ┌───────────────────────────────────┐  │
 │  │  FastAPI Server (port 8001)       │  │
 │  │  ├── Servo Control (PCA9685)      │  │
-│  │  ├── Camera Capture (Picamera2)   │  │
+│  │  ├── Camera (Pi/USB Auto-detect)  │  │
 │  │  ├── Movement Registry (57+)      │  │
 │  │  └── Movement Endpoints           │  │
 │  └───────────────────────────────────┘  │
@@ -33,7 +33,7 @@ FastAPI-based control system for servo control and camera capture on Raspberry P
 - **Servo Control V3**: Dual-leg independent control with improved servo management
 - **57+ Pre-programmed Movements**: From basic locomotion to complex choreography
 - **Movement Registry**: Organized library of all available movements
-- **Camera Capture**: Real-time frame capture from Raspberry Pi Camera Module v2 (1280x720 JPEG)
+- **Camera Capture**: Auto-detects Pi Camera or USB webcam (1280x720 JPEG)
 - **HTTP API**: RESTful endpoints with OpenAPI documentation
 - **CORS Enabled**: Cross-origin requests supported for MacBook integration
 - **Minimal Footprint**: ~250MB dependencies (vs. 1.3GB with AI components)
@@ -357,9 +357,11 @@ Get camera status
 {
   "available": true,
   "running": true,
-  "first_frame_captured": true
+  "camera_type": "picamera2"
 }
 ```
+
+**Note:** `camera_type` can be `"picamera2"` (Pi Camera), `"opencv"` (USB webcam), or `null` (no camera available)
 
 #### `GET /camera/capture`
 Capture current camera frame as base64-encoded JPEG
@@ -398,15 +400,24 @@ The `[SERVO]` section uses the V3 format with separate left/right controls:
 - Calibration offsets: `perfectLeftHeightOffset`, `perfectRightHeightOffset`, etc.
 - Arm ranges (if arms_present): `leftMainMin`, `leftMainMax`, etc.
 
-### Camera Configuration (`src/config.ini`)
+### Camera Configuration
 
-The `[UI]` section controls camera settings:
+The simplified camera module (`src/modules/module_camera.py`) automatically detects and uses available cameras:
 
+1. **Pi Camera** (preferred) - Uses picamera2 for Raspberry Pi Camera Module v2
+2. **USB Webcam** (fallback) - Uses OpenCV for standard USB webcams
+
+The module automatically tries Pi Camera first, then falls back to USB webcam if Pi Camera is not available. No manual configuration required - just connect your camera and the system will detect it.
+
+**Configuration in `src/config.ini`:**
 ```ini
 [UI]
-use_camera_module = True  # Enable/disable camera
-rotation = 270            # Camera rotation (0, 90, 180, 270)
-target_fps = 30           # Frame rate
+use_camera_module = True  # Enable/disable camera in servo tester
+```
+
+**Testing camera:**
+```bash
+python test_camera.py  # Captures test frames and saves as test_frame.jpg
 ```
 
 ## Hardware Requirements
@@ -415,7 +426,7 @@ target_fps = 30           # Frame rate
 - **PCA9685 PWM Driver** (I2C address 0x40)
 - **Servos**: 4x servos minimum (2 leg heights + 2 leg positions)
   - Optional: 6x additional servos for arms (when arms_present=True)
-- **Camera**: Raspberry Pi Camera Module v2 or compatible
+- **Camera**: Pi Camera Module v2 (preferred) or USB webcam (fallback)
 - **Power**: 12V battery with INA260 sensor (optional but recommended)
 - **Bluetooth Gamepad** (optional, for manual control)
 
@@ -478,12 +489,29 @@ sudo i2cdetect -y 1
 
 ### Camera Not Available
 
+The camera module tries Pi Camera first, then USB webcam. Check which camera type you're using:
+
+**For Pi Camera:**
 ```bash
 # Check camera detection
 libcamera-hello --list-cameras
 
 # Test camera
 libcamera-hello -t 5000
+```
+
+**For USB Webcam:**
+```bash
+# List video devices
+ls -l /dev/video*
+
+# Test with fswebcam
+fswebcam test.jpg
+```
+
+**Test with TARS camera module:**
+```bash
+python test_camera.py  # Should show which camera type is detected
 ```
 
 ## Development
