@@ -15,12 +15,11 @@ Servo control system for TARS robot on Raspberry Pi 5. Provides 19 pre-programme
 ### Start the Service
 
 ```bash
-# Option 1: Using startup script
-./start_movement_service.sh
+# Using startup script
+./start.sh
 
-# Option 2: Manual start
-source venv/bin/activate
-python main.py
+# Or manually
+python tars_daemon.py
 ```
 
 The service will start on `http://0.0.0.0:8001`
