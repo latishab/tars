@@ -1,5 +1,6 @@
 """
-WebRTC client for connecting to MacBook's pipecat pipeline
+WebRTC client for connecting to host computer's pipecat pipeline
+(macOS/Windows/Linux)
 """
 
 import asyncio
@@ -22,7 +23,7 @@ from .audio_output import SpeakerOutput
 
 class WebRTCClient:
     """
-    WebRTC client that connects RPi to MacBook's pipecat pipeline.
+    WebRTC client that connects RPi to host computer's pipecat pipeline.
 
     Handles:
     - Audio capture from microphone
@@ -59,7 +60,7 @@ class WebRTCClient:
         return self._connected
 
     async def connect(self):
-        """Connect to MacBook's pipecat WebRTC endpoint"""
+        """Connect to host computer's pipecat WebRTC endpoint"""
         logger.info(f"Connecting to {self.signaling_url}...")
 
         # Create peer connection
@@ -76,7 +77,7 @@ class WebRTCClient:
         @self.pc.on("track")
         async def on_track(track):
             if track.kind == "audio":
-                logger.info("Receiving audio track from MacBook")
+                logger.info("Receiving audio track from host computer")
                 asyncio.create_task(self._handle_audio_track(track))
 
         # Handle data channel
@@ -206,7 +207,7 @@ class WebRTCClient:
         logger.info("WebRTC disconnected")
 
     def send_message(self, message_type: str, data: dict):
-        """Send message to MacBook via data channel"""
+        """Send message to host computer via data channel"""
         if not self.data_channel or self.data_channel.readyState != "open":
             logger.warning("Data channel not open - cannot send message")
             return

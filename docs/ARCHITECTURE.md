@@ -1,6 +1,6 @@
 # TARS Architecture v5
 
-**Distributed voice assistant**: RPi 5 handles hardware, MacBook handles AI processing.
+**Distributed voice assistant**: RPi 5 handles hardware, host computer (macOS/Windows/Linux) handles AI processing.
 
 ## System Diagram
 
@@ -9,7 +9,7 @@
 │                          NETWORK (Tailscale)                         │
 │                                                                      │
 │   ┌─────────────────────────┐         ┌──────────────────────────┐  │
-│   │   RPi 5 (:8001)         │ WebRTC  │   MacBook (:7860)        │  │
+│   │   RPi 5 (:8001)         │ WebRTC  │   Host Computer (:7860)        │  │
 │   │   tars_daemon.py        │◄───────►│   pipecat_service.py     │  │
 │   │                         │  Audio  │                          │  │
 │   │   - Mic capture ────────┼────────►│   - Deepgram STT        │  │
@@ -30,7 +30,7 @@
 User speaks
     │
     ▼
-RPi USB Mic ──► WebRTC Audio ──► MacBook Pipecat
+RPi USB Mic ──► WebRTC Audio ──► Host Computer Pipecat
                                       │
                                       ├─► STT (Deepgram)
                                       ├─► LLM (Qwen/GPT)
@@ -45,13 +45,13 @@ User hears TARS
 ## Data Channels
 
 ### WebRTC (Real-time Audio)
-- RPi → MacBook: Mic audio (16kHz mono PCM)
-- MacBook → RPi: TTS audio (24kHz mono PCM)
+- RPi → Host Computer: Mic audio (16kHz mono PCM)
+- Host Computer → RPi: TTS audio (24kHz mono PCM)
 - Data channel: Eye states, emotions, transcripts
 
 ### HTTP REST (Commands)
-- MacBook → RPi: Movement commands, vision requests
-- RPi → MacBook: Image captures, status updates
+- Host Computer → RPi: Movement commands, vision requests
+- RPi → Host Computer: Image captures, status updates
 
 ## Components
 
@@ -91,7 +91,7 @@ tars_daemon.py (single process)
     └── module_facetracking.py (face detection)
 ```
 
-### MacBook (tars-omni)
+### Host Computer (macOS/Windows/Linux) - tars-omni
 
 ```
 pipecat_service.py
@@ -110,12 +110,12 @@ pipecat_service.py
 
 ### RPi (`.env`)
 ```bash
-MACBOOK_URL=http://100.64.0.1:7860
+HOST_URL=http://100.64.0.1:7860
 API_PORT=8001
 DISPLAY_ENABLED=true
 ```
 
-### MacBook (`tars-omni/.env.local`)
+### Host Computer (macOS/Windows/Linux) - `tars-omni/.env.local`
 ```bash
 TARS_RPI_URL=http://100.64.0.2:8001
 DEEPGRAM_API_KEY=xxx
@@ -128,17 +128,18 @@ ELEVENLABS_API_KEY=xxx
 ### RPi
 ```bash
 # Run manually
-python tars_daemon.py --macbook http://100.64.0.1:7860
+python tars_daemon.py --host http://100.64.0.1:7860
 
 # Or with start.sh
-./start.sh --macbook http://100.64.0.1:7860
+./start.sh --host http://100.64.0.1:7860
 
 # Or as service
 sudo systemctl start tars
 ```
 
-### MacBook
+### Host Computer (macOS/Windows/Linux)
 ```bash
+cd tars-omni
 npm run dev:backend  # Starts on :7860
 ```
 

@@ -1,6 +1,6 @@
 """
 Speaker audio output for WebRTC
-Plays TTS audio received from MacBook through USB soundcard
+Plays TTS audio received from host computer through USB soundcard
 """
 
 import queue

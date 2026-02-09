@@ -30,15 +30,15 @@ if [ -f ".env" ]; then
 fi
 
 # Default values
-MACBOOK_URL=${MACBOOK_URL:-""}
+HOST_URL=${HOST_URL:-""}
 API_PORT=${API_PORT:-8001}
 DISPLAY_ENABLED=${DISPLAY_ENABLED:-true}
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --macbook|-m)
-            MACBOOK_URL="$2"
+        --host|-m)
+            HOST_URL="$2"
             shift 2
             ;;
         --port|-p)
@@ -53,7 +53,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --macbook, -m URL     MacBook URL for WebRTC (e.g., http://100.64.0.1:7860)"
+            echo "  --host, -H URL        Host computer URL for WebRTC (e.g., http://100.64.0.1:7860)"
             echo "  --port, -p PORT       REST API port (default: 8001)"
             echo "  --no-display          Disable display (headless mode)"
             echo "  --help, -h            Show this help message"
@@ -70,9 +70,9 @@ done
 # Build command
 CMD="python tars_daemon.py --port $API_PORT"
 
-if [ -n "$MACBOOK_URL" ]; then
-    CMD="$CMD --macbook $MACBOOK_URL"
-    echo "MacBook URL: $MACBOOK_URL"
+if [ -n "$HOST_URL" ]; then
+    CMD="$CMD --host $HOST_URL"
+    echo "Host Computer: $HOST_URL"
 fi
 
 if [ "$DISPLAY_ENABLED" = "false" ]; then

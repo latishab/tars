@@ -39,7 +39,7 @@ websockets==12.0
 pydantic==2.6.1
 
 # ============================================
-# WebRTC (for MacBook connection)
+# WebRTC (for Host Computer connection)
 # ============================================
 aiortc==1.6.0
 aiohttp==3.9.1

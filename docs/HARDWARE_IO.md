@@ -87,7 +87,7 @@ Capture current camera frame as base64-encoded JPEG
 curl http://localhost:8001/camera/capture | jq -r '.image' | base64 -d > frame.jpg
 ```
 
-**Example (from MacBook via Tailscale):**
+**Example (from host computer via Tailscale):**
 ```bash
 curl http://raspberrypi.local:8001/camera/capture | jq -r '.image' | base64 -d > frame.jpg
 ```
@@ -120,7 +120,7 @@ WebSocket endpoint for bidirectional audio streaming
 
 **Usage:**
 - Connect to `ws://localhost:8001/audio/stream`
-- Send audio bytes from MacBook (TTS output)
+- Send audio bytes from host computer (TTS output)
 - Receive audio bytes from RPi (microphone input)
 
 **Example (Python client):**

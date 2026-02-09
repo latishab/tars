@@ -8,7 +8,7 @@
 > 👉 **https://github.com/TARS-AI-Community/TARS-AI**
 >
 > This fork splits TARS into a dual-machine setup:
-> - **MacBook (tars-omni)**: Handles all AI processing (STT, TTS, LLM, Vision)
+> - **Host Computer (macOS/Windows/Linux)**: Handles all AI processing (STT, TTS, LLM, Vision)
 > - **Raspberry Pi 5**: Handles all hardware I/O (servos, camera, audio)
 
 ---
@@ -16,7 +16,7 @@
 ## Architecture Overview
 
 ```
-MacBook (tars-omni)                       RPi 5 (tars)
+Host Computer (tars-omni)                       RPi 5 (tars)
 ┌──────────────────────┐                  ┌──────────────────────┐
 │ AI PROCESSING ONLY   │                  │ ALL HARDWARE I/O     │
 │                      │                  │                      │
@@ -61,7 +61,7 @@ MacBook (tars-omni)                       RPi 5 (tars)
 Run the unified daemon:
 
 ```bash
-python tars_daemon.py --macbook http://100.64.0.1:7860
+python tars_daemon.py --host http://100.64.0.1:7860
 ```
 
 See **[docs/DAEMON.md](./docs/DAEMON.md)** for full setup guide
