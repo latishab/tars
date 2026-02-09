@@ -34,6 +34,7 @@ from modules.module_servoctl import (
 )
 from modules.module_camera import CameraModule
 from modules.module_audio import AudioModule
+from display_manager import DisplayManager
 
 app = FastAPI(title="TARS Hardware Service", version="1.0.0")
 
@@ -47,10 +48,11 @@ app.add_middleware(
 # Initialize hardware modules
 camera: Optional[CameraModule] = None
 audio: Optional[AudioModule] = None
+display: Optional[DisplayManager] = None
 
 @app.on_event("startup")
 async def startup():
-    global camera, audio
+    global camera, audio, display
 
     # Initialize camera
     try:
@@ -66,13 +68,23 @@ async def startup():
     except Exception as e:
         print(f"Audio not available: {e}")
 
+    # Initialize display
+    try:
+        display = DisplayManager(width=800, height=480)
+        display.start()
+        print("Display initialized")
+    except Exception as e:
+        print(f"Display not available: {e}")
+
 @app.on_event("shutdown")
 async def shutdown():
-    global camera, audio
+    global camera, audio, display
     if camera:
         camera.close()
     if audio:
         audio.close()
+    if display:
+        display.stop()
 
 
 # ============== Status Endpoints ==============
@@ -87,6 +99,7 @@ def root():
             "servos": True,
             "camera": camera is not None,
             "audio": audio is not None,
+            "display": display is not None,
             "moving": MOVING
         }
     }
@@ -97,7 +110,8 @@ def health():
         "status": "ok",
         "moving": MOVING,
         "camera": camera is not None,
-        "audio": audio is not None
+        "audio": audio is not None,
+        "display": display is not None
     }
 
 
@@ -280,6 +294,97 @@ def audio_status():
         "playing": audio.is_playing,
         "device": audio.get_device_info()
     }
+
+
+# ============== Display Endpoints ==============
+
+@app.post("/display/mode")
+def set_display_mode(request: dict):
+    if display is None:
+        raise HTTPException(503, "Display not available")
+    mode = request.get("mode", "eyes")
+    display.set_mode(mode)
+    return {"status": "ok", "mode": mode}
+
+
+@app.post("/eyes/state")
+def set_eye_state(request: dict):
+    if display is None:
+        raise HTTPException(503, "Display not available")
+    state = request.get("state", "idle")
+    display.set_eye_state(state)
+    return {"status": "ok", "state": state}
+
+
+@app.post("/eyes/emotion")
+def set_emotion(request: dict):
+    if display is None:
+        raise HTTPException(503, "Display not available")
+    emotion = request.get("emotion", "default")
+    display.set_emotion(emotion)
+    return {"status": "ok", "emotion": emotion}
+
+
+@app.post("/eyes/look")
+def set_look(request: dict):
+    if display is None:
+        raise HTTPException(503, "Display not available")
+    x = request.get("x", 0)
+    y = request.get("y", 0)
+    display.set_look(x, y)
+    return {"status": "ok"}
+
+
+@app.post("/eyes/blink")
+def trigger_blink():
+    if display is None:
+        raise HTTPException(503, "Display not available")
+    display.blink()
+    return {"status": "ok"}
+
+
+@app.post("/eyes/animation")
+def play_animation(request: dict):
+    if display is None:
+        raise HTTPException(503, "Display not available")
+    animation = request.get("animation", "")
+    display.play_animation(animation)
+    return {"status": "ok"}
+
+
+@app.post("/display/audio")
+def set_audio_level(request: dict):
+    if display is None:
+        raise HTTPException(503, "Display not available")
+    level = request.get("level", 0)
+    source = request.get("source", "none")
+    display.set_audio_level(level, source)
+    return {"status": "ok"}
+
+
+@app.post("/eyes/face")
+def set_face_position(request: dict):
+    if display is None:
+        raise HTTPException(503, "Display not available")
+
+    detected = request.get("detected", False)
+    if detected:
+        x = request.get("x", 0)
+        y = request.get("y", 0)
+        w = request.get("width", 640)
+        h = request.get("height", 480)
+        display.set_face_position(x, y, w, h, True)
+    else:
+        display.set_face_position(0, 0, 1, 1, False)
+
+    return {"status": "ok"}
+
+
+@app.get("/display/status")
+def get_display_status():
+    if display is None:
+        return {"available": False}
+    return {"available": True, **display.get_status()}
 
 
 if __name__ == "__main__":
