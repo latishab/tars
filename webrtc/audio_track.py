@@ -1,6 +1,6 @@
 """
 Microphone audio track for WebRTC
-Captures audio from USB soundcard and streams to MacBook
+Captures audio from USB soundcard and streams to host computer
 """
 
 import asyncio

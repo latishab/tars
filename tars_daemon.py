@@ -99,7 +99,7 @@ class TARSDaemon:
     Unified daemon for TARS robot.
 
     Manages:
-    - WebRTC connection to MacBook (audio streaming)
+    - WebRTC connection to host computer (audio streaming)
     - REST API for hardware control
     - Display (eyes, spectrum)
     - Hardware (servos, camera) via existing modules
@@ -107,12 +107,12 @@ class TARSDaemon:
 
     def __init__(
         self,
-        macbook_url: Optional[str] = None,
+        host_url: Optional[str] = None,
         api_port: int = 8001,
         display_enabled: bool = True,
         face_tracking_enabled: bool = False,
     ):
-        self.macbook_url = macbook_url
+        self.host_url = host_url
         self.api_port = api_port
         self.display_enabled = display_enabled
         self.face_tracking_enabled = face_tracking_enabled
@@ -445,16 +445,16 @@ class TARSDaemon:
                 logger.warning(f"✗ Battery monitoring not available: {e}")
                 self.battery = None
 
-        # Connect WebRTC to MacBook
-        if self.macbook_url and WEBRTC_AVAILABLE:
+        # Connect WebRTC to host computer
+        if self.host_url and WEBRTC_AVAILABLE:
             try:
                 self.webrtc = WebRTCClient(
-                    signaling_url=self.macbook_url,
+                    signaling_url=self.host_url,
                     on_state_change=self._on_state_change,
                     on_emotion=self._on_emotion,
                 )
                 await self.webrtc.connect()
-                logger.info(f"✓ WebRTC connected to {self.macbook_url}")
+                logger.info(f"✓ WebRTC connected to host: {self.host_url}")
             except Exception as e:
                 logger.warning(f"✗ WebRTC connection failed: {e}")
                 logger.info("  Running in standalone mode (REST API only)")
@@ -488,7 +488,7 @@ class TARSDaemon:
         logger.info(f"  REST API: http://0.0.0.0:{self.api_port}")
         logger.info(f"  Docs:     http://0.0.0.0:{self.api_port}/docs")
         if self.webrtc and self.webrtc.is_connected:
-            logger.info(f"  WebRTC:   Connected to {self.macbook_url}")
+            logger.info(f"  WebRTC:   Connected to host {self.host_url}")
         if self.face_tracker:
             logger.info(f"  Tracking: Face tracking enabled")
         logger.info("=" * 60)
@@ -578,9 +578,9 @@ def main():
 
     parser = argparse.ArgumentParser(description="TARS Unified Daemon")
     parser.add_argument(
-        "--macbook", "-m",
+        "--host", "-m",
         type=str,
-        help="MacBook URL for WebRTC (e.g., http://100.64.0.1:7860)"
+        help="Host computer URL for WebRTC (e.g., http://100.64.0.1:7860)"
     )
     parser.add_argument(
         "--port", "-p",
@@ -609,7 +609,7 @@ def main():
     )
 
     daemon = TARSDaemon(
-        macbook_url=args.macbook,
+        host_url=args.host,
         api_port=args.port,
         display_enabled=not args.no_display,
         face_tracking_enabled=args.face_tracking,

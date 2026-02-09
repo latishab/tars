@@ -10,13 +10,13 @@ pip install -r requirements.txt
 
 # Configure
 cp .env.example .env
-nano .env  # Set MACBOOK_URL
+nano .env  # Set HOST_URL
 
 # Run
-python tars_daemon.py --macbook http://100.64.0.1:7860
+python tars_daemon.py --host http://100.64.0.1:7860
 
 # Or use start script
-./start.sh --macbook http://100.64.0.1:7860
+./start.sh --host http://100.64.0.1:7860
 ```
 
 ## Architecture
@@ -60,9 +60,9 @@ Start Daemon
     │
     ├─► Start REST API (:8001)
     │
-    └─► Connect WebRTC (if --macbook specified)
+    └─► Connect WebRTC (if --host specified)
         │
-        ├─► POST /api/offer to MacBook
+        ├─► POST /api/offer to Host Computer
         ├─► Receive SDP answer
         ├─► Establish P2P connection
         │
@@ -76,7 +76,7 @@ Start Daemon
 ```bash
 python tars_daemon.py [OPTIONS]
 
---macbook URL       MacBook URL for WebRTC (http://100.64.0.1:7860)
+--host URL       Host Computer URL for WebRTC (http://100.64.0.1:7860)
 --port PORT         REST API port (default: 8001)
 --no-display        Headless mode (no pygame window)
 --face-tracking     Enable face tracking with eyes
@@ -86,8 +86,8 @@ python tars_daemon.py [OPTIONS]
 ## Configuration (`.env`)
 
 ```bash
-# MacBook (Tailscale recommended)
-MACBOOK_URL=http://100.64.0.1:7860
+# Host Computer (Tailscale recommended)
+HOST_URL=http://100.64.0.1:7860
 
 # API
 API_PORT=8001
@@ -132,8 +132,8 @@ journalctl -u tars -f           # View logs
 ## Features
 
 ### WebRTC Audio Streaming
-- Mic → MacBook: 16kHz mono PCM
-- MacBook → Speaker: 24kHz mono PCM
+- Mic → Host Computer: 16kHz mono PCM
+- Host Computer → Speaker: 24kHz mono PCM
 - Auto-reconnect on failure
 
 ### REST API
@@ -177,7 +177,7 @@ python tars_daemon.py
 
 ### WebRTC connection failed
 ```bash
-# Check MacBook service
+# Check Host Computer service
 curl http://100.64.0.1:7860/health
 
 # Test connectivity
@@ -268,7 +268,7 @@ The unified daemon provides:
 
 ```bash
 # Run in foreground with logs
-python tars_daemon.py --macbook http://100.64.0.1:7860
+python tars_daemon.py --host http://100.64.0.1:7860
 
 # Test REST API
 curl http://localhost:8001/health
@@ -286,8 +286,8 @@ journalctl -u tars -f
 ## Next Steps
 
 1. **Test locally**: Run daemon without WebRTC
-2. **Setup MacBook**: Start tars-omni pipecat service
-3. **Connect**: Run with `--macbook` flag
+2. **Setup Host Computer**: Start tars-omni pipecat service
+3. **Connect**: Run with `--host` flag
 4. **Install service**: Setup systemd for auto-start
 5. **Configure Tailscale**: For remote access
 

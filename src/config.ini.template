@@ -13,7 +13,7 @@ controller_name = 8BitDo
 enabled = False
 # Enable or disable Bluetooth controller input
 voicemovement = False
-# Enable or disable movement via voice control (requires AI integration on MacBook)
+# Enable or disable movement via voice control 
 swap_turn_directions = False
 # Swap left/right turn directions if controller feels inverted
 invert_y = False
