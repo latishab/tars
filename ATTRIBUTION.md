@@ -17,13 +17,17 @@ As we continue to build and expand the TARS project, below are the guidelines fo
 
 ## Specific Guidelines for CAD, STL, Scripts, and Modules
 
-- The original CAD files and scripts are provided by Charlie Diaz.  
-- If you modify or extend these files:  
-  - Credit Charlie Diaz as the original creator.  
-  - Clearly specify your contributions or modifications.  
+- The original CAD files and scripts are provided by Charlie Diaz.
+- If you modify or extend these files:
+  - Credit Charlie Diaz as the original creator.
+  - Clearly specify your contributions or modifications.
 
-- Files authored or significantly modified by Charles-Olivier Dion (AtomikSpace) are **dual-licensed**:  
-  - Free for non-commercial use under CC-BY-NC 4.0.  
+- Files authored or significantly modified by Charles-Olivier Dion (AtomikSpace) are **dual-licensed**:
+  - Free for non-commercial use under CC-BY-NC 4.0.
+
+- Distributed architecture design and implementation contributed by Latisha Besariani Hendra:
+  - Unified daemon architecture (`tars_daemon.py`)
+  - WebRTC audio streaming implementation (`webrtc/`)
 
 ---
 
