@@ -35,6 +35,9 @@ class DisplayState:
     face_detected: bool = False
     face_x: float = 0.0
     face_y: float = 0.0
+    battery_percentage: Optional[float] = None
+    battery_voltage: Optional[float] = None
+    battery_charging: bool = False
 
 
 class DisplayManager:
@@ -145,6 +148,15 @@ class DisplayManager:
                 self.state.face_y = look_y
                 self.eyes.set_look(look_x, look_y)
 
+    # ========== Battery ==========
+
+    def set_battery_status(self, percentage: float, voltage: float, charging: bool):
+        """Update battery status for display"""
+        with self._lock:
+            self.state.battery_percentage = percentage
+            self.state.battery_voltage = voltage
+            self.state.battery_charging = charging
+
     # ========== Main Loop ==========
 
     def _run(self):
@@ -196,10 +208,62 @@ class DisplayManager:
                     self.spectrum.update(dt)
                     self.spectrum.draw(screen)
 
+                # Draw battery indicator (always on top)
+                self._draw_battery_indicator(screen)
+
             pygame.display.flip()
             clock.tick(60)
 
         pygame.quit()
+
+    def _draw_battery_indicator(self, screen: pygame.Surface):
+        """Draw battery status in top-right corner"""
+        if self.state.battery_percentage is None:
+            return
+
+        # Position: top-right with margin
+        margin = 15
+        width = 60
+        height = 25
+        x = self.width - width - margin
+        y = margin
+
+        # Battery percentage
+        percentage = max(0, min(100, self.state.battery_percentage))
+
+        # Colors based on charge level
+        if self.state.battery_charging:
+            color = (100, 200, 100)  # Green when charging
+        elif percentage > 50:
+            color = (100, 200, 100)  # Green
+        elif percentage > 20:
+            color = (255, 200, 0)    # Yellow
+        else:
+            color = (255, 50, 50)    # Red
+
+        # Draw battery outline
+        pygame.draw.rect(screen, (200, 200, 200), (x, y, width, height), 2)
+
+        # Draw battery terminal (little nub on right)
+        pygame.draw.rect(screen, (200, 200, 200), (x + width, y + 7, 3, 11))
+
+        # Draw fill level
+        fill_width = int((width - 4) * (percentage / 100))
+        if fill_width > 0:
+            pygame.draw.rect(screen, color, (x + 2, y + 2, fill_width, height - 4))
+
+        # Draw percentage text
+        font = pygame.font.Font(None, 18)
+        text = f"{int(percentage)}%"
+        text_surface = font.render(text, True, (255, 255, 255))
+        text_rect = text_surface.get_rect(center=(x + width // 2, y + height // 2))
+        screen.blit(text_surface, text_rect)
+
+        # Draw charging indicator if charging
+        if self.state.battery_charging:
+            bolt_font = pygame.font.Font(None, 20)
+            bolt = bolt_font.render("⚡", True, (255, 255, 100))
+            screen.blit(bolt, (x - 15, y + 2))
 
     def get_status(self) -> dict:
         """Get current display status"""
@@ -210,5 +274,7 @@ class DisplayManager:
                 "emotion": self.state.emotion,
                 "audio_level": self.state.audio_level,
                 "audio_source": self.state.audio_source,
-                "face_detected": self.state.face_detected
+                "face_detected": self.state.face_detected,
+                "battery_percentage": self.state.battery_percentage,
+                "battery_charging": self.state.battery_charging
             }

@@ -55,12 +55,28 @@ MacBook (tars-omni)                       RPi 5 (tars)
 - **19 pre-programmed movements** for servo control
 - **Camera capture endpoints** (Pi Camera or USB webcam)
 - **Audio I/O endpoints** (USB soundcard)
-- **Minimal footprint**: ~250MB dependencies (AI processing moved to MacBook)
+
+## Quick Start
+
+Run the unified daemon:
+
+```bash
+python tars_daemon.py --macbook http://100.64.0.1:7860
+```
+
+See **[docs/DAEMON.md](./docs/DAEMON.md)** for full setup guide
 
 ## Documentation
 
+**User Guides:**
+- **[DAEMON.md](./docs/DAEMON.md)** - Getting started with unified daemon
+
+**API Reference:**
 - **[MOVEMENTS.md](./docs/MOVEMENTS.md)** - Servo control and movement API
-- **[HARDWARE_IO.md](./docs/HARDWARE_IO.md)** - Camera, audio, and system status API
+- **[HARDWARE_IO.md](./docs/HARDWARE_IO.md)** - Camera and audio API
+
+**Architecture & Design:**
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System architecture (v5)
 
 ---
 
