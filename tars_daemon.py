@@ -58,13 +58,13 @@ except ImportError:
     DISPLAY_AVAILABLE = False
     logger.warning("Display manager not available")
 
-# Import WebRTC client
+# Import WebRTC server
 try:
-    from webrtc.client import WebRTCClient
+    from webrtc.server import WebRTCServer
     WEBRTC_AVAILABLE = True
 except ImportError:
     WEBRTC_AVAILABLE = False
-    logger.warning("WebRTC client not available")
+    logger.warning("WebRTC server not available")
 
 # Import face tracking
 try:
@@ -107,18 +107,18 @@ class TARSDaemon:
 
     def __init__(
         self,
-        host_url: Optional[str] = None,
         api_port: int = 8001,
         display_enabled: bool = True,
         face_tracking_enabled: bool = False,
+        webrtc_enabled: bool = True,
     ):
-        self.host_url = host_url
         self.api_port = api_port
         self.display_enabled = display_enabled
         self.face_tracking_enabled = face_tracking_enabled
+        self.webrtc_enabled = webrtc_enabled
 
         # Components (initialized in startup)
-        self.webrtc: Optional[WebRTCClient] = None
+        self.webrtc: Optional[WebRTCServer] = None
         self.display: Optional[DisplayManager] = None
         self.camera: Optional[CameraModule] = None
         self.audio: Optional[AudioModule] = None
@@ -202,6 +202,27 @@ class TARSDaemon:
         class AnimationRequest(BaseModel):
             animation: str
 
+        # === WebRTC Signaling ===
+        class OfferRequest(BaseModel):
+            sdp: str
+            type: str
+
+        @app.post("/api/offer")
+        async def handle_webrtc_offer(request: OfferRequest):
+            """
+            WebRTC signaling endpoint.
+            MacBook sends SDP offer, RPi responds with SDP answer.
+            """
+            if not self.webrtc:
+                raise HTTPException(503, "WebRTC server not available")
+
+            try:
+                answer = await self.webrtc.handle_offer(request.sdp, request.type)
+                return answer
+            except Exception as e:
+                logger.error(f"Failed to handle WebRTC offer: {e}")
+                raise HTTPException(500, f"WebRTC offer failed: {str(e)}")
+
         # === Health ===
         @app.get("/")
         @app.get("/health")
@@ -220,6 +241,7 @@ class TARSDaemon:
                 },
                 "webrtc": {
                     "available": WEBRTC_AVAILABLE,
+                    "enabled": self.webrtc_enabled,
                     "connected": self.webrtc.is_connected if self.webrtc else False,
                 },
                 "battery": self.battery.get_battery_status() if self.battery else {"available": False}
@@ -445,18 +467,19 @@ class TARSDaemon:
                 logger.warning(f"✗ Battery monitoring not available: {e}")
                 self.battery = None
 
-        # Connect WebRTC to host computer
-        if self.host_url and WEBRTC_AVAILABLE:
+        # Start WebRTC server (waits for MacBook to connect)
+        if self.webrtc_enabled and WEBRTC_AVAILABLE:
             try:
-                self.webrtc = WebRTCClient(
-                    signaling_url=self.host_url,
+                self.webrtc = WebRTCServer(
                     on_state_change=self._on_state_change,
                     on_emotion=self._on_emotion,
+                    on_connected=self._on_webrtc_connected,
+                    on_disconnected=self._on_webrtc_disconnected,
                 )
-                await self.webrtc.connect()
-                logger.info(f"✓ WebRTC connected to host: {self.host_url}")
+                await self.webrtc.start()
+                logger.info("✓ WebRTC server started (waiting for AI brain connection)")
             except Exception as e:
-                logger.warning(f"✗ WebRTC connection failed: {e}")
+                logger.warning(f"✗ WebRTC server failed to start: {e}")
                 logger.info("  Running in standalone mode (REST API only)")
 
         # Start face tracking
@@ -485,12 +508,12 @@ class TARSDaemon:
         self._running = True
         logger.info("=" * 60)
         logger.info("TARS Daemon ready")
-        logger.info(f"  REST API: http://0.0.0.0:{self.api_port}")
-        logger.info(f"  Docs:     http://0.0.0.0:{self.api_port}/docs")
-        if self.webrtc and self.webrtc.is_connected:
-            logger.info(f"  WebRTC:   Connected to host {self.host_url}")
+        logger.info(f"  REST API:     http://0.0.0.0:{self.api_port}")
+        logger.info(f"  Docs:         http://0.0.0.0:{self.api_port}/docs")
+        if self.webrtc:
+            logger.info(f"  WebRTC:       Waiting for AI brain (POST /api/offer)")
         if self.face_tracker:
-            logger.info(f"  Tracking: Face tracking enabled")
+            logger.info(f"  Tracking:     Face tracking enabled")
         logger.info("=" * 60)
 
     async def _shutdown(self):
@@ -503,7 +526,7 @@ class TARSDaemon:
         if self.battery:
             self.battery.stop()
         if self.webrtc:
-            await self.webrtc.disconnect()
+            await self.webrtc.stop()
         if self.display:
             self.display.stop()
         if self.camera:
@@ -527,6 +550,20 @@ class TARSDaemon:
         logger.debug(f"Emotion change: {emotion}")
         if self.display:
             self.display.set_emotion(emotion)
+
+    def _on_webrtc_connected(self):
+        """Handle WebRTC connection established"""
+        logger.info("AI brain connected via WebRTC")
+        if self.display:
+            # Show connected status on display
+            self.display.set_eye_state("idle")
+
+    def _on_webrtc_disconnected(self):
+        """Handle WebRTC disconnection"""
+        logger.info("AI brain disconnected")
+        if self.display:
+            # Show waiting status on display
+            self.display.set_eye_state("idle")
 
     # === Callbacks from face tracking ===
 
@@ -578,11 +615,6 @@ def main():
 
     parser = argparse.ArgumentParser(description="TARS Unified Daemon")
     parser.add_argument(
-        "--host", "-m",
-        type=str,
-        help="Host computer URL for WebRTC (e.g., http://100.64.0.1:7860)"
-    )
-    parser.add_argument(
         "--port", "-p",
         type=int,
         default=8001,
@@ -592,6 +624,11 @@ def main():
         "--no-display",
         action="store_true",
         help="Disable display (for headless operation)"
+    )
+    parser.add_argument(
+        "--no-webrtc",
+        action="store_true",
+        help="Disable WebRTC server (REST API only)"
     )
     parser.add_argument(
         "--face-tracking",
@@ -609,9 +646,9 @@ def main():
     )
 
     daemon = TARSDaemon(
-        host_url=args.host,
         api_port=args.port,
         display_enabled=not args.no_display,
+        webrtc_enabled=not args.no_webrtc,
         face_tracking_enabled=args.face_tracking,
     )
 

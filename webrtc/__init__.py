@@ -1,8 +1,10 @@
 """
-WebRTC client for TARS
-Connects RPi to host computer's pipecat pipeline for real-time audio streaming
+WebRTC for TARS
+- Server: RPi waits for connections (new architecture)
+- Client: RPi connects to host (legacy, for backward compatibility)
 """
 
 from .client import WebRTCClient
+from .server import WebRTCServer
 
-__all__ = ["WebRTCClient"]
+__all__ = ["WebRTCClient", "WebRTCServer"]

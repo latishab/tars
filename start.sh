@@ -30,17 +30,14 @@ if [ -f ".env" ]; then
 fi
 
 # Default values
-HOST_URL=${HOST_URL:-""}
 API_PORT=${API_PORT:-8001}
 DISPLAY_ENABLED=${DISPLAY_ENABLED:-true}
+WEBRTC_ENABLED=${WEBRTC_ENABLED:-true}
+FACE_TRACKING=${FACE_TRACKING:-false}
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --host|-m)
-            HOST_URL="$2"
-            shift 2
-            ;;
         --port|-p)
             API_PORT="$2"
             shift 2
@@ -49,13 +46,22 @@ while [[ $# -gt 0 ]]; do
             DISPLAY_ENABLED=false
             shift
             ;;
+        --no-webrtc)
+            WEBRTC_ENABLED=false
+            shift
+            ;;
+        --face-tracking)
+            FACE_TRACKING=true
+            shift
+            ;;
         --help|-h)
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --host, -H URL        Host computer URL for WebRTC (e.g., http://100.64.0.1:7860)"
             echo "  --port, -p PORT       REST API port (default: 8001)"
             echo "  --no-display          Disable display (headless mode)"
+            echo "  --no-webrtc           Disable WebRTC server (REST API only)"
+            echo "  --face-tracking       Enable face tracking with eyes"
             echo "  --help, -h            Show this help message"
             exit 0
             ;;
@@ -70,16 +76,23 @@ done
 # Build command
 CMD="python tars_daemon.py --port $API_PORT"
 
-if [ -n "$HOST_URL" ]; then
-    CMD="$CMD --host $HOST_URL"
-    echo "Host Computer: $HOST_URL"
-fi
-
 if [ "$DISPLAY_ENABLED" = "false" ]; then
     CMD="$CMD --no-display"
     echo "Display: disabled"
 else
     echo "Display: enabled"
+fi
+
+if [ "$WEBRTC_ENABLED" = "false" ]; then
+    CMD="$CMD --no-webrtc"
+    echo "WebRTC: disabled (REST API only)"
+else
+    echo "WebRTC: enabled (waiting for AI brain)"
+fi
+
+if [ "$FACE_TRACKING" = "true" ]; then
+    CMD="$CMD --face-tracking"
+    echo "Face Tracking: enabled"
 fi
 
 echo "API Port: $API_PORT"

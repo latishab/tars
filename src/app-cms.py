@@ -93,7 +93,7 @@ class TarsConfigManager:
 ║       ██    ██   ██ ██   ██      ██     ██      ██  ██  ██      ██    ║
 ║       ██    ██   ██ ██   ██ ███████      ██████ ██      ██ ███████    ║
 ║                                                                       ║
-║                 Configuration Management System V3                   ║
+║                 Configuration Management System V3                    ║
 ║                                                                       ║
 ║       Syncs config.ini with template while preserving settings        ║
 ║                                                                       ║
