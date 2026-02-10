@@ -1,6 +1,6 @@
-# TARS Unified Daemon
+# TARS Daemon
 
-**Single process** managing WebRTC audio, REST API, display, and hardware.
+Single process managing gRPC API, WebRTC audio, display, and hardware.
 
 ## Quick Start
 
@@ -8,15 +8,14 @@
 # Install dependencies
 pip install -r requirements.txt
 
-# Configure
-cp .env.example .env
-nano .env  # Set HOST_URL
+# Generate gRPC code
+./scripts/generate_grpc.sh
 
-# Run
-python tars_daemon.py --host http://100.64.0.1:7860
+# Run daemon
+python tars_daemon.py
 
-# Or use start script
-./start.sh --host http://100.64.0.1:7860
+# With options
+python tars_daemon.py --grpc-port 50051 --face-tracking
 ```
 
 ## Architecture
@@ -24,51 +23,32 @@ python tars_daemon.py --host http://100.64.0.1:7860
 ```
 tars_daemon.py (single process)
 │
-├─► WebRTC Client (aiortc)
-│   ├── Mic capture (16kHz)
-│   ├── Speaker output (24kHz)
-│   └── Data channel (state sync)
+├── gRPC Server (:50051)
+│   ├── Health, GetStatus
+│   ├── Move, Reset
+│   ├── SetEmotion, SetEyeState
+│   ├── CaptureCamera
+│   └── StreamBattery, StreamMovementStatus
 │
-├─► REST API (FastAPI :8001)
-│   ├── /move, /reset
-│   ├── /camera/capture
-│   ├── /display/*, /eyes/*
-│   └── /battery/status
+├── HTTP Server (:8001)
+│   ├── POST /api/offer (WebRTC signaling)
+│   └── GET /health
 │
-├─► Display Manager (Pygame thread)
+├── WebRTC Server (aiortc)
+│   ├── Mic track (16kHz)
+│   ├── Speaker track (24kHz)
+│   └── DataChannel (state sync)
+│
+├── Display Manager (Pygame thread)
 │   ├── Robot eyes (animated)
 │   ├── Audio spectrum bars
 │   └── Face tracking (optional)
 │
-└─► Hardware Modules
+└── Hardware Modules
     ├── Servos (PCA9685)
     ├── Camera (Pi/USB)
     ├── Audio (USB soundcard)
     └── Battery (INA260)
-```
-
-## Connection Flow
-
-```
-Start Daemon
-    │
-    ├─► Initialize Hardware
-    │   ├─► Servos (PCA9685)
-    │   ├─► Camera (if available)
-    │   ├─► Audio (if available)
-    │   └─► Display (if enabled)
-    │
-    ├─► Start REST API (:8001)
-    │
-    └─► Connect WebRTC (if --host specified)
-        │
-        ├─► POST /api/offer to Host Computer
-        ├─► Receive SDP answer
-        ├─► Establish P2P connection
-        │
-        ├─► Start mic streaming ────────►
-        ├─► Start speaker playback ◄──────
-        └─► Open data channel ◄─────────►
 ```
 
 ## Command Line Options
@@ -76,28 +56,25 @@ Start Daemon
 ```bash
 python tars_daemon.py [OPTIONS]
 
---host URL       Host Computer URL for WebRTC (http://100.64.0.1:7860)
---port PORT         REST API port (default: 8001)
+--port PORT         HTTP API port (default: 8001)
+--grpc-port PORT    gRPC API port (default: 50051)
 --no-display        Headless mode (no pygame window)
+--no-webrtc         Disable WebRTC server
 --face-tracking     Enable face tracking with eyes
 --help              Show help
 ```
 
-## Configuration (`.env`)
+## Configuration
+
+Environment variables (optional):
 
 ```bash
-# Host Computer (Tailscale recommended)
-HOST_URL=http://100.64.0.1:7860
-
-# API
-API_PORT=8001
-
 # Display
 DISPLAY_ENABLED=true
 DISPLAY_WIDTH=800
 DISPLAY_HEIGHT=480
 
-# Audio devices (optional)
+# Audio devices
 AUDIO_INPUT_DEVICE=
 AUDIO_OUTPUT_DEVICE=
 AUDIO_SAMPLE_RATE_IN=16000
@@ -129,66 +106,83 @@ sudo systemctl restart tars     # Restart
 journalctl -u tars -f           # View logs
 ```
 
+## API Access
+
+### gRPC (Primary)
+
+```python
+from tars_sdk import TarsClient
+
+client = TarsClient("localhost:50051")
+client.move("wave_right")
+client.set_emotion("happy")
+jpeg = client.capture_camera()
+status = client.get_status()
+```
+
+### HTTP (WebRTC + Health)
+
+```bash
+# Health check
+curl http://localhost:8001/health
+
+# WebRTC signaling (used by aiortc)
+curl -X POST http://localhost:8001/api/offer \
+  -H "Content-Type: application/json" \
+  -d '{"sdp": "...", "type": "offer"}'
+```
+
 ## Features
 
-### WebRTC Audio Streaming
-- Mic → Host Computer: 16kHz mono PCM
-- Host Computer → Speaker: 24kHz mono PCM
-- Auto-reconnect on failure
-
-### REST API
-Full hardware control via HTTP:
-- `/health` - Status check
-- `/move` - Execute movements
-- `/camera/capture` - Grab image
-- `/display/*` - Control display
-- `/eyes/*` - Control eye states
-- `/battery/status` - Battery info
-
-See [API docs](http://localhost:8001/docs) when running.
-
-### Display Manager
-- Animated robot eyes
-- Audio spectrum visualizer
-- Face tracking (with `--face-tracking`)
-- Battery indicator (top-right corner)
-- Modes: eyes, spectrum, off
-
-### Hardware Integration
-- PCA9685 servo control (19 movements)
-- Camera capture (Pi Camera or USB)
-- USB soundcard (mic + speaker)
-- INA260 battery monitoring
-- Automatic hardware detection
+- gRPC API for hardware control (5-10ms latency)
+- WebRTC audio streaming (real-time, low latency)
+- Auto-reconnection on network failures
+- Integrated display management
+- Face tracking support
+- Battery monitoring with auto-shutdown
+- Single process architecture
 
 ## Troubleshooting
 
 ### Daemon won't start
+
 ```bash
 # Check dependencies
 pip install -r requirements.txt
 
 # Check permissions
-groups  # Should include i2c, gpio
+groups  # Should include i2c, gpio, audio
 
 # Run manually to see errors
 python tars_daemon.py
 ```
 
-### WebRTC connection failed
+### gRPC connection failed
+
 ```bash
-# Check Host Computer service
-curl http://100.64.0.1:7860/health
+# Test gRPC
+python -c "from tars_sdk import TarsClient; print(TarsClient().health())"
+
+# Check port
+nc -zv localhost 50051
+
+# Check logs
+journalctl -u tars -f | grep gRPC
+```
+
+### WebRTC connection failed
+
+```bash
+# Check HTTP server
+curl http://localhost:8001/health
 
 # Test connectivity
 ping 100.64.0.1
 tailscale status
-
-# Run without WebRTC
-python tars_daemon.py  # REST API only
 ```
 
 ### No audio
+
 ```bash
 # List devices
 python -c "import sounddevice as sd; print(sd.query_devices())"
@@ -201,6 +195,7 @@ groups  # Should include audio
 ```
 
 ### Display issues
+
 ```bash
 # Check environment
 echo $DISPLAY
@@ -213,6 +208,7 @@ python -c "import pygame; pygame.init()"
 ```
 
 ### Battery not detected
+
 ```bash
 # Check I2C device
 i2cdetect -y 1  # Should show 0x41
@@ -221,63 +217,17 @@ i2cdetect -y 1  # Should show 0x41
 groups  # Should include i2c
 ```
 
-## API Endpoints
-
-**Health & Status:**
-- `GET /` - Service info
-- `GET /health` - Health check
-- `GET /state` - Servo positions
-
-**Movement:**
-- `POST /move` - Execute movements
-- `POST /reset` - Reset to neutral
-- `POST /disable` - Disable servos
-- See [MOVEMENTS.md](./MOVEMENTS.md)
-
-**Camera:**
-- `GET /camera/capture` - Capture image (base64 JPEG)
-- `GET /camera/status` - Camera availability
-
-**Display:**
-- `POST /display/mode` - Set mode (eyes/spectrum/off)
-- `POST /eyes/state` - Set state (idle/listening/thinking/speaking)
-- `POST /eyes/emotion` - Set emotion (happy/angry/tired/surprised)
-- `POST /eyes/look` - Look direction (-1 to 1)
-- `POST /eyes/blink` - Trigger blink
-- `POST /eyes/face` - Update face tracking position
-- `GET /display/status` - Display status
-
-**Battery:**
-- `GET /battery/status` - Full battery info
-- `GET /battery/percentage` - Battery percentage
-
-Full API docs: http://localhost:8001/docs
-
-## Features
-
-The unified daemon provides:
-- ✅ WebRTC audio streaming (real-time, low latency)
-- ✅ REST API for hardware control
-- ✅ Auto-reconnection on network failures
-- ✅ Integrated display management
-- ✅ Face tracking support
-- ✅ Battery monitoring with auto-shutdown
-- ✅ Single process architecture
-
 ## Development
 
 ```bash
 # Run in foreground with logs
-python tars_daemon.py --host http://100.64.0.1:7860
+python tars_daemon.py
 
-# Test REST API
+# Test gRPC API
+python -c "from tars_sdk import TarsClient; print(TarsClient().health())"
+
+# Test HTTP
 curl http://localhost:8001/health
-curl http://localhost:8001/docs
-
-# Test movement
-curl -X POST http://localhost:8001/move \
-  -H "Content-Type: application/json" \
-  -d '{"movements": ["forward"]}'
 
 # Monitor logs
 journalctl -u tars -f
@@ -285,10 +235,10 @@ journalctl -u tars -f
 
 ## Next Steps
 
-1. **Test locally**: Run daemon without WebRTC
-2. **Setup Host Computer**: Start tars-omni pipecat service
-3. **Connect**: Run with `--host` flag
-4. **Install service**: Setup systemd for auto-start
-5. **Configure Tailscale**: For remote access
+1. Test locally: Run daemon
+2. Setup AI brain: Start tars-omni on MacBook
+3. Connect: WebRTC and gRPC will establish automatically
+4. Install service: Setup systemd for auto-start
+5. Configure Tailscale: For remote access
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for system overview.

@@ -1,37 +1,99 @@
-# TARS Architecture v6
+# TARS Architecture v7
 
-**Distributed voice assistant**: RPi 5 is a self-contained robot that waits for AI brain connections. MacBook (or other computers) connect to it as clients.
+Distributed voice assistant with RPi 5 as standalone robot hardware. MacBook or other computers connect as AI brain clients.
 
-**Key principle:** The robot is standalone. It boots up and waits for an AI brain to connect, not the other way around.
+The robot boots independently and waits for connections.
 
 ## System Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      NETWORK (LAN / Tailscale)                       │
-│                                                                      │
-│   ┌──────────────────────────┐         ┌──────────────────────────┐ │
-│   │   RPi 5 (:8001)          │         │   MacBook (tars-omni)    │ │
-│   │   Standalone Robot       │         │   AI Brain               │ │
-│   │                          │         │                          │ │
-│   │   tars_daemon.py         │         │   pipecat_service.py     │ │
-│   │                          │         │                          │ │
-│   │   WebRTC SERVER          │ WebRTC  │   WebRTC CLIENT          │ │
-│   │   POST /api/offer ◄──────┼─────────┤   aiortc connects to RPi │ │
-│   │   (waits for brain)      │  P2P    │                          │ │
-│   │                          │  Audio  │                          │ │
-│   │   Mic ──────────────────►┼────────►│──► Pipecat Pipeline      │ │
-│   │   Speaker ◄──────────────┼◄────────┤◄── │  VAD → STT → LLM  │ │
-│   │   Eye display            │  State  │    │  → TTS            │ │
-│   │   Servos                 │ Channel │    └──► Audio Out       │ │
-│   │   Camera ────────────────┼────────►│  HTTP  │                │ │
-│   │   Battery                │  REST  │  Tools │  - Deepgram    │ │
-│   │                          │ ◄──────┤ ◄──────┤  - DeepInfra   │ │
-│   └──────────────────────────┘         │        - ElevenLabs    │ │
-│                                        │        - Vision        │ │
-│                                        └──────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      NETWORK (LAN / Tailscale)                          │
+│                                                                         │
+│   ┌──────────────────────────┐         ┌──────────────────────────┐    │
+│   │   RPi 5                  │         │   MacBook (tars-omni)    │    │
+│   │   Standalone Robot       │         │   AI Brain               │    │
+│   │                          │         │                          │    │
+│   │   tars_daemon.py         │         │   tars_bot.py            │    │
+│   │                          │         │                          │    │
+│   │   ┌──────────────────┐   │ WebRTC  │   ┌──────────────────┐   │    │
+│   │   │ WebRTC SERVER    │   │         │   │ WebRTC CLIENT    │   │    │
+│   │   │ POST /api/offer  │◄──┼─────────┼───│ aiortc connects  │   │    │
+│   │   │ (waits for brain)│   │  P2P    │   │ to RPi           │   │    │
+│   │   │                  │   │  Audio  │   │                  │   │    │
+│   │   │ Mic ────────────►│───┼────────►│──►│ Pipecat Pipeline │   │    │
+│   │   │ Speaker ◄────────│◄──┼─────────┼◄──│ VAD → STT → LLM  │   │    │
+│   │   │                  │   │         │   │ → TTS            │   │    │
+│   │   └──────────────────┘   │         │   └──────────────────┘   │    │
+│   │                          │         │           │              │    │
+│   │   ┌──────────────────┐   │  gRPC   │           │              │    │
+│   │   │ gRPC SERVER      │◄──┼─────────┼───────────┘              │    │
+│   │   │ :50051           │   │ 5-10ms  │   tars_sdk.TarsClient    │    │
+│   │   │                  │   │         │                          │    │
+│   │   │ • Health()       │   │         │   LLM Tools:             │    │
+│   │   │ • Move()         │   │         │   • execute_movement()   │    │
+│   │   │ • SetEmotion()   │   │         │   • capture_camera()     │    │
+│   │   │ • SetEyeState()  │   │         │   • set_emotion()        │    │
+│   │   │ • CaptureCamera()│   │         │   • get_status()         │    │
+│   │   │ • GetStatus()    │   │         │                          │    │
+│   │   │ • StreamBattery()│   │         │   Services:              │    │
+│   │   └──────────────────┘   │         │   - Deepgram STT         │    │
+│   │                          │         │   - DeepInfra LLM        │    │
+│   │   Hardware:              │         │   - ElevenLabs TTS       │    │
+│   │   • Servos (PCA9685)     │         │                          │    │
+│   │   • Camera (Pi/USB)      │         │                          │    │
+│   │   • Display (5" 800x480) │         │                          │    │
+│   │   • Battery (INA260)     │         │                          │    │
+│   └──────────────────────────┘         └──────────────────────────┘    │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
+
+## Communication Channels
+
+Three channels with different purposes:
+
+| Channel | Transport | Direction | Purpose | Latency |
+|---------|-----------|-----------|---------|---------|
+| **Audio** | WebRTC (aiortc) | Bidirectional | Voice conversation | ~20ms |
+| **Commands** | gRPC | Bidirectional | Hardware control | ~5-10ms |
+| **Signaling** | HTTP | One-time | WebRTC setup | N/A |
+
+### Audio Channel (WebRTC)
+- **RPi → MacBook**: Mic audio (16kHz mono PCM, Opus codec)
+- **MacBook → RPi**: TTS audio (24kHz mono PCM, Opus codec)
+- Latency: ~20ms one-way on LAN
+- Uses aiortc P2P connection
+
+### Command Channel (gRPC)
+
+RPCs Available:
+```protobuf
+// Health & Status
+rpc Health() → HealthResponse
+rpc GetStatus() → StatusResponse
+
+// Movement
+rpc Move(movement, speed) → MoveResponse
+rpc Reset() → Empty
+
+// Display
+rpc SetEmotion(emotion) → Empty
+rpc SetEyeState(state) → Empty
+
+// Camera
+rpc CaptureCamera(width, height, quality) → CaptureResponse
+
+// Streaming
+rpc StreamBattery() → stream BatteryStatus
+rpc StreamMovementStatus() → stream MovementStatus
+```
+
+### Signaling Channel (HTTP)
+
+Endpoints:
+- `POST /api/offer` - WebRTC signaling (accepts SDP offer, returns answer)
+- `GET /health` - Convenience health check (also available via gRPC)
 
 ## Conversation Flow
 
@@ -46,10 +108,12 @@ User speaks → RPi USB Mic
                 │
                 ├─► VAD (Silero) - detects speech
                 ├─► STT (Deepgram) - transcribes
-                ├─► LLM (Qwen/Llama via DeepInfra) - generates response
+                ├─► LLM (via DeepInfra) - generates response
                 │       │
-                │       └─► Tools (via HTTP to RPi)
-                │           - move(), look(), set_emotion()
+                │       └─► Tools (via gRPC to RPi)
+                │           - execute_movement()
+                │           - capture_camera()
+                │           - set_emotion()
                 │
                 └─► TTS (ElevenLabs) - synthesizes
                         │
@@ -61,54 +125,7 @@ User speaks → RPi USB Mic
                         │
                         ▼
                  User hears TARS
-
-DataChannel (parallel to audio):
-  MacBook → RPi: eye_state, emotion, audio_level
-  RPi → MacBook: battery, movement_status, face_detected
 ```
-
-## Communication Channels
-
-Three distinct channels for different purposes:
-
-| Channel | Transport | Direction | Purpose | Latency |
-|---------|-----------|-----------|---------|---------|
-| **Audio** | WebRTC (aiortc) | Bidirectional | Voice conversation | ~20ms |
-| **State** | WebRTC DataChannel | Bidirectional | Real-time sync | ~10ms |
-| **Commands** | HTTP REST | MacBook → RPi | Robot actions | ~50ms |
-
-### Audio Channel (WebRTC)
-- **RPi → MacBook**: Mic audio (16kHz mono PCM, Opus codec)
-- **MacBook → RPi**: TTS audio (24kHz mono PCM, Opus codec)
-- Latency: ~20ms one-way on LAN
-
-### State Channel (WebRTC DataChannel)
-Real-time state synchronization. No polling needed.
-
-**MacBook → RPi:**
-```json
-{"type": "eye_state", "state": "listening"}
-{"type": "emotion", "value": "happy"}
-{"type": "transcript", "role": "user", "text": "Hello TARS"}
-{"type": "audio_level", "level": 0.75}
-{"type": "tts_state", "speaking": true}
-```
-
-**RPi → MacBook:**
-```json
-{"type": "battery", "level": 85, "charging": false}
-{"type": "connected", "client": "macbook"}
-{"type": "movement_status", "moving": true, "movement": "wave"}
-{"type": "face_detected", "x": 320, "y": 240}
-```
-
-### Command Channel (HTTP REST)
-For actions that need acknowledgment:
-- `POST /api/offer` - WebRTC signaling
-- `POST /move` - Execute movement
-- `GET /camera/capture` - Capture frame (returns base64 JPEG)
-- `POST /eyes/emotion` - Set emotion
-- `GET /status` - Full robot status
 
 ## Components
 
@@ -116,25 +133,25 @@ For actions that need acknowledgment:
 
 ```
 tars_daemon.py (single process)
+├── gRPC Server (:50051)
+│   ├── Health() - comprehensive status
+│   ├── Move() - execute movements
+│   ├── SetEmotion() - display control
+│   ├── SetEyeState() - eye animations
+│   ├── CaptureCamera() - grab frames
+│   ├── GetStatus() - robot status
+│   ├── StreamBattery() - real-time battery
+│   └── StreamMovementStatus() - movement progress
+│
+├── HTTP Server (:8001) - Minimal
+│   ├── POST /api/offer (WebRTC signaling only)
+│   └── GET /health (convenience - also in gRPC)
+│
 ├── WebRTC Server (aiortc)
 │   ├── Waits for AI brain connections
-│   ├── Handles POST /api/offer (signaling)
-│   ├── MicrophoneTrack (sounddevice) → sends to MacBook
-│   ├── SpeakerOutput (sounddevice) ← receives from MacBook
-│   └── DataChannel (bidirectional state sync)
-│
-├── REST API (FastAPI :8001)
-│   ├── POST /api/offer (WebRTC signaling)
-│   ├── /health, /state
-│   ├── /move, /reset, /disable
-│   ├── /camera/capture, /camera/status
-│   ├── /display/*, /eyes/*, /audio/*
-│   └── /battery/status, /battery/percentage
-│
-├── State Management
-│   └── state/data_channel.py (DataChannel handler)
-│       ├── Receives: eye_state, emotion, audio_level
-│       └── Sends: battery, movement_status, face_detected
+│   ├── MicrophoneTrack → sends to MacBook
+│   ├── SpeakerOutput ← receives from MacBook
+│   └── DataChannel (state sync) [DEPRECATED - use gRPC streaming]
 │
 ├── Hardware Drivers
 │   ├── PCA9685 (16 servos via I2C)
@@ -156,39 +173,35 @@ tars_daemon.py (single process)
     ├── module_battery.py (INA260 monitoring)
     ├── module_display.py (display compositor)
     ├── modules_roboeyes.py (eye animations)
-    ├── modules_spectrum.py (audio visualizer)
-    └── module_facetracking.py (face detection)
+    └── modules_spectrum.py (audio visualizer)
 ```
 
 ### MacBook (tars-omni) - AI Brain
 
 ```
-pipecat_service.py (FastAPI entry point)
+tars_bot.py (robot mode)
+├── gRPC Client (tars_sdk.TarsClient)
+│   └── Connects to RPi :50051
+│
 ├── Pipecat Pipeline
 │   ├── WebRTC Client (aiortc)
 │   │   └── Connects to RPi POST /api/offer
-│   ├── Audio Bridge
-│   │   ├── aiortc AudioFrame ↔ Pipecat AudioRawFrame
-│   │   └── Handles sample rate conversion
+│   ├── Audio Bridge (aiortc ↔ Pipecat frames)
 │   ├── VAD (Silero)
 │   ├── STT (Deepgram/Speechmatics)
-│   ├── LLM (Qwen/Llama via DeepInfra API)
-│   │   └── Tools: move(), look(), set_emotion(), dance()
+│   ├── LLM (via DeepInfra API)
+│   │   └── Tools: execute_movement(), capture_camera()
 │   ├── TTS (ElevenLabs/Qwen3)
 │   └── Vision (Moondream/GPT-4V)
 │
 ├── Transport Layer
 │   ├── transport/aiortc_client.py (WebRTC client)
-│   ├── transport/audio_bridge.py (audio conversion)
-│   └── transport/state_sync.py (DataChannel manager)
+│   └── transport/audio_bridge.py (audio conversion)
 │
-├── Services
-│   ├── services/tars_client.py (HTTP client to RPi)
-│   ├── services/memory_chromadb.py (semantic memory)
-│   └── services/factories/ (STT/TTS provider factories)
-│
-└── Observers
-    └── observers/state_observer.py (pipeline events → DataChannel)
+└── Services
+    ├── services/robot.py (gRPC-based hardware control)
+    ├── services/memory_chromadb.py (semantic memory)
+    └── services/factories/ (STT/TTS provider factories)
 ```
 
 ## Configuration
@@ -196,7 +209,8 @@ pipecat_service.py (FastAPI entry point)
 ### RPi (`.env`)
 ```bash
 # Server configuration
-API_PORT=8001
+API_PORT=8001        # HTTP (WebRTC signaling only)
+GRPC_PORT=50051      # gRPC (hardware control)
 WEBRTC_ENABLED=true
 
 # Display
@@ -207,173 +221,197 @@ DISPLAY_HEIGHT=480
 # Features
 FACE_TRACKING_ENABLED=false
 
-# Audio devices (optional - uses default if not specified)
+# Audio devices (optional)
 AUDIO_INPUT_DEVICE=
 AUDIO_OUTPUT_DEVICE=
 AUDIO_SAMPLE_RATE_IN=16000
 AUDIO_SAMPLE_RATE_OUT=24000
 ```
 
-### MacBook - `tars-omni/.env.local`
-```bash
-# Robot connection (Tailscale IP or LAN)
-TARS_RPI_IP=100.64.0.2
-TARS_RPI_PORT=8001
+### MacBook - `tars-omni/config.ini`
+```ini
+[Connection]
+rpi_url = http://100.64.0.2:8001    # For WebRTC signaling
+rpi_grpc = 100.64.0.2:50051         # For hardware control
+mode = robot
 
-# AI Services
-DEEPGRAM_API_KEY=xxx
-DEEPINFRA_API_KEY=xxx
-ELEVENLABS_API_KEY=xxx
-ELEVENLABS_VOICE_ID=xxx
+[LLM]
+model = openai/gpt-oss-20b
+
+[STT]
+provider = deepgram
+
+[TTS]
+provider = elevenlabs
 ```
 
 ## Quick Start
 
 ### RPi (boots and waits for AI brain)
 ```bash
-# Run manually (with WebRTC server)
+# Install dependencies
+pip install -r requirements.txt
+
+# Generate gRPC code
+./scripts/generate_grpc.sh
+
+# Run daemon
 python tars_daemon.py
 
-# Or with start script
-./start.sh
-
 # With options
-python tars_daemon.py --port 8001 --face-tracking
-
-# REST API only (no WebRTC)
-python tars_daemon.py --no-webrtc
-
-# Headless mode (no display)
-python tars_daemon.py --no-display
+python tars_daemon.py --grpc-port 50051 --face-tracking
 
 # Or as systemd service
 sudo systemctl start tars
 ```
 
 **On boot, RPi will:**
-1. Start WebRTC server on :8001
-2. Initialize hardware (servos, camera, display)
-3. Wait for AI brain connection at `POST /api/offer`
-4. Display shows "Waiting for brain..."
+1. Start gRPC server on :50051
+2. Start HTTP server on :8001 (WebRTC signaling only)
+3. Initialize hardware (servos, camera, display)
+4. Wait for AI brain connection
+5. Display shows "Waiting for brain..."
 
 ### MacBook (connects to RPi)
 ```bash
 cd tars-omni
-source .venv/bin/activate
-python pipecat_service.py
+pip install -e ../tars  # Install tars_sdk
+python tars_bot.py
 ```
 
 **MacBook will:**
-1. Create WebRTC client
-2. POST SDP offer to `http://<rpi-ip>:8001/api/offer`
-3. Establish P2P audio connection
-4. Start Pipecat pipeline with STT/LLM/TTS
-5. Send state updates via DataChannel
-6. Call RPi HTTP endpoints for movements/vision
+1. Connect gRPC client to RPi :50051
+2. Create WebRTC client
+3. POST SDP offer to RPi :8001/api/offer
+4. Establish P2P audio connection
+5. Start Pipecat pipeline with STT/LLM/TTS
+6. Use gRPC for all hardware control (fast!)
 
-## Connection Lifecycle
+## Performance
 
+Latency measurements on LAN:
+
+| Operation | gRPC |
+|-----------|------|
+| Move command | 5-10ms |
+| Set emotion | 5-8ms |
+| Camera capture | 25-35ms |
+| Get status | 5-8ms |
+
+## API Usage Examples
+
+### Using the SDK (Python)
+
+```python
+from tars_sdk import TarsClient
+
+# Connect to robot
+client = TarsClient("100.64.0.2:50051")
+
+# Health check (gRPC)
+health = client.health()
+print(f"Status: {health['status']}")
+print(f"Battery: {health['battery']['level']}%")
+print(f"WebRTC connected: {health['webrtc']['connected']}")
+
+# Execute movement
+result = client.move("wave_right")
+if result['success']:
+    print(f"Wave completed in {result['duration']:.2f}s")
+
+# Display control
+client.set_emotion("happy")
+client.set_eye_state("idle")
+
+# Camera capture
+jpeg_bytes = client.capture_camera(width=640, height=480, quality=80)
+with open("capture.jpg", "wb") as f:
+    f.write(jpeg_bytes)
+
+# Status check
+status = client.get_status()
+print(f"Moving: {status['is_moving']}")
+print(f"Emotion: {status['emotion']}")
+
+# Streaming battery updates
+for battery in client.stream_battery():
+    print(f"Battery: {battery['level']}% ({battery['voltage']:.2f}V)")
+    if battery['level'] < 20:
+        break
+
+# Context manager
+with TarsClient("100.64.0.2:50051") as client:
+    client.move("wave_right")
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                       CONNECTION LIFECYCLE                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  RPi BOOT                                                       │
-│  ════════                                                       │
-│  1. systemd starts tars_daemon.py                               │
-│  2. Hardware initialization (servos, display, camera, audio)    │
-│  3. FastAPI server starts on :8001                              │
-│  4. WebRTC server ready, waiting for offers                     │
-│  5. Display shows "Waiting for brain..." + idle eyes            │
-│                                                                 │
-│  MACBOOK CONNECTS                                               │
-│  ═══════════════                                                │
-│  1. pipecat_service.py starts                                   │
-│  2. aiortc client creates SDP offer                             │
-│  3. POST offer to http://<rpi-ip>:8001/api/offer               │
-│  4. RPi returns SDP answer                                      │
-│  5. ICE candidates exchanged                                    │
-│  6. P2P connection established                                  │
-│  7. Audio tracks flowing (RPi mic → MacBook, MacBook TTS → RPi) │
-│  8. DataChannel open                                            │
-│  9. RPi display → "Connected" + happy eyes                      │
-│  10. Ready for conversation                                     │
-│                                                                 │
-│  CONVERSATION                                                   │
-│  ════════════                                                   │
-│  User speaks → RPi mic → WebRTC → VAD → STT → LLM → TTS →     │
-│  WebRTC → RPi speaker                                          │
-│                              │                                  │
-│                              └─► Tools → HTTP → RPi movements  │
-│                                                                 │
-│  DISCONNECT                                                     │
-│  ══════════                                                     │
-│  1. MacBook closes connection (or network fails)                │
-│  2. RPi detects disconnect                                      │
-│  3. Display → "Waiting for brain..." + idle eyes                │
-│  4. Robot returns to idle state                                 │
-│  5. Ready to accept new connection                              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+
+### From tars-omni (LLM Tools)
+
+```python
+# In tars_bot.py
+from services import robot as robot_service
+
+# Initialize client
+robot_client = robot_service.get_robot_client("100.64.0.2:50051")
+
+# LLM tool functions (already integrated)
+async def execute_movement(movements: list[str]) -> str:
+    # Uses gRPC client.move()
+    result = robot_client.move(movements[0])
+    return f"Completed in {result['duration']:.2f}s"
+
+async def capture_camera_view() -> dict:
+    # Uses gRPC client.capture_camera()
+    jpeg_bytes = robot_client.capture_camera()
+    return {"image": base64.b64encode(jpeg_bytes).decode()}
 ```
-
-## API Reference
-
-See detailed docs:
-- [DAEMON.md](./DAEMON.md) - Setup and usage
-- [MOVEMENTS.md](./MOVEMENTS.md) - Servo API
-- [HARDWARE_IO.md](./HARDWARE_IO.md) - Camera/audio API
-- [TARS_ARCHITECTURE_PLAN_V6.md](../TARS_ARCHITECTURE_PLAN_V6.md) - Full architecture details
 
 ## Troubleshooting
 
-### Check RPi Status
+### gRPC Connection Issues
+
 ```bash
-# Check daemon status
-sudo systemctl status tars
+# Test gRPC health (from Mac)
+python -c "from tars_sdk import TarsClient; print(TarsClient('100.64.0.2:50051').health())"
 
-# View logs
-journalctl -u tars -f
+# Check if gRPC port is open
+nc -zv 100.64.0.2 50051
 
-# Test health endpoint
-curl http://localhost:8001/health
-
-# Check if WebRTC server is ready
-curl http://localhost:8001/health | jq '.webrtc'
+# Check daemon logs
+journalctl -u tars -f | grep gRPC
 ```
 
-### Test WebRTC Connection
+### WebRTC Connection Issues
+
 ```bash
-# From MacBook, test if RPi is reachable
+# Check if RPi is reachable
 curl http://100.64.0.2:8001/health
 
 # Test WebRTC signaling endpoint
 curl -X POST http://100.64.0.2:8001/api/offer \
   -H "Content-Type: application/json" \
   -d '{"sdp": "test", "type": "offer"}'
-# Should return error (invalid SDP) but confirms endpoint works
 ```
 
-### Audio Devices
-```bash
-# List available audio devices
-python -c "import sounddevice as sd; print(sd.query_devices())"
+### Performance Testing
 
-# Test microphone
-python -c "import sounddevice as sd; import time; print('Recording...'); sd.rec(16000, samplerate=16000, channels=1); time.sleep(3); print('Done')"
+```python
+import time
+from tars_sdk import TarsClient
 
-# Test speaker
-python -c "import sounddevice as sd; import numpy as np; sd.play(np.sin(2*np.pi*440*np.linspace(0,1,16000)), 16000); sd.wait()"
+client = TarsClient("100.64.0.2:50051")
+
+# Measure latency
+start = time.time()
+client.move("wave_right")
+latency = (time.time() - start) * 1000
+print(f"gRPC latency: {latency:.1f}ms")
+
+# Should be 5-10ms on LAN
 ```
 
-### Network Diagnostics
-```bash
-# Check if Tailscale is running
-sudo tailscale status
+## See Also
 
-# Test latency
-ping 100.64.0.2
-
-# Check open ports
-sudo netstat -tlnp | grep 8001
-```
+- [DAEMON.md](./DAEMON.md) - Daemon setup and usage
+- [MOVEMENTS.md](./MOVEMENTS.md) - Available movements
+- [HARDWARE_IO.md](./HARDWARE_IO.md) - Hardware specifications
+- [TARS_ARCHITECTURE_PLAN_V7.md](../TARS_ARCHITECTURE_PLAN_V7.md) - Full architecture plan
