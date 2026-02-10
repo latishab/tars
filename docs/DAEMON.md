@@ -236,7 +236,7 @@ journalctl -u tars -f
 ## Next Steps
 
 1. Test locally: Run daemon
-2. Setup AI brain: Start tars-omni on MacBook
+2. Setup AI brain: Start tars-omni on host computer
 3. Connect: WebRTC and gRPC will establish automatically
 4. Install service: Setup systemd for auto-start
 5. Configure Tailscale: For remote access

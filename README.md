@@ -15,10 +15,10 @@
 
 ## Architecture Overview (v6)
 
-**New Architecture:** RPi is self-contained and runs a WebRTC server. The MacBook connects to it as a client.
+**New Architecture:** RPi is self-contained and runs a WebRTC server. The host computer connects to it as a client.
 
 ```
-RPi 5 (tars) - Standalone Robot              MacBook (tars-omni) - AI Brain
+RPi 5 (tars) - Standalone Robot            Host Computer (tars-omni) - AI Brain
 ┌──────────────────────────────┐        ┌─────────────────────────────┐
 │ WEBRTC SERVER + HARDWARE     │        │ WEBRTC CLIENT + AI          │
 │                              │        │                             │
@@ -84,7 +84,7 @@ python tars_daemon.py --no-webrtc
 
 The RPi will:
 1. Start the WebRTC server and REST API on port 8001
-2. Wait for the MacBook to connect via POST /api/offer
+2. Wait for the host computer to connect via POST /api/offer
 3. Once connected, audio flows bidirectionally
 
 See **[TARS_ARCHITECTURE_PLAN_V6.md](./TARS_ARCHITECTURE_PLAN_V6.md)** for full architecture details

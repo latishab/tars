@@ -11,7 +11,7 @@ The robot boots independently and waits for connections.
 │                      NETWORK (LAN / Tailscale)                          │
 │                                                                         │
 │   ┌──────────────────────────┐         ┌──────────────────────────┐    │
-│   │   RPi 5                  │         │   MacBook (tars-omni)    │    │
+│   │   RPi 5                  │         │   Computer (tars-omni)   │    │
 │   │   Standalone Robot       │         │   AI Brain               │    │
 │   │                          │         │                          │    │
 │   │   tars_daemon.py         │         │   tars_bot.py            │    │
@@ -60,8 +60,8 @@ Three channels with different purposes:
 | **Signaling** | HTTP | One-time | WebRTC setup | N/A |
 
 ### Audio Channel (WebRTC)
-- **RPi → MacBook**: Mic audio (16kHz mono PCM, Opus codec)
-- **MacBook → RPi**: TTS audio (24kHz mono PCM, Opus codec)
+- **RPi → Host Computer**: Mic audio (16kHz mono PCM, Opus codec)
+- **Host Computer → RPi**: TTS audio (24kHz mono PCM, Opus codec)
 - Latency: ~20ms one-way on LAN
 - Uses aiortc P2P connection
 
@@ -104,7 +104,7 @@ User speaks → RPi USB Mic
          WebRTC Audio Track (16kHz)
                 │
                 ▼
-         MacBook Pipecat Pipeline
+         Host Computer Pipecat Pipeline
                 │
                 ├─► VAD (Silero) - detects speech
                 ├─► STT (Deepgram) - transcribes
@@ -149,9 +149,8 @@ tars_daemon.py (single process)
 │
 ├── WebRTC Server (aiortc)
 │   ├── Waits for AI brain connections
-│   ├── MicrophoneTrack → sends to MacBook
-│   ├── SpeakerOutput ← receives from MacBook
-│   └── DataChannel (state sync) [DEPRECATED - use gRPC streaming]
+│   ├── MicrophoneTrack → sends to host computer
+│   └── SpeakerOutput ← receives from host computer
 │
 ├── Hardware Drivers
 │   ├── PCA9685 (16 servos via I2C)
@@ -176,7 +175,7 @@ tars_daemon.py (single process)
     └── modules_spectrum.py (audio visualizer)
 ```
 
-### MacBook (tars-omni) - AI Brain
+### Host computer (tars-omni) - AI Brain
 
 ```
 tars_bot.py (robot mode)
@@ -228,7 +227,7 @@ AUDIO_SAMPLE_RATE_IN=16000
 AUDIO_SAMPLE_RATE_OUT=24000
 ```
 
-### MacBook - `tars-omni/config.ini`
+### Host computer - `tars-omni/config.ini`
 ```ini
 [Connection]
 rpi_url = http://100.64.0.2:8001    # For WebRTC signaling
@@ -272,14 +271,14 @@ sudo systemctl start tars
 4. Wait for AI brain connection
 5. Display shows "Waiting for brain..."
 
-### MacBook (connects to RPi)
+### Host computer (connects to RPi)
 ```bash
 cd tars-omni
 pip install -e ../tars  # Install tars_sdk
 python tars_bot.py
 ```
 
-**MacBook will:**
+**Host Computer will:**
 1. Connect gRPC client to RPi :50051
 2. Create WebRTC client
 3. POST SDP offer to RPi :8001/api/offer
