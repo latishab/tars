@@ -109,9 +109,21 @@ class RoboEyes:
         self._idle_variation = 2.0
         self._next_idle = self._random_idle_time()
 
+        # Breathing glow (idle animation)
+        self._breathing_enabled = True
+        self._breathing_timer = 0.0
+        self._breathing_phase = 0.0
+        self._breathing_amplitude = 0.15  # 15% brightness variation
+        self._breathing_speed = 1.5       # Cycles per second
+        self._idle_threshold = 0.5        # Seconds before breathing starts
+
         # Speaking animation
         self._speaking_look_timer = 0.0
         self._speaking_look_away = False
+
+        # Thinking animation
+        self._thinking_timer = 0.0
+        self._thinking_phase = 0
 
         # Animations
         self._anim_laugh = False
@@ -141,17 +153,22 @@ class RoboEyes:
     def set_state(self, state: str):
         """Set eye state: idle, listening, thinking, speaking"""
         self._state = EyeState(state)
+        self._breathing_timer = 0.0  # Reset breathing
 
         if self._state == EyeState.LISTENING:
-            # Widen eyes slightly
-            self._left_open_target = 1.1
-            self._right_open_target = 1.1
+            # Widen eyes and center on user
+            self._left_open_target = 1.15
+            self._right_open_target = 1.15
+            self._target_look_x = 0.0
+            self._target_look_y = 0.0
             self._idle_mode = False  # Focus on user
 
         elif self._state == EyeState.THINKING:
-            # Look up-left
-            self._target_look_x = -0.3
-            self._target_look_y = -0.4
+            # Squinted focused look
+            self._left_open_target = 0.85
+            self._right_open_target = 0.9
+            self._thinking_timer = 0
+            self._thinking_phase = 0
             self._idle_mode = False
 
         elif self._state == EyeState.SPEAKING:
@@ -218,6 +235,12 @@ class RoboEyes:
         self._idle_interval = interval
         self._idle_variation = variation
 
+    def set_breathing(self, enabled: bool, amplitude: float = 0.15, speed: float = 1.5):
+        """Enable/disable breathing glow during idle."""
+        self._breathing_enabled = enabled
+        self._breathing_amplitude = max(0.0, min(0.5, amplitude))
+        self._breathing_speed = max(0.5, min(3.0, speed))
+
     # ========== Update ==========
 
     def update(self, dt: float):
@@ -278,6 +301,22 @@ class RoboEyes:
                 self._speaking_look_away = False
                 self._speaking_look_timer = 0
 
+        # Thinking behavior - alternating contemplative look
+        if self._state == EyeState.THINKING:
+            self._thinking_timer += dt
+            if self._thinking_timer > 1.5:
+                self._thinking_timer = 0
+                self._thinking_phase = (self._thinking_phase + 1) % 2
+
+                if self._thinking_phase == 0:
+                    # Look up-left
+                    self._target_look_x = -0.4
+                    self._target_look_y = -0.5
+                else:
+                    # Look up-right
+                    self._target_look_x = 0.4
+                    self._target_look_y = -0.5
+
         # Laugh animation
         if self._anim_laugh:
             self._anim_laugh_timer -= dt
@@ -306,6 +345,17 @@ class RoboEyes:
         if self._state != EyeState.SPEAKING:
             self._glow_target = 1.0
 
+        # Breathing glow when idle
+        if self._breathing_enabled and self._state == EyeState.IDLE:
+            self._breathing_timer += dt
+            if self._breathing_timer >= self._idle_threshold:
+                self._breathing_phase += dt * self._breathing_speed * 3.14159 * 2
+                breathing_factor = 1.0 + math.sin(self._breathing_phase) * self._breathing_amplitude
+                self._glow_target = breathing_factor
+        else:
+            self._breathing_timer = 0.0
+            self._breathing_phase = 0.0
+
         # Update mood eyelids
         self._update_mood(dt)
 
@@ -324,10 +374,10 @@ class RoboEyes:
             target_bot_l = h * 0.5
             target_bot_r = h * 0.5
         elif self._mood == Mood.ANGRY:
-            target_top_l = h * 0.4
-            target_top_r = h * 0.4
-            target_angle_l = -20
-            target_angle_r = 20
+            target_top_l = h * 0.45
+            target_top_r = h * 0.45
+            target_angle_l = -25
+            target_angle_r = 25
         elif self._mood == Mood.TIRED:
             target_top_l = h * 0.5
             target_top_r = h * 0.5
@@ -336,8 +386,8 @@ class RoboEyes:
             self._left_open_target = 1.2
             self._right_open_target = 1.2
         elif self._mood == Mood.CONFUSED:
-            target_top_l = h * 0.2
-            target_angle_l = 10
+            target_top_l = h * 0.3
+            target_angle_l = 15
 
         lerp = 6.0 * dt
         self._lid_top_left += (target_top_l - self._lid_top_left) * lerp
@@ -421,12 +471,20 @@ class RoboEyes:
             lid_rect = pygame.Rect(x - 2, y - br, w + 4, lid_h)
 
             if abs(lid_angle) > 0.5:
-                # Angled (for angry)
-                lid_surf = pygame.Surface((w + 20, lid_h + 20), pygame.SRCALPHA)
+                # Angled (for angry/confused)
+                # Make surface extra wide to cover side edges after rotation
+                surf_w = int(w * 2.0)  # Much wider for side coverage
+                surf_h = int((lid_h + br) * 1.8)
+                lid_surf = pygame.Surface((surf_w, surf_h), pygame.SRCALPHA)
+
+                # Draw rectangle
                 pygame.draw.rect(lid_surf, cfg.bg_color,
-                               pygame.Rect(10, 10, w + 4, lid_h))
+                               pygame.Rect(0, 0, surf_w, surf_h))
+
+                # Rotate and position
                 rotated = pygame.transform.rotate(lid_surf, lid_angle)
-                rot_rect = rotated.get_rect(center=(x + w//2, y + lid_h//2 - br//2))
+                # Center on the eye top edge
+                rot_rect = rotated.get_rect(center=(x + w//2, y))
                 surface.blit(rotated, rot_rect)
             else:
                 pygame.draw.rect(surface, cfg.bg_color, lid_rect)

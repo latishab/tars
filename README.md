@@ -13,20 +13,20 @@
 
 ---
 
-## Architecture Overview 
+## Architecture Overview
 
-**New Architecture:** RPi is self-contained and runs a WebRTC server. The host computer connects to it as a client.
+**New Architecture:** RPi is self-contained and runs a WebRTC server + gRPC server. The host computer connects to it as a client.
 
 ```
 RPi 5 (tars) - Standalone Robot            Host Computer (tars-omni) - AI Brain
 ┌──────────────────────────────┐        ┌─────────────────────────────┐
-│ WEBRTC SERVER + HARDWARE     │        │ WEBRTC CLIENT + AI          │
+│ WEBRTC + gRPC SERVERS        │        │ WEBRTC CLIENT + AI          │
 │                              │        │                             │
-│ tars_daemon.py               │        │ pipecat_service.py          │
+│ tars_daemon.py               │        │ tars_bot.py                 │
 │                              │        │                             │
 │ On boot:                     │        │ Connects to RPi:            │
 │ - Starts WebRTC server       │ WebRTC │ - aiortc client             │
-│ - Waits for AI brain         │◄───────┤ - POST /api/offer           │
+│ - Starts gRPC server         │◄───────┤ - POST /api/offer           │
 │ - POST /api/offer endpoint   │  P2P   │                             │
 │                              │        │ Audio Pipeline:             │
 │ Audio Routing:               │        │ ┌─────────────────────┐     │
@@ -37,11 +37,12 @@ RPi 5 (tars) - Standalone Robot            Host Computer (tars-omni) - AI Brain
 │ - Receives eye states        │        │ Services:                   │
 │ - Sends battery status       │        │ - Deepgram STT              │
 │                              │        │ - Claude LLM + Tools        │
-│ HTTP REST API:               │        │ - ElevenLabs TTS            │
-│ - /move (movements)          │◄───────┤ - Vision (tool calls)       │
-│ - /camera/capture            │  HTTP  │                             │
-│ - /eyes/emotion              │        │ Tools call RPi via HTTP     │
-│ - /reset                     │        │                             │
+│ gRPC API (port 50051):       │        │ - ElevenLabs TTS            │
+│ - Move(movement, speed)      │◄───────┤ - Vision (tool calls)       │
+│ - CaptureCamera(w, h, q)     │  gRPC  │                             │
+│ - SetEmotion(emotion)        │        │ Tools call RPi via gRPC     │
+│ - SetEyeState(state)         │        │                             │
+│ - GetStatus()                │        │                             │
 └──────────────────────────────┘        └─────────────────────────────┘
           │
           │ I2C + USB + CSI
@@ -62,32 +63,35 @@ RPi 5 (tars) - Standalone Robot            Host Computer (tars-omni) - AI Brain
 
 ## What This Repo Contains
 
-- **FastAPI-based control system** for Raspberry Pi 5
+- **gRPC-based control system** for Raspberry Pi 5 (low-latency hardware control)
+- **WebRTC server** for bidirectional audio streaming
 - **19 pre-programmed movements** for servo control
-- **Camera capture endpoints** (Pi Camera or USB webcam)
-- **Audio I/O endpoints** (USB soundcard)
+- **Camera capture via gRPC** (Pi Camera or USB webcam)
+- **Real-time state synchronization** via WebRTC DataChannel
 
 ## Quick Start
 
 Start the RPi daemon (waits for AI brain to connect):
 
 ```bash
-# With WebRTC server (default)
+# Start WebRTC + gRPC servers (default)
 python tars_daemon.py
 
 # Or using start script
 ./start.sh
 
-# REST API only (no WebRTC)
-python tars_daemon.py --no-webrtc
+# WebRTC only (no gRPC)
+python tars_daemon.py --no-grpc
+
+# Specify custom gRPC port
+python tars_daemon.py --grpc-port 50052
 ```
 
 The RPi will:
-1. Start the WebRTC server and REST API on port 8001
-2. Wait for the host computer to connect via POST /api/offer
-3. Once connected, audio flows bidirectionally
-
-See **[TARS_ARCHITECTURE_PLAN_V6.md](./TARS_ARCHITECTURE_PLAN_V6.md)** for full architecture details
+1. Start the WebRTC server on port 8001
+2. Start the gRPC server on port 50051 (default)
+3. Wait for the host computer to connect via POST /api/offer
+4. Once connected, audio flows bidirectionally and gRPC handles hardware control
 
 ## Documentation
 

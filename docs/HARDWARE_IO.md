@@ -1,144 +1,119 @@
 # Hardware I/O API
 
-FastAPI endpoints for camera, audio, and general system status on Raspberry Pi 5.
+gRPC and WebRTC endpoints for camera, audio, and system control on Raspberry Pi 5.
 
-## Service Endpoints
+**Communication Protocols:**
+- **gRPC** (port 50051): Low-latency hardware control (camera, movements, status)
+- **WebRTC** (port 8001): Real-time bidirectional audio streaming
 
-### `GET /`
-Root endpoint - service info
+## gRPC API
 
-**Response:**
-```json
-{
-  "service": "TARS Control System",
-  "version": "3.0.0",
-  "servo_controller": "V3",
-  "status": "running",
-  "camera_available": true,
-  "moving": false,
-  "available_movements": 19
-}
-```
+### `Health()`
+Get system health and status
 
-### `GET /health`
-Health check
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "moving": false,
-  "camera": true
-}
-```
-
-### `GET /state`
-Get current servo positions and system state
-
-**Response:**
-```json
-{
-  "positions": {
-    "0": 350,
-    "1": 350,
-    "2": 300,
-    "3": 300
-  },
-  "moving": false,
-  "camera_running": true
-}
-```
-
-## Camera Endpoints
-
-### `GET /camera/status`
-Get camera status
-
-**Response:**
-```json
-{
-  "available": true,
-  "running": true,
-  "camera_type": "picamera2"
-}
-```
-
-**Note:** `camera_type` can be:
-- `"picamera2"` - Pi Camera Module
-- `"opencv"` - USB webcam
-- `null` - No camera available
-
-### `GET /camera/capture`
-Capture current camera frame as base64-encoded JPEG
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "image": "base64-encoded-jpeg-data...",
-  "format": "jpeg",
-  "width": 1280,
-  "height": 720
-}
-```
-
-**Example (save to file):**
-```bash
-curl http://localhost:8001/camera/capture | jq -r '.image' | base64 -d > frame.jpg
-```
-
-**Example (from host computer via Tailscale):**
-```bash
-curl http://raspberrypi.local:8001/camera/capture | jq -r '.image' | base64 -d > frame.jpg
-```
-
-## Audio Endpoints
-
-### `POST /audio/play`
-Play audio bytes through USB soundcard speaker
-
-**Request:**
-```json
-{
-  "audio_data": "base64-encoded-audio-bytes",
-  "format": "pcm",
-  "sample_rate": 24000,
-  "channels": 1
-}
-```
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "message": "Audio played successfully"
-}
-```
-
-### `WS /audio/stream`
-WebSocket endpoint for bidirectional audio streaming
-
-**Usage:**
-- Connect to `ws://localhost:8001/audio/stream`
-- Send audio bytes from host computer (TTS output)
-- Receive audio bytes from RPi (microphone input)
-
-**Example (Python client):**
+**Python Example:**
 ```python
-import asyncio
-import websockets
+from tars_sdk import TarsClient
 
-async def audio_stream():
-    async with websockets.connect("ws://raspberrypi.local:8001/audio/stream") as ws:
-        # Send TTS audio to RPi speaker
-        await ws.send(tts_audio_bytes)
-
-        # Receive mic audio from RPi
-        mic_data = await ws.recv()
-        print(f"Received {len(mic_data)} bytes from microphone")
-
-asyncio.run(audio_stream())
+client = TarsClient("localhost:50051")
+health = client.health()
+print(health)
+# {
+#   'status': 'healthy',
+#   'version': '3.0.0',
+#   'grpc_available': True,
+#   'webrtc': {'available': True, 'connected': True},
+#   'hardware': {
+#     'servos': True, 'camera': True, 'audio': True,
+#     'display': True, 'battery': True, 'moving': False
+#   },
+#   'battery': {'level': 87, 'charging': False, 'voltage': 11.8, 'current': 0.5}
+# }
 ```
+
+### `GetStatus()`
+Get current robot status
+
+**Python Example:**
+```python
+status = client.get_status()
+print(status)
+# {
+#   'connected': True,
+#   'battery': {'level': 87, 'charging': False, 'voltage': 11.8, 'current': 0.5},
+#   'emotion': 'neutral',
+#   'eye_state': 'idle',
+#   'is_moving': False,
+#   'movement': ''
+# }
+```
+
+## Camera API
+
+### `CaptureCamera(width, height, quality)`
+Capture camera frame as JPEG bytes
+
+**Python Example:**
+```python
+from tars_sdk import TarsClient
+
+client = TarsClient("localhost:50051")
+
+# Capture with default settings (640x480, quality 80)
+jpeg_bytes = client.capture_camera()
+with open("frame.jpg", "wb") as f:
+    f.write(jpeg_bytes)
+
+# Capture with custom settings
+jpeg_bytes = client.capture_camera(width=1280, height=720, quality=90)
+```
+
+**Parameters:**
+- `width` (int): Image width (default 640)
+- `height` (int): Image height (default 480)
+- `quality` (int): JPEG quality 1-100 (default 80)
+
+**Returns:** Raw JPEG image bytes
+
+**Latency:** 5-10ms for 640x480 capture
+
+## Audio API (WebRTC)
+
+Audio streaming uses **WebRTC** for real-time bidirectional audio with minimal latency.
+
+**Architecture:**
+```
+Host Computer                      Raspberry Pi
+┌─────────────┐                   ┌──────────────┐
+│ TTS Output  │──WebRTC Audio────►│ Speaker      │
+│             │    (24kHz PCM)    │              │
+│ STT Input   │◄──WebRTC Audio────│ Microphone   │
+└─────────────┘    (16kHz PCM)    └──────────────┘
+```
+
+**Setup:**
+1. Host connects to RPi WebRTC server via POST /api/offer
+2. Audio tracks are established automatically
+3. Mic audio flows: RPi → Host (for STT)
+4. TTS audio flows: Host → RPi (for speaker output)
+
+**Python Example (using tars-omni):**
+```python
+from transport import AiortcRPiClient
+
+# Connect to RPi
+client = AiortcRPiClient(rpi_url="http://raspberrypi.local:8001")
+await client.connect()
+
+# Audio tracks are established automatically
+# Use in Pipecat pipeline for STT/TTS
+```
+
+**See tars-omni repository** for full audio pipeline implementation with:
+- VAD (Voice Activity Detection)
+- STT (Speech-to-Text via Deepgram)
+- TTS (Text-to-Speech via ElevenLabs)
+- Audio frame processing
 
 ## Hardware Setup
 
@@ -190,30 +165,43 @@ defaults.ctl.card 1
 
 ## Testing
 
-### Camera Testing
+### gRPC Service Testing
 
-```bash
-# Test with TARS camera module
-python test_camera.py  # Captures test frames and saves as test_frame.jpg
+```python
+from tars_sdk import TarsClient
 
-# Check which camera is detected
-curl http://localhost:8001/camera/status
+# Connect to TARS
+client = TarsClient("localhost:50051")
 
-# Capture a frame
-curl http://localhost:8001/camera/capture | jq -r '.image' | base64 -d > frame.jpg
+# Test health
+health = client.health()
+print(f"Status: {health['status']}")
+print(f"Camera available: {health['hardware']['camera']}")
+
+# Test camera capture
+jpeg_bytes = client.capture_camera()
+with open("test_frame.jpg", "wb") as f:
+    f.write(jpeg_bytes)
+print(f"Captured {len(jpeg_bytes)} bytes")
+
+# Test movement
+result = client.move("wave_right")
+print(f"Movement: {result}")
 ```
 
-### Audio Testing
+### WebRTC Audio Testing
+
+Test audio streaming using the tars-omni repository:
 
 ```bash
-# Test speaker playback
-curl -X POST http://localhost:8001/audio/play \
-  -H "Content-Type: application/json" \
-  -d '{"audio_data": "base64-audio-here", "format": "pcm", "sample_rate": 24000, "channels": 1}'
-
-# Test WebSocket streaming
-# (Use Python script or WebSocket client)
+cd /path/to/tars-omni
+python tars_bot.py
 ```
+
+This will:
+1. Connect to RPi WebRTC server
+2. Establish bidirectional audio
+3. Test full STT → LLM → TTS pipeline
 
 ## Troubleshooting
 
@@ -286,15 +274,22 @@ alsamixer
 # Adjust microphone gain
 ```
 
-**WebSocket connection issues:**
-```bash
-# Check if service is running
-curl http://localhost:8001/health
-
-# Test WebSocket connection
-# Use websocat or wscat
-websocat ws://localhost:8001/audio/stream
+**gRPC connection issues:**
+```python
+# Test gRPC connection
+from tars_sdk import TarsClient
+try:
+    client = TarsClient("localhost:50051")
+    health = client.health()
+    print(f"Connection successful: {health['status']}")
+except Exception as e:
+    print(f"Connection failed: {e}")
 ```
+
+**WebRTC connection issues:**
+- Check RPi is running: `python tars_daemon.py`
+- Check port 8001 is accessible
+- Test from tars-omni with `python tars_bot.py`
 
 ## Hardware Requirements
 
@@ -304,18 +299,28 @@ websocat ws://localhost:8001/audio/stream
 
 ## API Documentation
 
-FastAPI automatically generates interactive documentation:
+**gRPC Proto Definition:**
+See `tars_sdk/proto/tars.proto` for complete API specification
 
-- Swagger UI: `http://localhost:8001/docs`
-- ReDoc: `http://localhost:8001/redoc`
+**Python SDK:**
+```bash
+pip install git+https://github.com/latishab/tars.git
+```
+
+**SDK Documentation:**
+```python
+from tars_sdk import TarsClient
+help(TarsClient)
+```
 
 ## Dependencies
 
-Camera and audio dependencies (from `requirements.txt`):
+Required dependencies (from `requirements.txt`):
 
+- **gRPC**: grpcio, grpcio-tools, protobuf
 - **Camera**: picamera2, opencv-python
-- **Audio**: pygame, pyaudio, websockets
-- **API**: fastapi, uvicorn
+- **Audio/WebRTC**: aiortc, aiohttp, av
+- **Hardware**: adafruit-pca9685, smbus2
 
 ## License
 
