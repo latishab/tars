@@ -206,3 +206,8 @@ character/
 
 /src/modules/UI/pictures/*
 dashboard.ini
+
+# Generated gRPC files (run scripts/generate_grpc.sh to regenerate)
+tars_sdk/proto/*_pb2.py
+tars_sdk/proto/*_pb2.pyi
+tars_sdk/proto/*_pb2_grpc.py

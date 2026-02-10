@@ -14,8 +14,6 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional
-import io
-import base64
 
 # Add src to path for module imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -26,14 +24,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-# Import existing modules
-from modules.module_servoctl import (
-    reset_positions, disable_all_servos, servo_positions, MOVING, move_legs
-)
-from modules.module_movements import (
-    step_forward, step_backward, walk_forward, walk_backward,
-    turn_left_slow, turn_right_slow
-)
+# Import existing modules (for state tracking only)
+from modules.module_servoctl import MOVING, disable_all_servos
 
 # Optional imports (may not be available on all systems)
 try:
@@ -82,27 +74,27 @@ except ImportError:
     BATTERY_AVAILABLE = False
     logger.warning("Battery monitoring not available")
 
-
-# Movement mapping (uses existing module_movements functions)
-MOVEMENT_MAP = {
-    "forward": step_forward,
-    "backward": step_backward,
-    "walk_forward": walk_forward,
-    "walk_backward": walk_backward,
-    "left": turn_left_slow,
-    "right": turn_right_slow,
-}
-
+# Import gRPC server
+try:
+    from grpc_server.server import TARSgRPCServer
+    GRPC_AVAILABLE = True
+except ImportError:
+    GRPC_AVAILABLE = False
+    logger.warning("gRPC server not available")
 
 class TARSDaemon:
     """
-    Unified daemon for TARS robot.
+    Daemon for TARS robot.
 
     Manages:
-    - WebRTC connection to host computer (audio streaming)
-    - REST API for hardware control
+    - gRPC server for hardware control (port 50051)
+    - WebRTC server for audio streaming (signaling via HTTP)
     - Display (eyes, spectrum)
-    - Hardware (servos, camera) via existing modules
+    - Hardware (servos, camera, battery) via existing modules
+
+    Note: All hardware control is now via gRPC. HTTP only provides:
+    - /health - Health check endpoint
+    - /api/offer - WebRTC signaling
     """
 
     def __init__(
@@ -111,14 +103,18 @@ class TARSDaemon:
         display_enabled: bool = True,
         face_tracking_enabled: bool = False,
         webrtc_enabled: bool = True,
+        grpc_port: int = 50051,
     ):
         self.api_port = api_port
         self.display_enabled = display_enabled
         self.face_tracking_enabled = face_tracking_enabled
         self.webrtc_enabled = webrtc_enabled
+        self.grpc_enabled = True  # Always enabled
+        self.grpc_port = grpc_port
 
         # Components (initialized in startup)
         self.webrtc: Optional[WebRTCServer] = None
+        self.grpc_server: Optional[TARSgRPCServer] = None
         self.display: Optional[DisplayManager] = None
         self.camera: Optional[CameraModule] = None
         self.audio: Optional[AudioModule] = None
@@ -162,45 +158,7 @@ class TARSDaemon:
         return app
 
     def _register_routes(self, app: FastAPI):
-        """Register all API routes"""
-
-        # === Models ===
-        class MoveRequest(BaseModel):
-            movements: list[str]
-
-        class LegsRequest(BaseModel):
-            left_height: int = 50
-            right_height: int = 50
-            left_leg: int = 50
-            right_leg: int = 50
-            speed: float = 0.8
-
-        class DisplayModeRequest(BaseModel):
-            mode: str
-
-        class EyeStateRequest(BaseModel):
-            state: str
-
-        class EmotionRequest(BaseModel):
-            emotion: str
-
-        class LookRequest(BaseModel):
-            x: float
-            y: float
-
-        class AudioLevelRequest(BaseModel):
-            level: float
-            source: str
-
-        class FacePositionRequest(BaseModel):
-            x: int = 0
-            y: int = 0
-            width: int = 640
-            height: int = 480
-            detected: bool = False
-
-        class AnimationRequest(BaseModel):
-            animation: str
+        """Register minimal HTTP routes (WebRTC signaling + health check only)"""
 
         # === WebRTC Signaling ===
         class OfferRequest(BaseModel):
@@ -223,14 +181,17 @@ class TARSDaemon:
                 logger.error(f"Failed to handle WebRTC offer: {e}")
                 raise HTTPException(500, f"WebRTC offer failed: {str(e)}")
 
-        # === Health ===
+        # === Health Check ===
         @app.get("/")
         @app.get("/health")
         def health():
+            """Simple health check endpoint."""
             return {
                 "service": "TARS Hardware Daemon",
-                "version": "2.0.0",
+                "version": "3.0.0",
                 "status": "running" if self._running else "starting",
+                "protocol": "gRPC",
+                "grpc_port": self.grpc_port if self.grpc_enabled else None,
                 "hardware": {
                     "servos": True,
                     "camera": self.camera is not None,
@@ -244,178 +205,12 @@ class TARSDaemon:
                     "enabled": self.webrtc_enabled,
                     "connected": self.webrtc.is_connected if self.webrtc else False,
                 },
-                "battery": self.battery.get_battery_status() if self.battery else {"available": False}
-            }
-
-        # === Movement (uses existing module_movements) ===
-        @app.get("/state")
-        def get_state():
-            return {"positions": dict(servo_positions), "moving": MOVING}
-
-        @app.post("/move")
-        def execute_move(body: MoveRequest):
-            if MOVING:
-                raise HTTPException(409, "Already moving")
-
-            results = []
-            for movement in body.movements:
-                if movement not in MOVEMENT_MAP:
-                    raise HTTPException(
-                        400,
-                        f"Unknown movement: {movement}. Valid: {list(MOVEMENT_MAP.keys())}"
-                    )
-                MOVEMENT_MAP[movement]()
-                results.append({"movement": movement, "status": "completed"})
-
-            return {"status": "ok", "results": results}
-
-        @app.post("/move/legs")
-        def move_legs_direct(request: LegsRequest):
-            if MOVING:
-                raise HTTPException(409, "Already moving")
-            move_legs(request.left_height, request.right_height,
-                      request.left_leg, request.right_leg, request.speed)
-            return {"status": "ok"}
-
-        @app.post("/reset")
-        def reset():
-            reset_positions()
-            return {"status": "ok", "message": "Reset to neutral"}
-
-        @app.post("/disable")
-        def disable():
-            disable_all_servos()
-            return {"status": "ok", "message": "Servos disabled"}
-
-        # === Camera (uses existing module_camera) ===
-        @app.get("/camera/capture")
-        def capture():
-            if not self.camera:
-                raise HTTPException(503, "Camera not available")
-
-            try:
-                frame = self.camera.capture_frame()
-
-                from PIL import Image
-                img = Image.fromarray(frame)
-                buffer = io.BytesIO()
-                img.save(buffer, format="JPEG", quality=85)
-                buffer.seek(0)
-
-                img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-
-                return {
-                    "status": "ok",
-                    "image": img_base64,
-                    "format": "jpeg",
-                    "width": img.width,
-                    "height": img.height
-                }
-            except Exception as e:
-                raise HTTPException(500, f"Capture failed: {str(e)}")
-
-        @app.get("/camera/status")
-        def camera_status():
-            return {
-                "available": self.camera is not None and self.camera.is_available() if self.camera else False,
-                "running": self.camera is not None and self.camera.is_available() if self.camera else False,
-                "camera_type": self.camera.get_camera_type() if self.camera else None
-            }
-
-        # === Audio ===
-        @app.get("/audio/status")
-        def audio_status():
-            if self.audio is None:
-                return {"available": False}
-            return {
-                "available": True,
-                "recording": self.audio.is_recording,
-                "playing": self.audio.is_playing,
-                "device": self.audio.get_device_info()
-            }
-
-        # === Display ===
-        @app.post("/display/mode")
-        def set_display_mode(body: DisplayModeRequest):
-            if not self.display:
-                raise HTTPException(503, "Display not available")
-            self.display.set_mode(body.mode)
-            return {"status": "ok", "mode": body.mode}
-
-        @app.post("/eyes/state")
-        def set_eye_state(body: EyeStateRequest):
-            if not self.display:
-                raise HTTPException(503, "Display not available")
-            self.display.set_eye_state(body.state)
-            return {"status": "ok", "state": body.state}
-
-        @app.post("/eyes/emotion")
-        def set_emotion(body: EmotionRequest):
-            if not self.display:
-                raise HTTPException(503, "Display not available")
-            self.display.set_emotion(body.emotion)
-            return {"status": "ok", "emotion": body.emotion}
-
-        @app.post("/eyes/look")
-        def set_look(body: LookRequest):
-            if not self.display:
-                raise HTTPException(503, "Display not available")
-            self.display.set_look(body.x, body.y)
-            return {"status": "ok"}
-
-        @app.post("/eyes/blink")
-        def trigger_blink():
-            if not self.display:
-                raise HTTPException(503, "Display not available")
-            self.display.blink()
-            return {"status": "ok"}
-
-        @app.post("/eyes/animation")
-        def play_animation(body: AnimationRequest):
-            if not self.display:
-                raise HTTPException(503, "Display not available")
-            self.display.play_animation(body.animation)
-            return {"status": "ok"}
-
-        @app.post("/display/audio")
-        def set_audio_level(body: AudioLevelRequest):
-            if not self.display:
-                raise HTTPException(503, "Display not available")
-            self.display.set_audio_level(body.level, body.source)
-            return {"status": "ok"}
-
-        @app.post("/eyes/face")
-        def set_face_position(body: FacePositionRequest):
-            if not self.display:
-                raise HTTPException(503, "Display not available")
-
-            if body.detected:
-                self.display.set_face_position(body.x, body.y, body.width, body.height, True)
-            else:
-                self.display.set_face_position(0, 0, 1, 1, False)
-
-            return {"status": "ok"}
-
-        @app.get("/display/status")
-        def display_status():
-            if not self.display:
-                return {"available": False}
-            return {"available": True, **self.display.get_status()}
-
-        # === Battery ===
-        @app.get("/battery/status")
-        def battery_status():
-            if not self.battery:
-                return {"available": False}
-            return {"available": True, **self.battery.get_battery_status()}
-
-        @app.get("/battery/percentage")
-        def battery_percentage():
-            if not self.battery:
-                raise HTTPException(503, "Battery monitoring not available")
-            return {
-                "percentage": self.battery.get_battery_percentage(),
-                "normalized": self.battery.get_normalized_percentage()
+                "grpc": {
+                    "available": GRPC_AVAILABLE,
+                    "enabled": self.grpc_enabled,
+                    "port": self.grpc_port if self.grpc_enabled else None,
+                },
+                "message": "All hardware control now via gRPC - use tars_sdk.TarsClient"
             }
 
     async def _startup(self):
@@ -482,6 +277,27 @@ class TARSDaemon:
                 logger.warning(f"✗ WebRTC server failed to start: {e}")
                 logger.info("  Running in standalone mode (REST API only)")
 
+        # Start gRPC server (required for hardware control)
+        if GRPC_AVAILABLE:
+            try:
+                self.grpc_server = TARSgRPCServer(
+                    port=self.grpc_port,
+                    camera=self.camera,
+                    display=self.display,
+                    battery=self.battery,
+                    audio=self.audio,
+                    webrtc=self.webrtc
+                )
+                await self.grpc_server.start()
+                logger.success(f"✓ gRPC server started on port {self.grpc_port}")
+            except Exception as e:
+                logger.error(f"✗ gRPC server failed to start: {e}")
+                logger.error("  Cannot continue without gRPC - all hardware control requires it")
+                raise
+        else:
+            logger.error("✗ gRPC not available - install dependencies: pip install grpcio grpcio-tools")
+            raise RuntimeError("gRPC dependencies not installed")
+
         # Start face tracking
         if self.face_tracking_enabled and self.camera and self.display and FACETRACKING_AVAILABLE:
             try:
@@ -508,12 +324,14 @@ class TARSDaemon:
         self._running = True
         logger.info("=" * 60)
         logger.info("TARS Daemon ready")
-        logger.info(f"  REST API:     http://0.0.0.0:{self.api_port}")
-        logger.info(f"  Docs:         http://0.0.0.0:{self.api_port}/docs")
+        logger.info(f"  HTTP API:     http://0.0.0.0:{self.api_port} (WebRTC signaling + health)")
+        logger.info(f"  gRPC API:     0.0.0.0:{self.grpc_port} (hardware control)")
         if self.webrtc:
             logger.info(f"  WebRTC:       Waiting for AI brain (POST /api/offer)")
         if self.face_tracker:
             logger.info(f"  Tracking:     Face tracking enabled")
+        logger.info("=" * 60)
+        logger.info("🎯 All hardware control now via gRPC - use tars_sdk.TarsClient")
         logger.info("=" * 60)
 
     async def _shutdown(self):
@@ -525,6 +343,8 @@ class TARSDaemon:
             self.face_tracker.stop()
         if self.battery:
             self.battery.stop()
+        if self.grpc_server:
+            await self.grpc_server.stop()
         if self.webrtc:
             await self.webrtc.stop()
         if self.display:
@@ -635,6 +455,12 @@ def main():
         action="store_true",
         help="Enable face tracking (follows faces with eyes)"
     )
+    parser.add_argument(
+        "--grpc-port",
+        type=int,
+        default=50051,
+        help="gRPC server port (default: 50051)"
+    )
     args = parser.parse_args()
 
     # Configure logging
@@ -650,6 +476,7 @@ def main():
         display_enabled=not args.no_display,
         webrtc_enabled=not args.no_webrtc,
         face_tracking_enabled=args.face_tracking,
+        grpc_port=args.grpc_port,
     )
 
     # Handle signals

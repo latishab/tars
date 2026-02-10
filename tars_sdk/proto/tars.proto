@@ -1,0 +1,113 @@
+// tars.proto
+
+syntax = "proto3";
+
+package tars;
+
+service TarsService {
+  // Health & Status
+  rpc Health(Empty) returns (HealthResponse);
+  rpc GetStatus(Empty) returns (StatusResponse);
+
+  // Movement Control
+  rpc Move(MoveRequest) returns (MoveResponse);
+  rpc Reset(Empty) returns (Empty);
+
+  // Display Control
+  rpc SetEmotion(EmotionRequest) returns (Empty);
+  rpc SetEyeState(EyeStateRequest) returns (Empty);
+
+  // Camera
+  rpc CaptureCamera(CaptureRequest) returns (CaptureResponse);
+
+  // Server streaming (RPi → Client)
+  rpc StreamBattery(Empty) returns (stream BatteryStatus);
+  rpc StreamMovementStatus(Empty) returns (stream MovementStatus);
+
+  // Bidirectional streaming (for future use)
+  rpc StreamAudioLevels(stream AudioLevelRequest) returns (stream AudioLevelResponse);
+}
+
+// Messages
+message Empty {}
+
+message HealthResponse {
+  string status = 1;           // "running" or "starting"
+  string version = 2;          // Daemon version
+  bool grpc_available = 3;
+  bool webrtc_available = 4;
+  bool webrtc_connected = 5;
+  HardwareStatus hardware = 6;
+  BatteryStatus battery = 7;
+}
+
+message HardwareStatus {
+  bool servos = 1;
+  bool camera = 2;
+  bool audio = 3;
+  bool display = 4;
+  bool battery = 5;
+  bool moving = 6;
+}
+
+message MoveRequest {
+  string movement = 1;  // "wave", "nod", "shake_head", etc.
+  float speed = 2;      // 0.0-1.0, default 1.0
+}
+
+message MoveResponse {
+  bool success = 1;
+  float duration = 2;   // How long the movement takes
+  string error = 3;     // Error message if failed
+}
+
+message EmotionRequest {
+  string emotion = 1;   // "happy", "sad", "angry", "surprised", "neutral"
+}
+
+message EyeStateRequest {
+  string state = 1;     // "idle", "listening", "thinking", "speaking"
+}
+
+message CaptureRequest {
+  int32 width = 1;      // Optional, default 640
+  int32 height = 2;     // Optional, default 480
+  int32 quality = 3;    // JPEG quality 1-100, default 80
+}
+
+message CaptureResponse {
+  bytes image = 1;      // JPEG bytes
+  int32 width = 2;
+  int32 height = 3;
+  string format = 4;    // "jpeg"
+}
+
+message StatusResponse {
+  bool connected = 1;
+  BatteryStatus battery = 2;
+  string current_emotion = 3;
+  string current_eye_state = 4;
+  bool is_moving = 5;
+  string current_movement = 6;
+}
+
+message BatteryStatus {
+  int32 level = 1;      // 0-100
+  bool charging = 2;
+  float voltage = 3;
+  float current = 4;
+}
+
+message MovementStatus {
+  bool moving = 1;
+  string movement = 2;
+  float progress = 3;   // 0.0-1.0
+}
+
+message AudioLevelRequest {
+  float level = 1;      // 0.0-1.0
+}
+
+message AudioLevelResponse {
+  bool received = 1;
+}

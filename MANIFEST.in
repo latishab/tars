@@ -1,0 +1,3 @@
+include tars_sdk/proto/*.proto
+include tars_sdk/py.typed
+include README.md

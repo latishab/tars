@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tars-sdk"
+version = "0.1.0"
+description = "Python SDK for controlling TARS robot via gRPC"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "CC-BY-NC-4.0"}
+authors = [
+    {name = "TARS Team"}
+]
+keywords = ["robotics", "grpc", "tars"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+    "grpcio>=1.60.0",
+    "protobuf>=4.25.0",
+    "loguru>=0.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "grpcio-tools>=1.60.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["tars_sdk", "tars_sdk.*"]
+
+[tool.setuptools.package-data]
+tars_sdk = ["proto/*.proto", "proto/*.pyi", "py.typed"]
