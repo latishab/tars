@@ -13,7 +13,7 @@
 
 ---
 
-## Architecture Overview (v6)
+## Architecture Overview 
 
 **New Architecture:** RPi is self-contained and runs a WebRTC server. The host computer connects to it as a client.
 

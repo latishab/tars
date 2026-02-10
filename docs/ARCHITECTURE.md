@@ -1,4 +1,4 @@
-# TARS Architecture v7
+# TARS Architecture 
 
 Distributed voice assistant with RPi 5 as standalone robot hardware. MacBook or other computers connect as AI brain clients.
 
