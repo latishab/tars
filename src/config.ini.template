@@ -19,32 +19,9 @@ swap_turn_directions = False
 invert_y = False
 # Invert D-Pad Y axis if up/down feels reversed
 
-[UI] # Graphical Interface (for app-servotester.py)
-UI_enabled = True
-# Enable or disable the visual interface for servo tester
-use_camera_module = True
-# Enable camera module for testing
-show_mouse = True
-# Show software mouse cursor in UI
-fullscreen = True
-# Run servo tester in fullscreen mode
-font_size = 12
-# Font size for UI text (9-20 depending on screen resolution)
-screensaver_timer = 300
-# Seconds before screensaver activates (0 = disabled, 60 = 1 minute)
-screensaver_cycle_interval = 300
-# Seconds before screensaver cycles to next animation
-screensaver_list = random
-# Screensaver selection: "random" for all, or comma-separated list like "starfield,matrix"
-# Available: blackhole, waves, matrix, starfield, hyperspace, terminal, face, fractal, pacman, nebulas, pictures, dashboard, defrag, bounce, endurance
-show_time = True
-# Display time during screensaver
-ampm_format = True
-# Time format: True = 12-hour AM/PM, False = 24-hour military
-show_cpu_temp = False
-# Display CPU temperature in UI
-target_fps = 30
-# Maximum UI refresh rate (frames per second)
+# [UI] section removed - not used by current apps
+# The servotester app (app-servotester.py) does not require UI configuration
+# All UI settings are handled internally by the app
 
 [SERVO]
 # ============================================

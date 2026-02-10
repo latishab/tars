@@ -1,13 +1,13 @@
 # Movement Control API
 
-Servo control system for TARS robot on Raspberry Pi 5. Provides 19 pre-programmed movements via HTTP API with V3 dual-leg independent control.
+Servo control system for TARS robot on Raspberry Pi 5. Provides 19 pre-programmed movements via gRPC API with V3 dual-leg independent control.
 
 ## Features
 
 - **Servo Control V3**: Dual-leg independent control with improved servo management
 - **19 Pre-programmed Movements**: From basic locomotion to complex choreography
 - **Movement Registry**: Organized library of all available movements
-- **HTTP API**: RESTful endpoints with OpenAPI documentation
+- **gRPC API**: Low-latency hardware control (5-10ms response time)
 - **Real-time Calibration**: Servo Tester GUI for fine-tuning
 
 ## Quick Start
@@ -22,18 +22,33 @@ Servo control system for TARS robot on Raspberry Pi 5. Provides 19 pre-programme
 python tars_daemon.py
 ```
 
-The service will start on `http://0.0.0.0:8001`
+The service will start:
+- gRPC server on port 50051 (hardware control)
+- WebRTC server on port 8001 (audio streaming)
 
 ### Test Movement
 
-```bash
-# Get available movements
-curl http://localhost:8001/movements
+Using the Python SDK:
+
+```python
+from tars_sdk import TarsClient
+
+# Connect to TARS
+client = TarsClient("localhost:50051")
 
 # Execute a movement
-curl -X POST http://localhost:8001/move \
-  -H "Content-Type: application/json" \
-  -d '{"movements": ["step_forward"]}'
+result = client.move("step_forward")
+print(result)  # {'success': True, 'duration': 1.2, 'error': None}
+
+# Get available movements
+status = client.get_status()
+print(status)
+```
+
+Or install the SDK:
+
+```bash
+pip install git+https://github.com/latishab/tars.git
 ```
 
 ## Installation
@@ -94,35 +109,24 @@ The Servo Tester GUI provides:
 6. Verify all movements execute smoothly
 7. Calibration saves automatically to config.ini
 
-## Movement API Endpoints
+## Movement gRPC API
 
-### `GET /movements`
-List all available movements
+### `Move(movement, speed)`
+Execute a single movement
 
-**Response:**
-```json
-{
-  "movements": {
-    "step_forward": {
-      "display_name": "Step Forward"
-    },
-    "turn_left": {
-      "display_name": "Turn Left"
-    }
-  },
-  "total": 19,
-  "available": ["step_forward", "walk_forward", "turn_left", "bow", "pose", ...]
-}
-```
+**Python Example:**
+```python
+from tars_sdk import TarsClient
 
-### `POST /move`
-Execute a sequence of movements
+client = TarsClient("localhost:50051")
 
-**Request:**
-```json
-{
-  "movements": ["step_forward", "turn_left", "step_forward"]
-}
+# Execute movement with default speed
+result = client.move("step_forward")
+print(result)
+# {'success': True, 'duration': 1.2, 'error': None}
+
+# Execute with custom speed
+result = client.move("wave_right", speed=0.5)
 ```
 
 **Available Movements:**
@@ -133,52 +137,37 @@ Execute a sequence of movements
 - **Waves**: `wave_left`, `wave_right`
 - **Utility**: `neutral_legs`
 
-**Response:**
-```json
-{
-  "status": "ok",
-  "results": [
-    {"movement": "step_forward", "status": "completed"},
-    {"movement": "turn_left", "status": "completed"}
-  ]
-}
+**Parameters:**
+- `movement` (string): Movement name
+- `speed` (float): Speed multiplier (0.1-1.0, default 1.0)
+
+**Returns:**
+- `success` (bool): Whether movement completed
+- `duration` (float): Time taken in seconds
+- `error` (string): Error message if failed
+
+### `GetStatus()`
+Get current robot status
+
+**Python Example:**
+```python
+status = client.get_status()
+print(status)
+# {
+#   'connected': True,
+#   'battery': {'level': 87, 'charging': False, 'voltage': 11.8, 'current': 0.5},
+#   'emotion': 'neutral',
+#   'eye_state': 'idle',
+#   'is_moving': False,
+#   'movement': ''
+# }
 ```
 
-**Example:**
-```bash
-# Single movement
-curl -X POST http://localhost:8001/move \
-  -H "Content-Type: application/json" \
-  -d '{"movements": ["bow"]}'
+### Manual Leg Control (Advanced)
 
-# Sequence of movements
-curl -X POST http://localhost:8001/move \
-  -H "Content-Type: application/json" \
-  -d '{"movements": ["step_forward", "step_forward", "bow"]}'
-```
+For custom choreography, use the servo control module directly:
 
-### `POST /move/legs`
-Manual leg control (advanced - for custom choreography)
-
-**Request:**
-```json
-{
-  "left_height": 50,
-  "right_height": 50,
-  "left_leg": 50,
-  "right_leg": 50,
-  "speed": 0.8
-}
-```
-
-**Parameters (all optional, 1-100 range):**
-- `left_height`: Left leg height (1=up, 100=down)
-- `right_height`: Right leg height (1=up, 100=down)
-- `left_leg`: Left leg forward/back (1=forward, 50=neutral, 100=backward)
-- `right_leg`: Right leg forward/back (1=forward, 50=neutral, 100=backward)
-- `speed`: Movement speed (0.0-1.0, default 0.8)
-
-**Example:**
+**Python Example:**
 ```bash
 # Raise both legs up
 curl -X POST http://localhost:8001/move/legs \
