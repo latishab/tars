@@ -13,39 +13,50 @@
 
 ---
 
-## Architecture Overview
+## Architecture Overview (v6)
+
+**New Architecture:** RPi is self-contained and runs a WebRTC server. The MacBook connects to it as a client.
 
 ```
-Host Computer (tars-omni)                       RPi 5 (tars)
-┌──────────────────────┐                  ┌──────────────────────┐
-│ AI PROCESSING ONLY   │                  │ ALL HARDWARE I/O     │
-│                      │                  │                      │
-│ pipecat_service.py   │    Tailscale     │ main.py (FastAPI)    │
-│                      │ ◄──────────────► │                      │
-│ Receives from RPi:   │   WebSocket +    │ Hardware:            │
-│ - Audio stream (mic) │   HTTP REST      │ - USB Soundcard      │
-│ - Camera frames      │                  │   - Microphone in    │
-│                      │                  │   - Speaker out      │
-│ Processes:           │                  │ - Camera (CSI/USB)   │
-│ - Deepgram STT       │                  │ - PCA9685 + Servos   │
-│ - GPT-OSS LLM        │                  │                      │
-│ - Moondream Vision   │                  │ Endpoints:           │
-│ - ElevenLabs TTS     │                  │ - /audio/stream (WS) │
-│                      │                  │ - /audio/play (POST) │
-│ Sends to RPi:        │                  │ - /camera/capture    │
-│ - TTS audio bytes    │                  │ - /move              │
-│ - Movement commands  │                  │ - /reset             │
-└──────────────────────┘                  └──────────────────────┘
-                                           │
-                                           │ I2C + USB + CSI
-                                           ▼
-                                          ┌──────────────────┐
-                                          │ Hardware         │
-                                          │ - Servos         │
-                                          │ - USB Soundcard  │
-                                          │ - Camera         │
-                                          └──────────────────┘
+RPi 5 (tars) - Standalone Robot              MacBook (tars-omni) - AI Brain
+┌──────────────────────────────┐        ┌─────────────────────────────┐
+│ WEBRTC SERVER + HARDWARE     │        │ WEBRTC CLIENT + AI          │
+│                              │        │                             │
+│ tars_daemon.py               │        │ pipecat_service.py          │
+│                              │        │                             │
+│ On boot:                     │        │ Connects to RPi:            │
+│ - Starts WebRTC server       │ WebRTC │ - aiortc client             │
+│ - Waits for AI brain         │◄───────┤ - POST /api/offer           │
+│ - POST /api/offer endpoint   │  P2P   │                             │
+│                              │        │ Audio Pipeline:             │
+│ Audio Routing:               │        │ ┌─────────────────────┐     │
+│ - Mic → WebRTC track ────────┼────────┼►│ VAD → STT → LLM     │     │
+│ - WebRTC track → Speaker ◄───┼────────┼─┤ → TTS → Audio Out   │     │
+│                              │        │ └─────────────────────┘     │
+│ DataChannel State Sync:      │        │                             │
+│ - Receives eye states        │        │ Services:                   │
+│ - Sends battery status       │        │ - Deepgram STT              │
+│                              │        │ - Claude LLM + Tools        │
+│ HTTP REST API:               │        │ - ElevenLabs TTS            │
+│ - /move (movements)          │◄───────┤ - Vision (tool calls)       │
+│ - /camera/capture            │  HTTP  │                             │
+│ - /eyes/emotion              │        │ Tools call RPi via HTTP     │
+│ - /reset                     │        │                             │
+└──────────────────────────────┘        └─────────────────────────────┘
+          │
+          │ I2C + USB + CSI
+          ▼
+┌──────────────────┐
+│ Hardware         │
+│ - Servos         │
+│ - USB Soundcard  │
+│ - Pi Camera      │
+│ - Display        │
+│ - Battery        │
+└──────────────────┘
 ```
+
+**Key Principle:** The robot is self-contained. It boots up and waits for an AI brain to connect, not the other way around.
 
 ---
 
@@ -58,13 +69,25 @@ Host Computer (tars-omni)                       RPi 5 (tars)
 
 ## Quick Start
 
-Run the unified daemon:
+Start the RPi daemon (waits for AI brain to connect):
 
 ```bash
-python tars_daemon.py --host http://100.64.0.1:7860
+# With WebRTC server (default)
+python tars_daemon.py
+
+# Or using start script
+./start.sh
+
+# REST API only (no WebRTC)
+python tars_daemon.py --no-webrtc
 ```
 
-See **[docs/DAEMON.md](./docs/DAEMON.md)** for full setup guide
+The RPi will:
+1. Start the WebRTC server and REST API on port 8001
+2. Wait for the MacBook to connect via POST /api/offer
+3. Once connected, audio flows bidirectionally
+
+See **[TARS_ARCHITECTURE_PLAN_V6.md](./TARS_ARCHITECTURE_PLAN_V6.md)** for full architecture details
 
 ## Documentation
 
