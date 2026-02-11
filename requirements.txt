@@ -1,51 +1,53 @@
 # ============================================
-# TARS Hardware Service - Dependencies
+# TARS Hardware Daemon - Dependencies
 # ============================================
-# For Raspberry Pi 5: servo control, camera, and audio I/O
+# For Raspberry Pi 5: servo control, display, battery, and gRPC
 
 # ============================================
 # Servo Control (I2C/PCA9685)
 # ============================================
-adafruit-circuitpython-pca9685==3.4.17
-adafruit-circuitpython-busdevice==5.2.9
-adafruit-circuitpython-servokit==1.3.18
-adafruit-circuitpython-ina260==1.4.7
-lgpio==0.2.2.0
-
-# ============================================
-# Camera (Picamera2 + OpenCV)
-# ============================================
-picamera2==0.3.17
-opencv-python-headless==4.9.0.80
-Pillow==10.2.0
+Adafruit-Blinka>=8.69.0
+adafruit-circuitpython-pca9685>=3.4.20
+adafruit-circuitpython-busdevice>=5.2.15
+adafruit-circuitpython-ina260>=1.3.20
+lgpio>=0.2.2.0
 
 # ============================================
 # Display (Pygame for eyes and spectrum)
 # ============================================
-pygame==2.5.2
+pygame>=2.6.1
+numpy>=2.4.0
+
+# ============================================
+# Bluetooth Controller
+# ============================================
+evdev>=1.9.3
+
+# ============================================
+# Camera (Picamera2 + OpenCV)
+# ============================================
+# picamera2  # Install via apt: sudo apt install python3-picamera2
+# opencv-python-headless  # Optional, for frame encoding
 
 # ============================================
 # Audio (USB Soundcard)
 # ============================================
-sounddevice==0.4.6
-scipy==1.11.4
+# sounddevice  # Optional, only if audio module is used
 
 # ============================================
-# FastAPI Service (HTTP API + WebSocket)
+# FastAPI (HTTP API + WebRTC signaling)
 # ============================================
-fastapi==0.109.0
-uvicorn==0.27.0
-websockets==12.0
-pydantic==2.6.1
+fastapi>=0.128.0
+uvicorn>=0.40.0
+pydantic>=2.12.0
 
 # ============================================
-# WebRTC (for Host Computer connection)
+# WebRTC (for host computer audio streaming)
 # ============================================
-aiortc==1.6.0
-aiohttp==3.9.1
+# aiortc  # Optional, only if WebRTC is used
 
 # ============================================
-# gRPC (for remote control and SDK)
+# gRPC (hardware control API + SDK)
 # ============================================
 grpcio>=1.60.0
 grpcio-tools>=1.60.0
@@ -54,7 +56,4 @@ protobuf>=4.25.0
 # ============================================
 # Infrastructure
 # ============================================
-configobj==5.0.8
-python-dotenv==1.0.1
-numpy==1.26.4
-loguru==0.7.2
+loguru>=0.7.2

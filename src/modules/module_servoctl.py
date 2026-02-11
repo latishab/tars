@@ -1,20 +1,20 @@
 """
 Module: Servo Controller V3.1
-Author: Charles-Olivier Dion (AtomikSpace)
+Author: Charles-Olivier Dion (Atomikspace)
 Contact: atomikspace.labs@gmail.com
-Copyright (c) 2026 Charles-Olivier Dion
+Copyright (c) 2026
 
-This file is authored by Charles-Olivier Dion and is dual-licensed.
+This module was originally created by Charles-Olivier Dion (Atomikspace).
 
-Non-Commercial License:
-This file is licensed under Creative Commons Attribution-NonCommercial 4.0 International (CC-BY-NC 4.0).
-You may use, modify, and redistribute this file for NON-COMMERCIAL purposes only, with attribution.
+Permission is granted to use, copy, modify, and redistribute this module,
+in whole or in part, provided that:
 
-Commercial License:
-Commercial use (including selling products, paid services, SaaS, subscriptions, Patreon rewards, or derivatives)
-requires a separate written license from Charles-Olivier Dion (AtomikSpace).
+- This notice is retained in the source file(s)
+- The original author (Charles-Olivier Dion / Atomikspace) is clearly credited
+- Any modifications are clearly identified as such
 
-This license applies only to this file and does not override licenses of other files in the repository.
+This notice applies only to this module and does not extend to the
+entire project or repository in which it may be included.
 """
 
 from __future__ import division
@@ -39,7 +39,7 @@ global_easing_strength = 0.6
 SERVO_POSITIONS_FILE = os.path.expanduser("~/.servo_positions.json")
 
 def _load_servo_positions():
-    
+
     import json
     try:
         with open(SERVO_POSITIONS_FILE, 'r') as f:
@@ -50,7 +50,7 @@ def _load_servo_positions():
         return {}
 
 def _save_servo_positions():
-    
+
     import json
     try:
         with open(SERVO_POSITIONS_FILE, 'w') as f:
@@ -76,23 +76,23 @@ def signal_servo_activity():
         battery_module.signal_servo_activity()
 
 def initialize_pca9685():
-    
+
     global pca
-    
+
     try:
         i2c = busio.I2C(board.SCL, board.SDA)
         pca = PCA9685(i2c, address=0x40)
         pca.frequency = 50
         queue_message("LOAD: PCA9685 initialized successfully")
         return True
-        
+
     except OSError as e:
         if e.errno == 121:
             queue_message(f"ERROR: I2C Remote I/O error - Check connections and power!")
         else:
             queue_message(f"ERROR: I2C error {e.errno}: {e}")
         return False
-        
+
     except Exception as e:
         queue_message(f"ERROR: Failed to initialize PCA9685: {e}")
         return False
@@ -137,16 +137,16 @@ _on_movement_end = None
 _is_ventilate_operation = False
 
 def set_movement_callbacks(on_start=None, on_end=None):
-    
+
     global _on_movement_start, _on_movement_end
     _on_movement_start = on_start
     _on_movement_end = on_end
 
 def _notify_movement_start():
     global _is_ventilate_operation
-    
+
     signal_servo_activity()
-    
+
     if not _is_ventilate_operation:
         try:
             from modules.module_cputemp import is_ventilating
@@ -155,7 +155,7 @@ def _notify_movement_start():
                 ventilate_off()
         except Exception as e:
             pass
-    
+
     if _on_movement_start:
         try:
             _on_movement_start()
@@ -163,9 +163,9 @@ def _notify_movement_start():
             queue_message(f"ERROR: Failed to pause UI/STT: {e}")
 
 def _notify_movement_end():
-    
+
     signal_servo_activity()
-    
+
     if _on_movement_end:
         try:
             _on_movement_end()
@@ -173,7 +173,7 @@ def _notify_movement_end():
             queue_message(f"ERROR: Failed to resume UI/STT: {e}")
 
 def pulse_to_duty_cycle(pulse_value):
-    
+
     MAX_PULSE = 600
     pulse_us = 500 + (pulse_value / MAX_PULSE) * 2000
     duty_cycle = int((pulse_us / 20000.0) * 65535)
@@ -182,14 +182,14 @@ def pulse_to_duty_cycle(pulse_value):
 def set_servo_pwm(channel, pwm_value):
     if pca is None:
         return False
-    
+
     duty_cycle = pulse_to_duty_cycle(pwm_value)
 
     for attempt in range(MAX_RETRIES):
         try:
             pca.channels[channel].duty_cycle = duty_cycle
             return True
-            
+
         except OSError as e:
             if e.errno == 121:
                 if attempt < MAX_RETRIES - 1:
@@ -198,24 +198,24 @@ def set_servo_pwm(channel, pwm_value):
                 else:
                     queue_message(f"I2C error on channel {channel} after {MAX_RETRIES} attempts")
             return False
-            
+
         except Exception as e:
             queue_message(f"Error setting PWM on channel {channel}: {e}")
             return False
-    
+
     return False
 
 def initialize_servos():
     if pca is None:
         queue_message("WARNING: Cannot initialize servos - PCA9685 not available")
         return
-    
+
     try:
         for channel in range(16):
             pca.channels[channel].duty_cycle = 0
     except Exception as e:
         queue_message(f"Error initializing servos: {e}")
-    
+
     time.sleep(0.1)
     reset_positions()
     print("All servos initialized")
@@ -223,13 +223,13 @@ def initialize_servos():
 def disable_all_servos():
     if pca is None:
         return
-    
+
     try:
         for channel in range(16):
             pca.channels[channel].duty_cycle = 0
     except Exception as e:
         queue_message(f"Error disabling servos: {e}")
-    
+
     time.sleep(0.05)
 
 def reset_positions():
@@ -252,32 +252,32 @@ def reset_positions():
 def move_servos_synchronized(movements, speed_factor, easing_strength=None):
     """
     Move multiple servos simultaneously.
-    
+
     Parameters:
     - movements: List of (channel, target_value) tuples
     - speed_factor: Speed multiplier (0.0-1.0, higher is faster)
     - easing_strength: Easing amount (None uses global default, 0 = linear, higher = more ease in/out)
     """
     global _channels_initialized
-    
+
     effective_easing = easing_strength if easing_strength is not None else global_easing_strength
-    
+
     signal_servo_activity()
-    
+
     servo_data = []
     hold_channels = []
     has_uninitialized_channel = False
-    
+
     for channel, target_value in movements:
         if target_value is None:
             continue
-        
+
         if channel not in _channels_initialized:
             has_uninitialized_channel = True
             _channels_initialized.add(channel)
-            
+
         current_value = servo_positions.get(channel, None)
-        
+
         if current_value is None:
             neutral_positions = {
                 0: leftNeutralHeight,
@@ -287,17 +287,17 @@ def move_servos_synchronized(movements, speed_factor, easing_strength=None):
             }
             current_value = neutral_positions.get(channel, 300)
             servo_positions[channel] = current_value
-        
+
         if target_value == -1:
             hold_channels.append((channel, current_value))
             continue
-        
+
         if current_value == target_value:
             continue
-        
+
         distance = abs(target_value - current_value)
         step = 1 if target_value > current_value else -1
-        
+
         servo_data.append({
             'channel': channel,
             'current': current_value,
@@ -306,40 +306,40 @@ def move_servos_synchronized(movements, speed_factor, easing_strength=None):
             'distance': distance,
             'steps_taken': 0
         })
-    
+
     for channel, value in hold_channels:
         set_servo_pwm(channel, value)
-    
+
     if not servo_data:
         return
-    
+
     try:
         from modules.module_cputemp import record_movement
         record_movement()
     except Exception:
         pass
-    
+
     max_distance = max(s['distance'] for s in servo_data)
-    
+
     if has_uninitialized_channel:
         effective_speed = min(speed_factor, 0.3)
     else:
         effective_speed = speed_factor
-    
+
     base_delay = 0.02 * (1.0 - effective_speed)
-    
+
     while any(s['current'] != s['target'] for s in servo_data):
         for servo in servo_data:
             if servo['current'] != servo['target']:
                 servo['current'] += servo['step']
                 set_servo_pwm(servo['channel'], servo['current'])
                 servo['steps_taken'] += 1
-        
+
         if max_distance > 0:
             progress = min(s['steps_taken'] for s in servo_data if s['current'] != s['target'] or s['steps_taken'] > 0) / max_distance
         else:
             progress = 1.0
-        
+
         if effective_easing > 0:
             if progress < 0.5:
                 eased = 2 * progress * progress
@@ -348,22 +348,22 @@ def move_servos_synchronized(movements, speed_factor, easing_strength=None):
             delay_multiplier = 1.0 + effective_easing * (1.0 - 4 * (eased - 0.5) ** 2)
         else:
             delay_multiplier = 1.0
-        
+
         time.sleep(base_delay * delay_multiplier)
-    
+
     for servo in servo_data:
         servo_positions[servo['channel']] = servo['target']
-    
+
     _save_servo_positions()
-    
+
     signal_servo_activity()
-    
+
     time.sleep(0.05)
 
 def move_legs(left_height_percent=None, right_height_percent=None, left_leg_percent=None, right_leg_percent=None, speed_factor=1.0):
     """
     Move leg servos to specified positions.
-    
+
     Parameters:
     - left_height_percent: Left leg height (1-100, None to skip)
     - right_height_percent: Right leg height (1-100, None to skip)
@@ -371,7 +371,7 @@ def move_legs(left_height_percent=None, right_height_percent=None, left_leg_perc
     - right_leg_percent: Right leg forward/back (1-100, None to skip)
     - speed_factor: Speed multiplier (0.0-1.0, higher is faster)
     """
-    
+
     def percentage_to_value(percent, min_val, max_val):
         if percent == 0:
             return None
@@ -380,19 +380,19 @@ def move_legs(left_height_percent=None, right_height_percent=None, left_leg_perc
         return int(round(value))
 
     movements = []
-    
+
     if left_height_percent is not None and left_height_percent != 0:
         target_value = percentage_to_value(left_height_percent, leftUpHeight, leftDownHeight)
         movements.append((0, target_value))
-    
+
     if right_height_percent is not None and right_height_percent != 0:
         target_value = percentage_to_value(right_height_percent, rightUpHeight, rightDownHeight)
         movements.append((1, target_value))
-    
+
     if left_leg_percent is not None and left_leg_percent != 0:
         target_value = percentage_to_value(left_leg_percent, forwardLeftLeg, backLeftLeg)
         movements.append((2, target_value))
-    
+
     if right_leg_percent is not None and right_leg_percent != 0:
         target_value = percentage_to_value(right_leg_percent, forwardRightLeg, backRightLeg)
         movements.append((3, target_value))
@@ -401,7 +401,7 @@ def move_legs(left_height_percent=None, right_height_percent=None, left_leg_perc
 
 
 def cleanup():
-    
+
     disable_all_servos()
 
 from modules.module_movements import (

@@ -1,7 +1,7 @@
 """TARS gRPC Client for remote robot control."""
 
 import os
-from typing import Optional, Iterator, Dict, Any
+from typing import Optional, Iterator
 
 import grpc
 from loguru import logger
@@ -13,21 +13,19 @@ class TarsClient:
     """
     Client for controlling TARS robot via gRPC.
 
+    Returns raw protobuf response objects for type safety and forward compatibility.
+
     Example:
-        # Remote mode (from MacBook) - replace with your robot's IP
         client = TarsClient("100.115.193.41:50051")
 
-        # Local mode (on Pi)
-        client = TarsClient("localhost:50051")
+        result = client.move("wave")
+        print(result.success, result.duration)
 
-        # Auto-detect
-        client = TarsClient()
+        health = client.health()
+        print(health.status, health.hardware.servos)
 
-        # Use it
-        client.move("wave")
-        client.set_emotion("happy")
-        frame = client.capture_camera()
         status = client.get_status()
+        print(status.connected, status.battery.level)
     """
 
     def __init__(self, address: Optional[str] = None, timeout: int = 10):
@@ -36,7 +34,7 @@ class TarsClient:
 
         Args:
             address: gRPC server address (host:port).
-                     If None, tries localhost:50051, then TARS_GRPC_ADDRESS env var.
+                     If None, tries TARS_GRPC_ADDRESS env var, then localhost:50051.
             timeout: Default timeout for RPC calls in seconds.
         """
         if address is None:
@@ -49,36 +47,27 @@ class TarsClient:
 
         logger.info(f"TarsClient connected to {address}")
 
-    def move(self, movement: str, speed: float = 1.0) -> Dict[str, Any]:
+    def move(self, movement: str, speed: float = 1.0) -> tars_pb2.MoveResponse:
         """
         Execute a movement.
 
         Args:
-            movement: Movement name (e.g., "wave", "nod", "shake_head")
+            movement: Movement name (e.g., "wave", "walk_forward")
             speed: Movement speed (0.0-1.0), default 1.0
 
         Returns:
-            Dictionary with success status, duration, and optional error message
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
+            MoveResponse with .success, .duration, .error fields
         """
         try:
             request = tars_pb2.MoveRequest(movement=movement, speed=speed)
             response = self.stub.Move(request, timeout=self.timeout)
-
-            result = {
-                "success": response.success,
-                "duration": response.duration,
-                "error": response.error if response.error else None
-            }
 
             if not response.success:
                 logger.error(f"Movement '{movement}' failed: {response.error}")
             else:
                 logger.debug(f"Movement '{movement}' completed in {response.duration:.2f}s")
 
-            return result
+            return response
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during move: {e}")
@@ -90,9 +79,6 @@ class TarsClient:
 
         Args:
             emotion: Emotion name ("happy", "sad", "angry", "surprised", "neutral")
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
         """
         try:
             request = tars_pb2.EmotionRequest(emotion=emotion)
@@ -109,9 +95,6 @@ class TarsClient:
 
         Args:
             state: Eye state ("idle", "listening", "thinking", "speaking")
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
         """
         try:
             request = tars_pb2.EyeStateRequest(state=state)
@@ -127,7 +110,7 @@ class TarsClient:
         width: int = 640,
         height: int = 480,
         quality: int = 80
-    ) -> bytes:
+    ) -> tars_pb2.CaptureResponse:
         """
         Capture a frame from the camera.
 
@@ -137,10 +120,7 @@ class TarsClient:
             quality: JPEG quality (1-100), default 80
 
         Returns:
-            JPEG image as bytes
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
+            CaptureResponse with .image (bytes), .width, .height, .format fields
         """
         try:
             request = tars_pb2.CaptureRequest(
@@ -155,91 +135,45 @@ class TarsClient:
                 f"{len(response.image)} bytes"
             )
 
-            return response.image
+            return response
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during capture_camera: {e}")
             raise
 
-    def health(self) -> Dict[str, Any]:
+    def health(self) -> tars_pb2.HealthResponse:
         """
-        Get health status (gRPC Health RPC).
+        Get health status.
 
         Returns:
-            Dictionary with health status including hardware, battery, WebRTC status
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
+            HealthResponse with .status, .version, .grpc_available, .hardware, .battery fields
         """
         try:
             response = self.stub.Health(tars_pb2.Empty(), timeout=self.timeout)
-
-            return {
-                "status": response.status,
-                "version": response.version,
-                "grpc_available": response.grpc_available,
-                "webrtc": {
-                    "available": response.webrtc_available,
-                    "connected": response.webrtc_connected,
-                },
-                "hardware": {
-                    "servos": response.hardware.servos,
-                    "camera": response.hardware.camera,
-                    "audio": response.hardware.audio,
-                    "display": response.hardware.display,
-                    "battery": response.hardware.battery,
-                    "moving": response.hardware.moving,
-                },
-                "battery": {
-                    "level": response.battery.level,
-                    "charging": response.battery.charging,
-                    "voltage": response.battery.voltage,
-                    "current": response.battery.current,
-                },
-            }
+            return response
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during health: {e}")
             raise
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> tars_pb2.StatusResponse:
         """
         Get current robot status.
 
         Returns:
-            Dictionary with robot status including battery, emotion, eye state, movement
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
+            StatusResponse with .connected, .battery, .current_emotion,
+            .current_eye_state, .is_moving, .current_movement fields
         """
         try:
             response = self.stub.GetStatus(tars_pb2.Empty(), timeout=self.timeout)
-
-            return {
-                "connected": response.connected,
-                "battery": {
-                    "level": response.battery.level,
-                    "charging": response.battery.charging,
-                    "voltage": response.battery.voltage,
-                    "current": response.battery.current,
-                },
-                "emotion": response.current_emotion,
-                "eye_state": response.current_eye_state,
-                "is_moving": response.is_moving,
-                "movement": response.current_movement,
-            }
+            return response
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during get_status: {e}")
             raise
 
     def reset(self) -> None:
-        """
-        Reset robot to neutral position.
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
-        """
+        """Reset robot to neutral position."""
         try:
             self.stub.Reset(tars_pb2.Empty(), timeout=self.timeout)
             logger.debug("Robot reset to neutral position")
@@ -248,46 +182,31 @@ class TarsClient:
             logger.error(f"gRPC error during reset: {e}")
             raise
 
-    def stream_battery(self) -> Iterator[Dict[str, Any]]:
+    def stream_battery(self) -> Iterator[tars_pb2.BatteryStatus]:
         """
         Stream battery status updates.
 
         Yields:
-            Dictionary with battery level, charging status, voltage, current
-
-        Raises:
-            grpc.RpcError: If the streaming fails
+            BatteryStatus with .level, .charging, .voltage, .current fields
         """
         try:
             for status in self.stub.StreamBattery(tars_pb2.Empty()):
-                yield {
-                    "level": status.level,
-                    "charging": status.charging,
-                    "voltage": status.voltage,
-                    "current": status.current,
-                }
+                yield status
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during stream_battery: {e}")
             raise
 
-    def stream_movement_status(self) -> Iterator[Dict[str, Any]]:
+    def stream_movement_status(self) -> Iterator[tars_pb2.MovementStatus]:
         """
         Stream movement status updates.
 
         Yields:
-            Dictionary with moving status, movement name, and progress
-
-        Raises:
-            grpc.RpcError: If the streaming fails
+            MovementStatus with .moving, .movement, .progress fields
         """
         try:
             for status in self.stub.StreamMovementStatus(tars_pb2.Empty()):
-                yield {
-                    "moving": status.moving,
-                    "movement": status.movement,
-                    "progress": status.progress,
-                }
+                yield status
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during stream_movement_status: {e}")

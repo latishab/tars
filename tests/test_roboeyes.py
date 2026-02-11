@@ -4,11 +4,13 @@ Test script for RoboEyes module with breathing animation.
 Run this to see the eyes in action with all states and expressions.
 """
 
-import pygame
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
+
+import pytest
+pygame = pytest.importorskip("pygame", reason="pygame not installed")
 
 from modules.modules_roboeyes import RoboEyes, Mood, EyeState
 
