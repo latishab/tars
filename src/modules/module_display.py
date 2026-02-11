@@ -160,18 +160,25 @@ class DisplayManager:
     # ========== Main Loop ==========
 
     def _run(self):
-        """Main display loop"""
+        """Main display loop - renders portrait content rotated onto landscape screen"""
         pygame.init()
 
-        # Setup fullscreen display
+        # Physical screen is 800x480 landscape (DSI panel mounted vertically)
+        display_info = pygame.display.Info()
+        screen_w = display_info.current_w
+        screen_h = display_info.current_h
+
         screen = pygame.display.set_mode(
-            (self.width, self.height),
+            (screen_w, screen_h),
             pygame.FULLSCREEN | pygame.NOFRAME
         )
         pygame.display.set_caption("TARS")
         pygame.mouse.set_visible(False)
 
-        # Initialize modules
+        # Render to portrait surface (480x800), then rotate for landscape screen
+        portrait_surface = pygame.Surface((self.width, self.height))
+
+        # Initialize modules with portrait dimensions
         self.eyes = RoboEyes(self.width, self.height)
         self.spectrum = SpectrumVisualizer(self.width, self.height)
 
@@ -196,20 +203,22 @@ class DisplayManager:
             dt = current_time - last_time
             last_time = current_time
 
-            # Clear
-            screen.fill(self.bg_color)
+            # Draw to portrait surface
+            portrait_surface.fill(self.bg_color)
 
-            # Update and draw based on mode
             with self._lock:
                 if self.state.mode == DisplayMode.EYES:
                     self.eyes.update(dt)
-                    self.eyes.draw(screen)
+                    self.eyes.draw(portrait_surface)
                 elif self.state.mode == DisplayMode.SPECTRUM:
                     self.spectrum.update(dt)
-                    self.spectrum.draw(screen)
+                    self.spectrum.draw(portrait_surface)
 
-                # Draw battery indicator (always on top)
-                self._draw_battery_indicator(screen)
+                self._draw_battery_indicator(portrait_surface)
+
+            # Rotate portrait (480x800) -> landscape (800x480) and blit to screen
+            rotated = pygame.transform.rotate(portrait_surface, 270)
+            screen.blit(rotated, (0, 0))
 
             pygame.display.flip()
             clock.tick(60)
