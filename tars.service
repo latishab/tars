@@ -4,19 +4,25 @@ Documentation=https://github.com/latishab/tars
 After=network-online.target sound.target
 Wants=network-online.target
 
+# NOTE: Update User, Group, WorkingDirectory, and all /home/mac/tars-daemon
+# paths below to match your system. Replace "mac" with your Pi username
+# and "tars-daemon" with your install directory name.
+
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/home/pi/tars
+User=mac
+Group=mac
+WorkingDirectory=/home/mac/tars-daemon
 
 # Environment
-Environment="PATH=/home/pi/tars/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PATH=/home/mac/tars-daemon/venv/bin:/usr/local/bin:/usr/bin:/bin"
 Environment="PYTHONUNBUFFERED=1"
-EnvironmentFile=-/home/pi/tars/.env
+Environment="DISPLAY=:0"
+Environment="XDG_RUNTIME_DIR=/run/user/1000"
+EnvironmentFile=-/home/mac/tars-daemon/.env
 
 # Start daemon with start.sh script (handles venv activation and argument parsing)
-ExecStart=/home/pi/tars/start.sh
+ExecStart=/home/mac/tars-daemon/start.sh
 
 # Restart policy
 Restart=always
