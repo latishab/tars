@@ -7,7 +7,6 @@
 - Mechanical design and 3D printing files
 
 ### Charles-Olivier Dion (AtomikSpace)
-- Battery monitoring system (`module_battery.py`)
 - Hardware integration modules
 - Dual-licensed contributions (CC-BY-NC 4.0 / Commercial)
 

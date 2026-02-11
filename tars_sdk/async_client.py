@@ -14,7 +14,8 @@ class AsyncTarsClient:
     Async client for controlling TARS robot via gRPC.
 
     Example:
-        async with AsyncTarsClient("100.64.0.2:50051") as client:
+        # Replace with your robot's IP address
+        async with AsyncTarsClient("100.115.193.41:50051") as client:
             await client.move("wave")
             await client.set_emotion("happy")
             frame = await client.capture_camera()

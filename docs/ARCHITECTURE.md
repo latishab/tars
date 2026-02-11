@@ -230,8 +230,9 @@ AUDIO_SAMPLE_RATE_OUT=24000
 ### Host computer - `tars-omni/config.ini`
 ```ini
 [Connection]
-rpi_url = http://100.64.0.2:8001    # For WebRTC signaling
-rpi_grpc = 100.64.0.2:50051         # For hardware control
+# Replace 100.115.193.41 with your robot's IP address
+rpi_url = http://100.115.193.41:8001    # For WebRTC signaling
+rpi_grpc = 100.115.193.41:50051         # For hardware control
 mode = robot
 
 [LLM]
@@ -304,8 +305,8 @@ Latency measurements on LAN:
 ```python
 from tars_sdk import TarsClient
 
-# Connect to robot
-client = TarsClient("100.64.0.2:50051")
+# Connect to robot (replace with your robot's IP)
+client = TarsClient("100.115.193.41:50051")
 
 # Health check (gRPC)
 health = client.health()
@@ -338,8 +339,8 @@ for battery in client.stream_battery():
     if battery['level'] < 20:
         break
 
-# Context manager
-with TarsClient("100.64.0.2:50051") as client:
+# Context manager (replace with your robot's IP)
+with TarsClient("100.115.193.41:50051") as client:
     client.move("wave_right")
 ```
 
@@ -349,8 +350,8 @@ with TarsClient("100.64.0.2:50051") as client:
 # In tars_bot.py
 from services import robot as robot_service
 
-# Initialize client
-robot_client = robot_service.get_robot_client("100.64.0.2:50051")
+# Initialize client (replace with your robot's IP)
+robot_client = robot_service.get_robot_client("100.115.193.41:50051")
 
 # LLM tool functions (already integrated)
 async def execute_movement(movements: list[str]) -> str:
@@ -369,11 +370,11 @@ async def capture_camera_view() -> dict:
 ### gRPC Connection Issues
 
 ```bash
-# Test gRPC health (from Mac)
-python -c "from tars_sdk import TarsClient; print(TarsClient('100.64.0.2:50051').health())"
+# Test gRPC health (from Mac) - replace IP with your robot's IP
+python -c "from tars_sdk import TarsClient; print(TarsClient('100.115.193.41:50051').health())"
 
-# Check if gRPC port is open
-nc -zv 100.64.0.2 50051
+# Check if gRPC port is open - replace IP with your robot's IP
+nc -zv 100.115.193.41 50051
 
 # Check daemon logs
 journalctl -u tars -f | grep gRPC
@@ -382,11 +383,11 @@ journalctl -u tars -f | grep gRPC
 ### WebRTC Connection Issues
 
 ```bash
-# Check if RPi is reachable
-curl http://100.64.0.2:8001/health
+# Check if RPi is reachable - replace IP with your robot's IP
+curl http://100.115.193.41:8001/health
 
-# Test WebRTC signaling endpoint
-curl -X POST http://100.64.0.2:8001/api/offer \
+# Test WebRTC signaling endpoint - replace IP with your robot's IP
+curl -X POST http://100.115.193.41:8001/api/offer \
   -H "Content-Type: application/json" \
   -d '{"sdp": "test", "type": "offer"}'
 ```
@@ -397,7 +398,8 @@ curl -X POST http://100.64.0.2:8001/api/offer \
 import time
 from tars_sdk import TarsClient
 
-client = TarsClient("100.64.0.2:50051")
+# Replace with your robot's IP
+client = TarsClient("100.115.193.41:50051")
 
 # Measure latency
 start = time.time()

@@ -70,7 +70,8 @@ python tars_daemon.py --grpc-port 50051
 
 ```python
 from tars_sdk import TarsClient
-client = TarsClient("100.64.0.2:50051")
+# Replace with your robot's IP address
+client = TarsClient("100.115.193.41:50051")
 client.move("wave_right")
 ```
 ```

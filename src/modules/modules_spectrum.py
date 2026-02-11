@@ -19,7 +19,7 @@ class SpectrumStyle(Enum):
 class SpectrumVisualizer:
     """Audio spectrum visualization"""
 
-    def __init__(self, screen_width: int = 800, screen_height: int = 480):
+    def __init__(self, screen_width: int = 480, screen_height: int = 800):
         self.width = screen_width
         self.height = screen_height
 
