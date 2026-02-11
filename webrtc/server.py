@@ -191,7 +191,9 @@ class WebRTCServer:
             }
 
         except Exception as e:
+            import traceback
             logger.error(f"Failed to process offer [{conn_id}]: {e}")
+            logger.error(traceback.format_exc())
             if conn_id in self.peer_connections:
                 await self.peer_connections[conn_id].close()
                 del self.peer_connections[conn_id]

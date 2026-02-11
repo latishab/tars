@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from loguru import logger
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -60,7 +61,7 @@ except ImportError:
 
 # Import face tracking
 try:
-    from modules.module_facetracking import FaceTracker, MediaPipeFaceTracker, MEDIAPIPE_AVAILABLE
+    from modules.module_facetracking import FaceTracker
     FACETRACKING_AVAILABLE = True
 except ImportError:
     FACETRACKING_AVAILABLE = False
@@ -213,6 +214,22 @@ class TARSDaemon:
                 "message": "All hardware control now via gRPC - use tars_sdk.TarsClient"
             }
 
+        # === Camera Preview ===
+        @app.get("/camera")
+        def camera_preview():
+            """Return a JPEG snapshot from the camera."""
+            if not self.camera or not self.camera.is_available():
+                raise HTTPException(503, "Camera not available")
+
+            frame = self.camera.capture_frame()
+            if frame is None:
+                raise HTTPException(500, "Failed to capture frame")
+
+            import cv2
+            # picamera2 RGB888 format - encode directly (OpenCV expects BGR, picamera2 delivers compatible order)
+            _, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            return Response(content=jpeg.tobytes(), media_type="image/jpeg")
+
     async def _startup(self):
         """Initialize all components"""
         logger.info("=" * 60)
@@ -222,7 +239,7 @@ class TARSDaemon:
         # Initialize camera (uses existing module)
         if CAMERA_AVAILABLE:
             try:
-                self.camera = CameraModule(1280, 720)
+                self.camera = CameraModule(640, 480)
                 logger.info("✓ Camera initialized")
             except Exception as e:
                 logger.warning(f"✗ Camera not available: {e}")
@@ -301,22 +318,11 @@ class TARSDaemon:
         # Start face tracking
         if self.face_tracking_enabled and self.camera and self.display and FACETRACKING_AVAILABLE:
             try:
-                # Use MediaPipe if available, otherwise OpenCV
-                if MEDIAPIPE_AVAILABLE:
-                    self.face_tracker = MediaPipeFaceTracker(
-                        camera=self.camera,
-                        on_face_detected=self._on_face_detected,
-                        on_face_lost=self._on_face_lost
-                    )
-                    logger.info("✓ Face tracking initialized (MediaPipe)")
-                else:
-                    self.face_tracker = FaceTracker(
-                        camera=self.camera,
-                        on_face_detected=self._on_face_detected,
-                        on_face_lost=self._on_face_lost
-                    )
-                    logger.info("✓ Face tracking initialized (OpenCV)")
-
+                self.face_tracker = FaceTracker(
+                    camera=self.camera,
+                    on_face_detected=self._on_face_detected,
+                    on_face_lost=self._on_face_lost
+                )
                 self.face_tracker.start()
             except Exception as e:
                 logger.warning(f"✗ Face tracking not available: {e}")

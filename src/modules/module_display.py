@@ -138,11 +138,11 @@ class DisplayManager:
             self.state.face_detected = detected
 
             if detected and self.eyes:
-                # Convert to look direction
-                look_x = (x / frame_w - 0.5) * 2
-                look_y = (y / frame_h - 0.5) * 2
-                look_x = max(-0.8, min(0.8, look_x))
-                look_y = max(-0.5, min(0.5, look_y))
+                # Convert face position to look direction with amplified range
+                look_x = (x / frame_w - 0.5) * 4
+                look_y = (y / frame_h - 0.5) * 3
+                look_x = max(-1.0, min(1.0, look_x))
+                look_y = max(-1.0, min(1.0, look_y))
 
                 self.state.face_x = look_x
                 self.state.face_y = look_y
