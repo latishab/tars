@@ -71,8 +71,9 @@ class CameraModule:
 
         try:
             if self.camera_type == "picamera2":
-                # Pi Camera - capture returns RGB
+                # Pi Camera - capture returns RGB, flip vertically (camera mounted upside down)
                 frame = self.camera.capture_array()
+                frame = np.flip(frame, axis=0)
                 return frame
 
             elif self.camera_type == "opencv":

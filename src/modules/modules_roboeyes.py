@@ -404,9 +404,10 @@ class RoboEyes:
         cfg = self.config
 
         # Calculate look offset
-        max_move = cfg.width * 0.25
-        look_offset_x = self._look_x * max_move
-        look_offset_y = self._look_y * max_move * 0.6
+        max_move_x = cfg.width * 0.35
+        max_move_y = cfg.height * 0.25
+        look_offset_x = self._look_x * max_move_x
+        look_offset_y = self._look_y * max_move_y
 
         # Animation offsets
         offset_x = look_offset_x + self._anim_offset_x

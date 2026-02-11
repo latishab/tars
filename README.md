@@ -36,7 +36,7 @@ RPi 5 (tars) - Standalone Robot            Host Computer (tars-omni) - AI Brain
 │ DataChannel State Sync:      │        │                             │
 │ - Receives eye states        │        │ Services:                   │
 │ - Sends battery status       │        │ - Deepgram STT              │
-│                              │        │ - Claude LLM + Tools        │
+│                              │        │ - GPT LLM + Tools           │
 │ gRPC API (port 50051):       │        │ - ElevenLabs TTS            │
 │ - Move(movement, speed)      │◄───────┤ - Vision (tool calls)       │
 │ - CaptureCamera(w, h, q)     │  gRPC  │                             │
