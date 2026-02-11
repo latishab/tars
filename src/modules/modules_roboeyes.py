@@ -46,7 +46,7 @@ class EyeConfig:
 class RoboEyes:
     """Animated robot eyes with expressions and tracking"""
 
-    def __init__(self, screen_width: int = 800, screen_height: int = 480):
+    def __init__(self, screen_width: int = 480, screen_height: int = 800):
         self.screen_width = screen_width
         self.screen_height = screen_height
 

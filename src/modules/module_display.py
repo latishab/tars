@@ -43,7 +43,7 @@ class DisplayState:
 class DisplayManager:
     """Manages TARS display - switches between eyes and spectrum"""
 
-    def __init__(self, width: int = 800, height: int = 480):
+    def __init__(self, width: int = 480, height: int = 800):
         self.width = width
         self.height = height
         self.running = False

@@ -14,8 +14,8 @@ class TarsClient:
     Client for controlling TARS robot via gRPC.
 
     Example:
-        # Remote mode (from MacBook)
-        client = TarsClient("100.64.0.2:50051")
+        # Remote mode (from MacBook) - replace with your robot's IP
+        client = TarsClient("100.115.193.41:50051")
 
         # Local mode (on Pi)
         client = TarsClient("localhost:50051")

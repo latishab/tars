@@ -176,8 +176,8 @@ journalctl -u tars -f | grep gRPC
 # Check HTTP server
 curl http://localhost:8001/health
 
-# Test connectivity
-ping 100.64.0.1
+# Test connectivity - replace with your robot's IP
+ping 100.115.193.41
 tailscale status
 ```
 
