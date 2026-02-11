@@ -7,10 +7,11 @@ import sys
 from pathlib import Path
 
 # Add src directory to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+import pytest
+cv2 = pytest.importorskip("cv2", reason="OpenCV not installed")
 from modules.module_camera import CameraModule
-import cv2
 
 def test_camera():
     print("="*50)

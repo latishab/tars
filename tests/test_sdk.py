@@ -42,7 +42,7 @@ class TestTarsClient:
             assert client.address == "localhost:50051"
 
     def test_move_success(self):
-        """Test successful movement."""
+        """Test successful movement returns protobuf response."""
         with patch('grpc.insecure_channel'):
             client = TarsClient("localhost:50051")
             client.stub = MagicMock()
@@ -54,11 +54,10 @@ class TestTarsClient:
 
             result = client.move("wave")
 
-            assert result["success"] is True
-            assert result["duration"] == 1.5
-            assert result["error"] is None
+            assert result.success is True
+            assert result.duration == 1.5
+            assert result.error == ""
 
-            # Verify request
             call_args = client.stub.Move.call_args
             request = call_args[0][0]
             assert request.movement == "wave"
@@ -77,10 +76,9 @@ class TestTarsClient:
 
             result = client.move("nod", speed=0.5)
 
-            assert result["success"] is True
-            assert result["duration"] == 2.0
+            assert result.success is True
+            assert result.duration == 2.0
 
-            # Verify speed was passed
             call_args = client.stub.Move.call_args
             request = call_args[0][0]
             assert request.speed == 0.5
@@ -98,8 +96,8 @@ class TestTarsClient:
 
             result = client.move("invalid")
 
-            assert result["success"] is False
-            assert result["error"] == "Unknown movement: invalid"
+            assert result.success is False
+            assert result.error == "Unknown movement: invalid"
 
     def test_set_emotion(self):
         """Test setting emotion."""
@@ -130,7 +128,7 @@ class TestTarsClient:
             assert request.state == "listening"
 
     def test_capture_camera(self):
-        """Test camera capture."""
+        """Test camera capture returns protobuf response."""
         with patch('grpc.insecure_channel'):
             client = TarsClient("localhost:50051")
             client.stub = MagicMock()
@@ -145,8 +143,10 @@ class TestTarsClient:
 
             result = client.capture_camera()
 
-            assert result == fake_jpeg
-            assert len(result) > 0
+            assert result.image == fake_jpeg
+            assert result.width == 640
+            assert result.height == 480
+            assert result.format == "jpeg"
 
     def test_capture_camera_with_params(self):
         """Test camera capture with custom parameters."""
@@ -169,7 +169,7 @@ class TestTarsClient:
             assert request.quality == 90
 
     def test_health(self):
-        """Test health check."""
+        """Test health check returns protobuf response."""
         with patch('grpc.insecure_channel'):
             client = TarsClient("localhost:50051")
             client.stub = MagicMock()
@@ -201,16 +201,16 @@ class TestTarsClient:
 
             result = client.health()
 
-            assert result["status"] == "running"
-            assert result["version"] == "2.0.0"
-            assert result["grpc_available"] is True
-            assert result["webrtc"]["available"] is True
-            assert result["webrtc"]["connected"] is False
-            assert result["hardware"]["servos"] is True
-            assert result["battery"]["level"] == 85
+            assert result.status == "running"
+            assert result.version == "2.0.0"
+            assert result.grpc_available is True
+            assert result.webrtc_available is True
+            assert result.webrtc_connected is False
+            assert result.hardware.servos is True
+            assert result.battery.level == 85
 
     def test_get_status(self):
-        """Test getting robot status."""
+        """Test getting robot status returns protobuf response."""
         with patch('grpc.insecure_channel'):
             client = TarsClient("localhost:50051")
             client.stub = MagicMock()
@@ -233,12 +233,12 @@ class TestTarsClient:
 
             result = client.get_status()
 
-            assert result["connected"] is True
-            assert result["battery"]["level"] == 90
-            assert result["emotion"] == "happy"
-            assert result["eye_state"] == "listening"
-            assert result["is_moving"] is True
-            assert result["movement"] == "wave"
+            assert result.connected is True
+            assert result.battery.level == 90
+            assert result.current_emotion == "happy"
+            assert result.current_eye_state == "listening"
+            assert result.is_moving is True
+            assert result.current_movement == "wave"
 
     def test_reset(self):
         """Test robot reset."""
@@ -261,7 +261,7 @@ class TestTarsClient:
             mock_channel.close.assert_called_once()
 
     def test_stream_battery(self):
-        """Test battery streaming."""
+        """Test battery streaming returns protobuf objects."""
         with patch('grpc.insecure_channel'):
             client = TarsClient("localhost:50051")
             client.stub = MagicMock()
@@ -276,13 +276,13 @@ class TestTarsClient:
             results = list(client.stream_battery())
 
             assert len(results) == 3
-            assert results[0]["level"] == 100
-            assert results[1]["level"] == 99
-            assert results[2]["level"] == 98
-            assert results[0]["charging"] is False
+            assert results[0].level == 100
+            assert results[1].level == 99
+            assert results[2].level == 98
+            assert results[0].charging is False
 
     def test_stream_movement_status(self):
-        """Test movement status streaming."""
+        """Test movement status streaming returns protobuf objects."""
         with patch('grpc.insecure_channel'):
             client = TarsClient("localhost:50051")
             client.stub = MagicMock()
@@ -297,10 +297,10 @@ class TestTarsClient:
             results = list(client.stream_movement_status())
 
             assert len(results) == 3
-            assert results[0]["moving"] is True
-            assert results[0]["movement"] == "wave"
-            assert results[1]["progress"] == 0.5
-            assert results[2]["moving"] is False
+            assert results[0].moving is True
+            assert results[0].movement == "wave"
+            assert results[1].progress == 0.5
+            assert results[2].moving is False
 
     def test_repr(self):
         """Test string representation."""
@@ -321,7 +321,7 @@ class TestAsyncTarsClient:
         assert not client._initialized
 
     async def test_async_move(self):
-        """Test async movement."""
+        """Test async movement returns protobuf response."""
         client = AsyncTarsClient("localhost:50051")
 
         with patch('grpc.aio.insecure_channel'):
@@ -335,9 +335,9 @@ class TestAsyncTarsClient:
 
             result = await client.move("wave")
 
-            assert result["success"] is True
-            assert result["duration"] == 1.5
-            assert result["error"] is None
+            assert result.success is True
+            assert result.duration == 1.5
+            assert result.error == ""
 
     async def test_async_set_emotion(self):
         """Test async set emotion."""
@@ -353,7 +353,7 @@ class TestAsyncTarsClient:
             client.stub.SetEmotion.assert_called_once()
 
     async def test_async_capture_camera(self):
-        """Test async camera capture."""
+        """Test async camera capture returns protobuf response."""
         client = AsyncTarsClient("localhost:50051")
 
         with patch('grpc.aio.insecure_channel'):
@@ -369,10 +369,11 @@ class TestAsyncTarsClient:
 
             result = await client.capture_camera()
 
-            assert result == fake_jpeg
+            assert result.image == fake_jpeg
+            assert result.width == 640
 
     async def test_async_health(self):
-        """Test async health check."""
+        """Test async health check returns protobuf response."""
         client = AsyncTarsClient("localhost:50051")
 
         with patch('grpc.aio.insecure_channel'):
@@ -398,8 +399,10 @@ class TestAsyncTarsClient:
 
             result = await client.health()
 
-            assert result["status"] == "running"
-            assert result["grpc_available"] is True
+            assert result.status == "running"
+            assert result.grpc_available is True
+            assert result.hardware.servos is True
+            assert result.battery.level == 85
 
     async def test_async_context_manager(self):
         """Test async context manager."""
@@ -414,7 +417,7 @@ class TestAsyncTarsClient:
             mock_channel.close.assert_called_once()
 
     async def test_async_stream_battery(self):
-        """Test async battery streaming."""
+        """Test async battery streaming returns protobuf objects."""
         client = AsyncTarsClient("localhost:50051")
 
         async def mock_stream():
@@ -436,8 +439,8 @@ class TestAsyncTarsClient:
                 results.append(status)
 
             assert len(results) == 3
-            assert results[0]["level"] == 100
-            assert results[1]["level"] == 99
+            assert results[0].level == 100
+            assert results[1].level == 99
 
     async def test_repr(self):
         """Test string representation."""

@@ -1,7 +1,7 @@
 """TARS async gRPC Client for remote robot control."""
 
 import os
-from typing import Optional, AsyncIterator, Dict, Any
+from typing import Optional, AsyncIterator
 
 import grpc.aio
 from loguru import logger
@@ -13,15 +13,15 @@ class AsyncTarsClient:
     """
     Async client for controlling TARS robot via gRPC.
 
-    Example:
-        # Replace with your robot's IP address
-        async with AsyncTarsClient("100.115.193.41:50051") as client:
-            await client.move("wave")
-            await client.set_emotion("happy")
-            frame = await client.capture_camera()
+    Returns raw protobuf response objects for type safety and forward compatibility.
 
-            async for battery in client.stream_battery():
-                print(f"Battery: {battery['level']}%")
+    Example:
+        async with AsyncTarsClient("100.115.193.41:50051") as client:
+            result = await client.move("wave")
+            print(result.success, result.duration)
+
+            async for status in client.stream_battery():
+                print(f"Battery: {status.level}%")
     """
 
     def __init__(self, address: Optional[str] = None, timeout: int = 10):
@@ -30,7 +30,7 @@ class AsyncTarsClient:
 
         Args:
             address: gRPC server address (host:port).
-                     If None, tries localhost:50051, then TARS_GRPC_ADDRESS env var.
+                     If None, tries TARS_GRPC_ADDRESS env var, then localhost:50051.
             timeout: Default timeout for RPC calls in seconds.
         """
         if address is None:
@@ -59,19 +59,16 @@ class AsyncTarsClient:
             self._initialized = True
             logger.info(f"AsyncTarsClient connected to {self.address}")
 
-    async def move(self, movement: str, speed: float = 1.0) -> Dict[str, Any]:
+    async def move(self, movement: str, speed: float = 1.0) -> tars_pb2.MoveResponse:
         """
         Execute a movement.
 
         Args:
-            movement: Movement name (e.g., "wave", "nod", "shake_head")
+            movement: Movement name (e.g., "wave", "walk_forward")
             speed: Movement speed (0.0-1.0), default 1.0
 
         Returns:
-            Dictionary with success status, duration, and optional error message
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
+            MoveResponse with .success, .duration, .error fields
         """
         await self._ensure_connected()
 
@@ -79,18 +76,12 @@ class AsyncTarsClient:
             request = tars_pb2.MoveRequest(movement=movement, speed=speed)
             response = await self.stub.Move(request, timeout=self.timeout)
 
-            result = {
-                "success": response.success,
-                "duration": response.duration,
-                "error": response.error if response.error else None
-            }
-
             if not response.success:
                 logger.error(f"Movement '{movement}' failed: {response.error}")
             else:
                 logger.debug(f"Movement '{movement}' completed in {response.duration:.2f}s")
 
-            return result
+            return response
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during move: {e}")
@@ -102,9 +93,6 @@ class AsyncTarsClient:
 
         Args:
             emotion: Emotion name ("happy", "sad", "angry", "surprised", "neutral")
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
         """
         await self._ensure_connected()
 
@@ -123,9 +111,6 @@ class AsyncTarsClient:
 
         Args:
             state: Eye state ("idle", "listening", "thinking", "speaking")
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
         """
         await self._ensure_connected()
 
@@ -143,7 +128,7 @@ class AsyncTarsClient:
         width: int = 640,
         height: int = 480,
         quality: int = 80
-    ) -> bytes:
+    ) -> tars_pb2.CaptureResponse:
         """
         Capture a frame from the camera.
 
@@ -153,10 +138,7 @@ class AsyncTarsClient:
             quality: JPEG quality (1-100), default 80
 
         Returns:
-            JPEG image as bytes
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
+            CaptureResponse with .image (bytes), .width, .height, .format fields
         """
         await self._ensure_connected()
 
@@ -173,95 +155,49 @@ class AsyncTarsClient:
                 f"{len(response.image)} bytes"
             )
 
-            return response.image
+            return response
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during capture_camera: {e}")
             raise
 
-    async def health(self) -> Dict[str, Any]:
+    async def health(self) -> tars_pb2.HealthResponse:
         """
-        Get health status (gRPC Health RPC).
+        Get health status.
 
         Returns:
-            Dictionary with health status including hardware, battery, WebRTC status
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
+            HealthResponse with .status, .version, .grpc_available, .hardware, .battery fields
         """
         await self._ensure_connected()
 
         try:
             response = await self.stub.Health(tars_pb2.Empty(), timeout=self.timeout)
-
-            return {
-                "status": response.status,
-                "version": response.version,
-                "grpc_available": response.grpc_available,
-                "webrtc": {
-                    "available": response.webrtc_available,
-                    "connected": response.webrtc_connected,
-                },
-                "hardware": {
-                    "servos": response.hardware.servos,
-                    "camera": response.hardware.camera,
-                    "audio": response.hardware.audio,
-                    "display": response.hardware.display,
-                    "battery": response.hardware.battery,
-                    "moving": response.hardware.moving,
-                },
-                "battery": {
-                    "level": response.battery.level,
-                    "charging": response.battery.charging,
-                    "voltage": response.battery.voltage,
-                    "current": response.battery.current,
-                },
-            }
+            return response
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during health: {e}")
             raise
 
-    async def get_status(self) -> Dict[str, Any]:
+    async def get_status(self) -> tars_pb2.StatusResponse:
         """
         Get current robot status.
 
         Returns:
-            Dictionary with robot status including battery, emotion, eye state, movement
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
+            StatusResponse with .connected, .battery, .current_emotion,
+            .current_eye_state, .is_moving, .current_movement fields
         """
         await self._ensure_connected()
 
         try:
             response = await self.stub.GetStatus(tars_pb2.Empty(), timeout=self.timeout)
-
-            return {
-                "connected": response.connected,
-                "battery": {
-                    "level": response.battery.level,
-                    "charging": response.battery.charging,
-                    "voltage": response.battery.voltage,
-                    "current": response.battery.current,
-                },
-                "emotion": response.current_emotion,
-                "eye_state": response.current_eye_state,
-                "is_moving": response.is_moving,
-                "movement": response.current_movement,
-            }
+            return response
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during get_status: {e}")
             raise
 
     async def reset(self) -> None:
-        """
-        Reset robot to neutral position.
-
-        Raises:
-            grpc.RpcError: If the RPC call fails
-        """
+        """Reset robot to neutral position."""
         await self._ensure_connected()
 
         try:
@@ -272,50 +208,35 @@ class AsyncTarsClient:
             logger.error(f"gRPC error during reset: {e}")
             raise
 
-    async def stream_battery(self) -> AsyncIterator[Dict[str, Any]]:
+    async def stream_battery(self) -> AsyncIterator[tars_pb2.BatteryStatus]:
         """
         Stream battery status updates.
 
         Yields:
-            Dictionary with battery level, charging status, voltage, current
-
-        Raises:
-            grpc.RpcError: If the streaming fails
+            BatteryStatus with .level, .charging, .voltage, .current fields
         """
         await self._ensure_connected()
 
         try:
             async for status in self.stub.StreamBattery(tars_pb2.Empty()):
-                yield {
-                    "level": status.level,
-                    "charging": status.charging,
-                    "voltage": status.voltage,
-                    "current": status.current,
-                }
+                yield status
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during stream_battery: {e}")
             raise
 
-    async def stream_movement_status(self) -> AsyncIterator[Dict[str, Any]]:
+    async def stream_movement_status(self) -> AsyncIterator[tars_pb2.MovementStatus]:
         """
         Stream movement status updates.
 
         Yields:
-            Dictionary with moving status, movement name, and progress
-
-        Raises:
-            grpc.RpcError: If the streaming fails
+            MovementStatus with .moving, .movement, .progress fields
         """
         await self._ensure_connected()
 
         try:
             async for status in self.stub.StreamMovementStatus(tars_pb2.Empty()):
-                yield {
-                    "moving": status.moving,
-                    "movement": status.movement,
-                    "progress": status.progress,
-                }
+                yield status
 
         except grpc.RpcError as e:
             logger.error(f"gRPC error during stream_movement_status: {e}")

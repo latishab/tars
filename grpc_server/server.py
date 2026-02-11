@@ -88,8 +88,9 @@ class TARSgRPCServer:
             grace: Grace period for shutdown in seconds (default 5.0)
         """
         logger.info("Stopping gRPC server...")
-        await asyncio.wrap_future(self.server.stop(grace))
-        logger.info("✓ gRPC server stopped")
+        event = self.server.stop(grace)
+        event.wait()
+        logger.info("gRPC server stopped")
 
     def wait_for_termination(self):
         """Block until server terminates."""
