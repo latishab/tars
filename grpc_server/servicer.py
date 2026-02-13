@@ -6,6 +6,7 @@ Maps gRPC methods to hardware modules.
 import time
 import io
 import asyncio
+import platform
 from typing import Optional
 
 import grpc
@@ -17,6 +18,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tars_sdk.proto import tars_pb2, tars_pb2_grpc
+from tars_sdk._version import __version__, __minimum_compatible_client__
+from grpc_server.version_service import (
+    get_git_commit,
+    get_build_date,
+    check_for_update,
+)
 
 # Import existing modules
 from src.modules import module_movements
@@ -74,8 +81,54 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
         self.battery = battery
         self.audio = audio
         self.webrtc = webrtc
+        self._build_date = get_build_date()
 
         logger.info("TarsServiceServicer initialized")
+
+    def GetVersion(self, request, context):
+        """Get version information."""
+        logger.debug("gRPC GetVersion")
+
+        try:
+            return tars_pb2.VersionResponse(
+                version=__version__,
+                git_commit=get_git_commit() or "",
+                build_date=self._build_date,
+                python_version=platform.python_version(),
+                platform=platform.platform(),
+                minimum_client=__minimum_compatible_client__,
+            )
+        except Exception as e:
+            logger.error(f"GetVersion failed: {e}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return tars_pb2.VersionResponse(version=__version__)
+
+    def CheckUpdate(self, request, context):
+        """Check for available updates."""
+        logger.debug("gRPC CheckUpdate")
+
+        try:
+            info = check_for_update()
+            return tars_pb2.UpdateCheckResponse(
+                update_available=info["update_available"],
+                current_version=info["current_version"],
+                latest_version=info["latest_version"],
+                severity=info["severity"],
+                release_notes=info["release_notes"],
+                pypi_url=info["pypi_url"],
+                github_url=info["github_url"],
+            )
+        except Exception as e:
+            logger.error(f"CheckUpdate failed: {e}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return tars_pb2.UpdateCheckResponse(
+                update_available=False,
+                current_version=__version__,
+                latest_version=__version__,
+                severity="none",
+            )
 
     def Health(self, request, context):
         """Get health status."""
@@ -108,7 +161,7 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
 
             return tars_pb2.HealthResponse(
                 status="running",
-                version="3.0.0",
+                version=__version__,
                 grpc_available=True,
                 webrtc_available=self.webrtc is not None,
                 webrtc_connected=self.webrtc.is_connected if self.webrtc else False,
@@ -120,7 +173,7 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
             logger.error(f"Health check failed: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
-            return tars_pb2.HealthResponse(status="error", version="3.0.0")
+            return tars_pb2.HealthResponse(status="error", version=__version__)
 
     def Move(self, request, context):
         """Execute a movement."""
@@ -242,7 +295,7 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
             # Encode as JPEG
             success, buffer = cv2.imencode(
                 '.jpg',
-                cv2.cvtColor(frame, cv2.COLOR_RGB2BGR),
+                frame,
                 [cv2.IMWRITE_JPEG_QUALITY, quality]
             )
 
@@ -371,8 +424,8 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
 
                 status = tars_pb2.MovementStatus(
                     moving=is_moving,
-                    movement="",  # Could track current movement if needed
-                    progress=0.0   # Could track progress if needed
+                    movement="",
+                    progress=0.0
                 )
 
                 yield status
@@ -392,7 +445,7 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
         try:
             for request in request_iterator:
                 level = request.level
-                # Process audio level (e.g., update display animation)
+                # Process audio level
                 if self.display is not None:
                     self.display.set_audio_level(level, "grpc")
 
