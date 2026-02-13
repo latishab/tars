@@ -93,6 +93,20 @@ The RPi will:
 3. Wait for the host computer to connect via POST /api/offer
 4. Once connected, audio flows bidirectionally and gRPC handles hardware control
 
+## Installation
+
+Pre-built Raspberry Pi OS images with TARS pre-installed:
+
+👉 **[TARS OS Repository](https://github.com/latishab/tars-os)**
+
+Download ready-to-flash SD card images with:
+- TARS daemon pre-installed
+- Setup wizard for WiFi and Tailscale
+- Auto-start on boot
+- mDNS (tars.local) configured
+
+See the tars-os repository for flashing instructions and build documentation.
+
 ## Documentation
 
 **User Guides:**
