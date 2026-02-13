@@ -1,6 +1,7 @@
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { Activity, Gamepad2, MessageSquare, Settings, Wifi } from 'lucide-react'
+import { Activity, Gamepad2, MessageSquare, Settings, Wifi, Sun, Moon } from 'lucide-react'
+import { Button } from './components/ui/button'
 import Status from './pages/Status'
 import Control from './pages/Control'
 import Chat from './pages/Chat'
@@ -10,6 +11,7 @@ import Setup from './pages/Setup'
 function App() {
   const [needsSetup, setNeedsSetup] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [darkMode, setDarkMode] = useState(true)
 
   useEffect(() => {
     // Check if WiFi setup is needed
@@ -23,6 +25,10 @@ function App() {
         setLoading(false)
       })
   }, [])
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode)
+  }
 
   if (loading) {
     return (
@@ -38,15 +44,27 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background dark">
+    <div className={`min-h-screen bg-background ${darkMode ? 'dark' : ''}`}>
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 max-w-screen-2xl items-center px-4">
+        <div className="container flex h-14 max-w-screen-2xl items-center justify-between px-4">
           <div className="mr-4 flex">
             <span className="font-bold text-xl bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
               TARS
             </span>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleDarkMode}
+            className="h-9 w-9"
+          >
+            {darkMode ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+          </Button>
         </div>
       </header>
 

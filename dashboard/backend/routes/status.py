@@ -119,30 +119,40 @@ async def get_status():
 
 @router.get("/camera")
 async def get_camera():
-    """Get camera snapshot as JPEG."""
+    """Get camera snapshot as JPEG via gRPC."""
     from fastapi.responses import Response
 
-    if not _camera_module:
-        return {"error": "Camera not available"}
-
     try:
-        import cv2
-        frame = _camera_module.capture_frame()
-        if frame is None:
-            return {"error": "Failed to capture frame"}
+        # Use gRPC to get camera from tars_daemon
+        import grpc
+        import sys
+        from pathlib import Path
 
-        # Encode as JPEG
-        success, buffer = cv2.imencode(
-            '.jpg',
-            cv2.cvtColor(frame, cv2.COLOR_RGB2BGR),
-            [cv2.IMWRITE_JPEG_QUALITY, 80]
+        # Add src to path for grpc imports
+        src_path = Path(__file__).parent.parent.parent.parent / "src"
+        if str(src_path) not in sys.path:
+            sys.path.insert(0, str(src_path))
+
+        from tars_sdk.proto import tars_pb2, tars_pb2_grpc
+
+        # Connect to tars_daemon gRPC
+        channel = grpc.insecure_channel('localhost:50051')
+        stub = tars_pb2_grpc.TarsServiceStub(channel)
+
+        # Request camera capture
+        request = tars_pb2.CaptureRequest(
+            width=640,
+            height=480,
+            quality=80
         )
+        response = stub.CaptureCamera(request)
+        channel.close()
 
-        if not success:
-            return {"error": "Failed to encode image"}
+        if not response.image:
+            return {"error": "No image data returned"}
 
         return Response(
-            content=buffer.tobytes(),
+            content=response.image,
             media_type="image/jpeg"
         )
     except Exception as e:

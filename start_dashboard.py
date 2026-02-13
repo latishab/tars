@@ -29,13 +29,8 @@ except Exception as e:
     print(f"Display init failed: {e}")
     display = None
 
-try:
-    from modules.module_camera import CameraModule
-    camera = CameraModule()
-    print("Camera initialized")
-except Exception as e:
-    print(f"Camera init failed: {e}")
-    camera = None
+camera = None  # Camera is managed by tars_daemon
+print("Camera: using tars_daemon via gRPC (dashboard uses snapshot only)")
 
 # Set module references
 dashboard_status.set_modules(
