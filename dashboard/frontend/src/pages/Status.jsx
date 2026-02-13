@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Battery, Cpu, Thermometer, Wifi, Radio, Eye, Copy, Check } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Separator } from '@/components/ui/separator'
+import { Battery, Cpu, Thermometer, Wifi, Radio, Eye, Copy, Check, Zap, Activity, Signal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 function Status() {
@@ -27,10 +30,13 @@ function Status() {
 
   if (error) {
     return (
-      <div className="p-4">
-        <Card>
+      <div className="container max-w-4xl mx-auto p-4">
+        <Card className="border-destructive">
           <CardContent className="pt-6">
-            <p className="text-destructive">{error}</p>
+            <p className="text-destructive flex items-center gap-2">
+              <Activity className="w-4 h-4 animate-pulse" />
+              {error}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -39,10 +45,13 @@ function Status() {
 
   if (!status) {
     return (
-      <div className="p-4">
+      <div className="container max-w-4xl mx-auto p-4">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-muted-foreground">Loading...</p>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Activity className="w-4 h-4 animate-spin" />
+              <span>Loading system status...</span>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -61,138 +70,221 @@ function Status() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">TARS Status</h1>
+  const getBatteryColor = (level) => {
+    if (level > 60) return 'text-green-500'
+    if (level > 20) return 'text-yellow-500'
+    return 'text-red-500'
+  }
 
-      {/* Battery */}
-      <Card>
-        <CardHeader className="pb-2">
+  const getTempColor = (temp) => {
+    if (temp > 70) return 'text-red-500'
+    if (temp > 60) return 'text-yellow-500'
+    return 'text-green-500'
+  }
+
+  return (
+    <div className="container max-w-4xl mx-auto p-4 space-y-6 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">System Status</h1>
+          <p className="text-muted-foreground">Real-time monitoring and diagnostics</p>
+        </div>
+        <Badge variant="success" className="flex items-center gap-1.5 px-3 py-1.5">
+          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          Online
+        </Badge>
+      </div>
+
+      {/* Battery Card */}
+      <Card className="overflow-hidden border-border/50 hover:border-primary/50 transition-colors">
+        <CardHeader className="pb-3 bg-gradient-to-r from-primary/10 via-transparent to-transparent">
           <CardTitle className="text-lg flex items-center gap-2">
-            <Battery className="w-5 h-5" />
-            Battery
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="text-4xl font-bold">{battery.level}%</div>
-              <div className="text-sm text-muted-foreground">
-                {battery.charging ? 'Charging' : 'Discharging'}
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Battery className={`w-5 h-5 ${getBatteryColor(battery.level)}`} />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-baseline gap-2">
+                <span>Battery</span>
+                <span className={`text-2xl font-bold ${getBatteryColor(battery.level)}`}>
+                  {battery.level}%
+                </span>
               </div>
             </div>
-            <div className="text-right text-sm text-muted-foreground">
-              <div>{battery.voltage?.toFixed(2)}V</div>
-              <div>{battery.current?.toFixed(0)}mA</div>
+            <Badge variant={battery.charging ? 'success' : 'secondary'} className="gap-1.5">
+              {battery.charging ? (
+                <>
+                  <Zap className="w-3 h-3" />
+                  Charging
+                </>
+              ) : (
+                'Discharging'
+              )}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-3">
+          <Progress value={battery.level} className="h-3" />
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50">
+              <span className="text-muted-foreground">Voltage</span>
+              <span className="font-semibold">{battery.voltage?.toFixed(2)}V</span>
             </div>
-          </div>
-          <div className="mt-2 h-2 bg-secondary rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all ${
-                battery.level > 20 ? 'bg-green-500' : 'bg-red-500'
-              }`}
-              style={{ width: `${battery.level}%` }}
-            />
+            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50">
+              <span className="text-muted-foreground">Current</span>
+              <span className="font-semibold">{battery.current?.toFixed(0)}mA</span>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* System */}
-      <Card>
-        <CardHeader className="pb-2">
+      {/* System Resources */}
+      <Card className="border-border/50 hover:border-primary/50 transition-colors">
+        <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
-            <Cpu className="w-5 h-5" />
-            System
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Cpu className="w-5 h-5 text-primary" />
+            </div>
+            System Resources
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <div className="text-sm text-muted-foreground">CPU</div>
-              <div className="text-xl font-semibold">{system.cpu_percent?.toFixed(0)}%</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Memory</div>
-              <div className="text-xl font-semibold">{system.memory_percent?.toFixed(0)}%</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground flex items-center gap-1">
-                <Thermometer className="w-3 h-3" /> Temp
+        <CardContent className="space-y-4">
+          <div className="grid gap-4">
+            {/* CPU */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground font-medium">CPU Usage</span>
+                <span className="font-bold">{system.cpu_percent?.toFixed(1)}%</span>
               </div>
-              <div className="text-xl font-semibold">
-                {system.cpu_temp ? `${system.cpu_temp.toFixed(1)}C` : 'N/A'}
+              <Progress value={system.cpu_percent} className="h-2" />
+            </div>
+
+            {/* Memory */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground font-medium">Memory</span>
+                <span className="font-bold">
+                  {system.memory_used_mb?.toFixed(0)}MB / {system.memory_total_mb?.toFixed(0)}MB
+                </span>
               </div>
+              <Progress value={system.memory_percent} className="h-2" />
+            </div>
+
+            {/* Temperature */}
+            <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2">
+                <Thermometer className={`w-4 h-4 ${getTempColor(system.cpu_temp)}`} />
+                <span className="text-sm font-medium text-muted-foreground">CPU Temperature</span>
+              </div>
+              <span className={`text-lg font-bold ${getTempColor(system.cpu_temp)}`}>
+                {system.cpu_temp ? `${system.cpu_temp.toFixed(1)}°C` : 'N/A'}
+              </span>
+            </div>
+
+            {/* Platform */}
+            <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-muted/50">
+              <span className="text-sm font-medium text-muted-foreground">Platform</span>
+              <Badge variant="outline">{system.platform}</Badge>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Network & Connections */}
-      <Card>
-        <CardHeader className="pb-2">
+      <Card className="border-border/50 hover:border-primary/50 transition-colors">
+        <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
-            <Wifi className="w-5 h-5" />
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Wifi className="w-5 h-5 text-primary" />
+            </div>
             Network & Connections
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Connection mode */}
+          {/* Connection Mode */}
           {network.connection_mode && (
             <div>
-              <div className="text-sm text-muted-foreground mb-2">Connection Mode</div>
-              <div className="text-lg font-semibold capitalize">{network.connection_mode}</div>
+              <div className="text-sm font-medium text-muted-foreground mb-2">Connection Mode</div>
+              <div className="flex items-center gap-2">
+                <Badge variant="default" className="text-base px-3 py-1.5 capitalize">
+                  <Signal className="w-3.5 h-3.5 mr-1.5" />
+                  {network.connection_mode}
+                </Badge>
+              </div>
               {network.connection_mode === 'tailscale' && network.tailscale_ip && (
-                <div className="mt-2 flex items-center gap-2 bg-secondary p-2 rounded">
-                  <code className="text-sm flex-1">{network.tailscale_ip}</code>
+                <div className="mt-3 flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border/50">
+                  <code className="text-sm flex-1 font-mono">{network.tailscale_ip}</code>
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-8 w-8 p-0"
                     onClick={() => copyToClipboard(network.tailscale_ip)}
                   >
-                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    {copied ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
               )}
             </div>
           )}
 
-          {/* Connection status */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-2">
-              <Radio className={`w-4 h-4 ${connections.webrtc ? 'text-green-500' : 'text-red-500'}`} />
-              <span>WebRTC</span>
-              <span className={`text-sm ${connections.webrtc ? 'text-green-500' : 'text-muted-foreground'}`}>
-                {connections.webrtc ? 'Connected' : 'Disconnected'}
-              </span>
+          <Separator />
+
+          {/* Connection Status */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-muted/50 border border-border/50">
+              <div className={`p-1.5 rounded-full ${connections.webrtc ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                <Radio className={`w-4 h-4 ${connections.webrtc ? 'text-green-500' : 'text-red-500'}`} />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium">WebRTC</div>
+                <div className={`text-xs ${connections.webrtc ? 'text-green-500' : 'text-muted-foreground'}`}>
+                  {connections.webrtc ? 'Connected' : 'Disconnected'}
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Radio className={`w-4 h-4 ${connections.grpc ? 'text-green-500' : 'text-red-500'}`} />
-              <span>gRPC</span>
-              <span className={`text-sm ${connections.grpc ? 'text-green-500' : 'text-muted-foreground'}`}>
-                {connections.grpc ? 'Ready' : 'Error'}
-              </span>
+
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-muted/50 border border-border/50">
+              <div className={`p-1.5 rounded-full ${connections.grpc ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                <Radio className={`w-4 h-4 ${connections.grpc ? 'text-green-500' : 'text-red-500'}`} />
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium">gRPC</div>
+                <div className={`text-xs ${connections.grpc ? 'text-green-500' : 'text-muted-foreground'}`}>
+                  {connections.grpc ? 'Ready' : 'Error'}
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Display State */}
-      <Card>
-        <CardHeader className="pb-2">
+      <Card className="border-border/50 hover:border-primary/50 transition-colors">
+        <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
-            <Eye className="w-5 h-5" />
-            Display
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Eye className="w-5 h-5 text-primary" />
+            </div>
+            Display State
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm text-muted-foreground">Emotion</div>
-              <div className="text-xl font-semibold capitalize">{display.emotion}</div>
+            <div className="px-4 py-3 rounded-lg bg-muted/50 border border-border/50">
+              <div className="text-sm text-muted-foreground mb-1">Emotion</div>
+              <Badge variant="secondary" className="text-base px-3 py-1 capitalize">
+                {display.emotion}
+              </Badge>
             </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Eye State</div>
-              <div className="text-xl font-semibold capitalize">{display.eye_state}</div>
+            <div className="px-4 py-3 rounded-lg bg-muted/50 border border-border/50">
+              <div className="text-sm text-muted-foreground mb-1">Eye State</div>
+              <Badge variant="secondary" className="text-base px-3 py-1 capitalize">
+                {display.eye_state}
+              </Badge>
             </div>
           </div>
         </CardContent>

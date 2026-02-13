@@ -1,3 +1,37 @@
-include tars_sdk/proto/*.proto
-include tars_sdk/py.typed
 include README.md
+include LICENSE
+include .env.example
+include tars_daemon.py
+include app_servotester.py
+include start.sh
+
+# SDK
+include tars_sdk/proto/*.proto
+include tars_sdk/proto/*.pyi
+include tars_sdk/py.typed
+
+# gRPC server
+recursive-include grpc_server *.py
+
+# WebRTC
+recursive-include webrtc *.py
+
+# State management
+recursive-include state *.py
+
+# Source modules (for servo tester and daemon)
+recursive-include src/modules *.py
+include src/config.ini
+include src/app-servotester.py
+
+# Dashboard backend
+recursive-include dashboard/backend *.py
+
+# Dashboard frontend (built assets)
+recursive-include dashboard/frontend/dist *
+
+# Exclude unnecessary files
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude *.so
+global-exclude .DS_Store

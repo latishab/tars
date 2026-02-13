@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tars-robot"
 version = "0.2.0"
-description = "SDK for the TARS robot replica from Interstellar. Control movements, camera, display, and audio streaming via gRPC."
+description = "TARS robot from Interstellar: unified daemon, SDK, and dashboard for Raspberry Pi 5. Control via gRPC, WebRTC audio, web UI."
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "CC-BY-NC-4.0"}
@@ -15,7 +15,7 @@ authors = [
 maintainers = [
     {name = "Latisha Besariani Hendra"}
 ]
-keywords = ["robotics", "grpc", "tars", "interstellar", "raspberry-pi", "robot"]
+keywords = ["robotics", "grpc", "tars", "interstellar", "raspberry-pi", "robot", "webrtc", "dashboard"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -26,25 +26,100 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: System :: Hardware",
 ]
 dependencies = [
     "grpcio>=1.60.0",
     "protobuf>=4.25.0",
-    "loguru>=0.7.0",
+    "loguru>=0.7.2",
+    "fastapi>=0.128.0",
+    "uvicorn>=0.40.0",
+    "pydantic>=2.12.0",
+    "numpy>=2.4.0",
+    "Adafruit-Blinka>=8.69.0",
+    "adafruit-circuitpython-pca9685>=3.4.20",
+    "adafruit-circuitpython-busdevice>=5.2.15",
+    "adafruit-circuitpython-ina260>=1.3.20",
+    "lgpio>=0.2.2.0",
+    "pygame>=2.6.1",
+    "evdev>=1.9.3",
+    "opencv-python-headless>=4.10.0",
+    "python-multipart>=0.0.9",
 ]
 
 [project.urls]
 Homepage = "https://github.com/latishab/tars"
 Repository = "https://github.com/latishab/tars"
 Issues = "https://github.com/latishab/tars/issues"
+Documentation = "https://github.com/latishab/tars/tree/main/docs"
+
+[project.scripts]
+tars-daemon = "tars_daemon:main"
+tars-servo-tester = "app_servotester:main"
 
 [project.optional-dependencies]
+# SDK only (for host computers - minimal installation)
+sdk = [
+    "grpcio>=1.60.0",
+    "protobuf>=4.25.0",
+    "loguru>=0.7.2",
+]
+
+# WebRTC dependencies (for host computers with audio)
+webrtc = [
+    "aiortc>=1.10.0",
+    "av>=14.0.1",
+]
+
+# Audio dependencies (optional for daemon)
+audio = [
+    "sounddevice>=0.4.6",
+]
+
+# Face tracking (optional for daemon)
+facetracking = [
+    "mediapipe>=0.10.0",
+]
+
+# Development tools
 dev = [
     "grpcio-tools>=1.60.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+]
+
+# Everything including optional features
+all = [
+    "tars-robot[webrtc,audio,facetracking,dev]",
 ]
 
 [tool.setuptools.packages.find]
-include = ["tars_sdk", "tars_sdk.*"]
+include = [
+    "tars_sdk",
+    "tars_sdk.*",
+    "grpc_server",
+    "grpc_server.*",
+    "webrtc",
+    "webrtc.*",
+    "state",
+    "state.*",
+    "dashboard",
+    "dashboard.*",
+    "src",
+    "src.*",
+]
+exclude = [
+    "tests*",
+    "*.tests*",
+    "venv*",
+    "dashboard.frontend.node_modules*",
+]
 
 [tool.setuptools.package-data]
 tars_sdk = ["proto/*.proto", "proto/*.pyi", "py.typed"]
+dashboard = [
+    "frontend/dist/**/*",
+    "frontend/dist/**/**/*",
+    "backend/**/*.py",
+]
