@@ -27,6 +27,18 @@ def set_modules(battery=None, display=None, camera=None, webrtc=None):
 
 async def get_status_data() -> Dict[str, Any]:
     """Get current status data."""
+    # Load config for network info
+    config = {}
+    try:
+        import json
+        from pathlib import Path
+        config_file = Path("/etc/tars/config.json")
+        if config_file.exists():
+            with open(config_file) as f:
+                config = json.load(f)
+    except Exception:
+        pass
+
     # System stats
     cpu_percent = psutil.cpu_percent(interval=None)
     memory = psutil.virtual_memory()
@@ -91,6 +103,10 @@ async def get_status_data() -> Dict[str, Any]:
         "connections": {
             "webrtc": webrtc_connected,
             "grpc": True,  # If we're running, gRPC is available
+        },
+        "network": {
+            "connection_mode": config.get("connection_mode", "local"),
+            "tailscale_ip": config.get("tailscale_ip"),
         },
     }
 

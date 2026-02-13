@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Battery, Cpu, Thermometer, Wifi, Radio, Eye } from 'lucide-react'
+import { Battery, Cpu, Thermometer, Wifi, Radio, Eye, Copy, Check } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 function Status() {
   const [status, setStatus] = useState(null)
   const [error, setError] = useState(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -51,6 +53,13 @@ function Status() {
   const system = status.system || {}
   const display = status.display || {}
   const connections = status.connections || {}
+  const network = status.network || {}
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div className="p-4 space-y-4">
@@ -118,15 +127,36 @@ function Status() {
         </CardContent>
       </Card>
 
-      {/* Connections */}
+      {/* Network & Connections */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <Wifi className="w-5 h-5" />
-            Connections
+            Network & Connections
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Connection mode */}
+          {network.connection_mode && (
+            <div>
+              <div className="text-sm text-muted-foreground mb-2">Connection Mode</div>
+              <div className="text-lg font-semibold capitalize">{network.connection_mode}</div>
+              {network.connection_mode === 'tailscale' && network.tailscale_ip && (
+                <div className="mt-2 flex items-center gap-2 bg-secondary p-2 rounded">
+                  <code className="text-sm flex-1">{network.tailscale_ip}</code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToClipboard(network.tailscale_ip)}
+                  >
+                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Connection status */}
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center gap-2">
               <Radio className={`w-4 h-4 ${connections.webrtc ? 'text-green-500' : 'text-red-500'}`} />

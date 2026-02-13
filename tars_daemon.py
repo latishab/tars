@@ -297,7 +297,7 @@ class TARSDaemon:
                 logger.warning(f"✗ Battery monitoring not available: {e}")
                 self.battery = None
 
-        # Start WebRTC server (waits for MacBook to connect)
+        # Start WebRTC server 
         if self.webrtc_enabled and WEBRTC_AVAILABLE:
             try:
                 self.webrtc = WebRTCServer(
