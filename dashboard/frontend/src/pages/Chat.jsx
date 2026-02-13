@@ -80,7 +80,7 @@ function Chat() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] p-4">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Chat</h1>
+        <h1 className="text-2xl font-bold text-foreground">Chat</h1>
         <Button variant="ghost" size="sm" onClick={clearHistory}>
           <Trash2 className="w-4 h-4" />
         </Button>

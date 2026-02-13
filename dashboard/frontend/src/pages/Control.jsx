@@ -85,7 +85,7 @@ function Control() {
 
   return (
     <div className="container max-w-7xl mx-auto p-4 space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Control</h1>
+      <h1 className="text-3xl font-bold tracking-tight text-foreground">Control</h1>
 
       {/* Top Row - Camera and Emotions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

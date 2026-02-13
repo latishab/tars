@@ -43,13 +43,13 @@ function AppStore() {
   return (
     <div className="container max-w-7xl mx-auto p-4 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">App Store</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">App Store</h1>
       </div>
 
       {/* Official Apps Section */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold">Official Apps</h2>
+          <h2 className="text-2xl font-bold text-foreground">Official Apps</h2>
           <Badge variant="default" className="text-sm px-3 py-1">
             {apps.length}
           </Badge>
