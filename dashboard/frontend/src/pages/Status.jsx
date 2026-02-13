@@ -263,34 +263,6 @@ function Status() {
           </div>
         </CardContent>
         </Card>
-
-        {/* Display State */}
-        <Card className="border-border/50 hover:border-primary/50 transition-colors">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Eye className="w-5 h-5 text-primary" />
-            </div>
-            Display State
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="px-4 py-3 rounded-lg bg-muted/50 border border-border/50">
-              <div className="text-sm text-muted-foreground mb-1">Emotion</div>
-              <Badge variant="secondary" className="text-base px-3 py-1 capitalize">
-                {display.emotion}
-              </Badge>
-            </div>
-            <div className="px-4 py-3 rounded-lg bg-muted/50 border border-border/50">
-              <div className="text-sm text-muted-foreground mb-1">Eye State</div>
-              <Badge variant="secondary" className="text-base px-3 py-1 capitalize">
-                {display.eye_state}
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-        </Card>
       </div>
     </div>
   )
