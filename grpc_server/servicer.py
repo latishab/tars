@@ -6,6 +6,7 @@ Maps gRPC methods to hardware modules.
 import time
 import io
 import asyncio
+import platform
 from typing import Optional
 
 import grpc
@@ -17,6 +18,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tars_sdk.proto import tars_pb2, tars_pb2_grpc
+from tars_sdk._version import __version__, __minimum_compatible_client__
+from grpc_server.version_service import (
+    get_git_commit,
+    get_build_date,
+    check_for_update,
+)
 
 # Import existing modules
 from src.modules import module_movements
@@ -53,6 +60,7 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
 
     def __init__(
         self,
+        hardware_controller=None,
         camera=None,
         display=None,
         battery=None,
@@ -60,58 +68,104 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
         webrtc=None
     ):
         """
-        Initialize servicer with module references.
+        Initialize servicer with hardware controller.
 
         Args:
-            camera: CameraModule instance
-            display: DisplayManager instance
-            battery: BatteryModule instance
-            audio: AudioModule instance
+            hardware_controller: HardwareController instance (preferred)
+            camera: CameraModule instance (legacy)
+            display: DisplayManager instance (legacy)
+            battery: BatteryModule instance (legacy)
+            audio: AudioModule instance (legacy)
             webrtc: WebRTCServer instance
         """
+        self.hw = hardware_controller
         self.camera = camera
         self.display = display
         self.battery = battery
         self.audio = audio
         self.webrtc = webrtc
+        self._build_date = get_build_date()
 
         logger.info("TarsServiceServicer initialized")
+
+    def GetVersion(self, request, context):
+        """Get version information."""
+        logger.debug("gRPC GetVersion")
+
+        try:
+            return tars_pb2.VersionResponse(
+                version=__version__,
+                git_commit=get_git_commit() or "",
+                build_date=self._build_date,
+                python_version=platform.python_version(),
+                platform=platform.platform(),
+                minimum_client=__minimum_compatible_client__,
+            )
+        except Exception as e:
+            logger.error(f"GetVersion failed: {e}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return tars_pb2.VersionResponse(version=__version__)
+
+    def CheckUpdate(self, request, context):
+        """Check for available updates."""
+        logger.debug("gRPC CheckUpdate")
+
+        try:
+            info = check_for_update()
+            return tars_pb2.UpdateCheckResponse(
+                update_available=info["update_available"],
+                current_version=info["current_version"],
+                latest_version=info["latest_version"],
+                severity=info["severity"],
+                release_notes=info["release_notes"],
+                pypi_url=info["pypi_url"],
+                github_url=info["github_url"],
+            )
+        except Exception as e:
+            logger.error(f"CheckUpdate failed: {e}")
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return tars_pb2.UpdateCheckResponse(
+                update_available=False,
+                current_version=__version__,
+                latest_version=__version__,
+                severity="none",
+            )
 
     def Health(self, request, context):
         """Get health status."""
         logger.debug("gRPC Health")
 
+        if not self.hw:
+            return tars_pb2.HealthResponse(status="error", version=__version__)
+
         try:
-            # Hardware status
+            health_data = self.hw.get_health()
+            
             hardware = tars_pb2.HardwareStatus(
-                servos=True,
-                camera=self.camera is not None,
-                audio=self.audio is not None,
-                display=self.display is not None,
-                battery=self.battery is not None,
-                moving=module_servoctl.MOVING
+                servos=health_data["hardware"]["servos"],
+                camera=health_data["hardware"]["camera"],
+                audio=health_data["hardware"]["audio"],
+                display=health_data["hardware"]["display"],
+                battery=health_data["hardware"]["battery"],
+                moving=health_data["hardware"]["moving"]
             )
 
-            # Battery status
+            battery_data = health_data["battery"]
             battery_status = tars_pb2.BatteryStatus(
-                level=0,
-                charging=False,
-                voltage=0.0,
-                current=0.0
+                level=battery_data["level"],
+                charging=battery_data["charging"],
+                voltage=battery_data["voltage"],
+                current=battery_data["current"]
             )
-
-            if self.battery is not None:
-                battery_status.level = int(self.battery.normalized_percentage)
-                battery_status.charging = self.battery.charging_state == "CHARGING"
-                battery_status.voltage = self.battery.voltage
-                battery_status.current = self.battery.current
 
             return tars_pb2.HealthResponse(
                 status="running",
-                version="3.0.0",
+                version=__version__,
                 grpc_available=True,
-                webrtc_available=self.webrtc is not None,
-                webrtc_connected=self.webrtc.is_connected if self.webrtc else False,
+                webrtc_available=health_data["webrtc"]["available"],
+                webrtc_connected=health_data["webrtc"]["connected"],
                 hardware=hardware,
                 battery=battery_status
             )
@@ -120,7 +174,7 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
             logger.error(f"Health check failed: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
-            return tars_pb2.HealthResponse(status="error", version="3.0.0")
+            return tars_pb2.HealthResponse(status="error", version=__version__)
 
     def Move(self, request, context):
         """Execute a movement."""
@@ -129,9 +183,8 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
 
         logger.info(f"gRPC Move: {movement} (speed={speed})")
 
-        # Check if movement exists
-        if movement not in MOVEMENT_MAP:
-            error_msg = f"Unknown movement: {movement}"
+        if not self.hw:
+            error_msg = "Hardware controller not available"
             logger.error(error_msg)
             return tars_pb2.MoveResponse(
                 success=False,
@@ -139,26 +192,22 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
                 error=error_msg
             )
 
-        # Execute movement
         try:
-            start_time = time.time()
-
-            # Get movement function
-            movement_func = MOVEMENT_MAP[movement]
-
-            # Execute
-            movement_func()
-
-            duration = time.time() - start_time
-
-            logger.info(f"Movement '{movement}' completed in {duration:.2f}s")
-
+            result = self.hw.execute_movement(movement, speed)
             return tars_pb2.MoveResponse(
-                success=True,
-                duration=duration,
+                success=result["success"],
+                duration=result["duration"],
                 error=""
             )
 
+        except ValueError as e:
+            error_msg = str(e)
+            logger.error(error_msg)
+            return tars_pb2.MoveResponse(
+                success=False,
+                duration=0.0,
+                error=error_msg
+            )
         except Exception as e:
             error_msg = f"Movement failed: {str(e)}"
             logger.error(error_msg)
@@ -176,15 +225,20 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
 
         logger.info(f"gRPC SetEmotion: {emotion}")
 
-        if self.display is None:
+        if not self.hw:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
-            context.set_details("Display not available")
+            context.set_details("Hardware controller not available")
             return tars_pb2.Empty()
 
         try:
-            self.display.set_emotion(emotion)
+            self.hw.set_emotion(emotion)
             return tars_pb2.Empty()
 
+        except ValueError as e:
+            logger.error(f"SetEmotion failed: {e}")
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(e))
+            return tars_pb2.Empty()
         except Exception as e:
             logger.error(f"SetEmotion failed: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
@@ -197,15 +251,20 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
 
         logger.info(f"gRPC SetEyeState: {state}")
 
-        if self.display is None:
+        if not self.hw:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
-            context.set_details("Display not available")
+            context.set_details("Hardware controller not available")
             return tars_pb2.Empty()
 
         try:
-            self.display.set_eye_state(state)
+            self.hw.set_eye_state(state)
             return tars_pb2.Empty()
 
+        except ValueError as e:
+            logger.error(f"SetEyeState failed: {e}")
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_details(str(e))
+            return tars_pb2.Empty()
         except Exception as e:
             logger.error(f"SetEyeState failed: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
@@ -220,48 +279,26 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
 
         logger.info(f"gRPC CaptureCamera: {width}x{height} q={quality}")
 
-        if self.camera is None:
+        if not self.hw:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
-            context.set_details("Camera not available")
+            context.set_details("Hardware controller not available")
             return tars_pb2.CaptureResponse()
 
         try:
-            # Capture frame
-            frame = self.camera.capture_frame()
-
-            if frame is None:
-                context.set_code(grpc.StatusCode.INTERNAL)
-                context.set_details("Failed to capture frame")
-                return tars_pb2.CaptureResponse()
-
-            # Resize if needed
-            import cv2
-            if frame.shape[1] != width or frame.shape[0] != height:
-                frame = cv2.resize(frame, (width, height))
-
-            # Encode as JPEG
-            success, buffer = cv2.imencode(
-                '.jpg',
-                cv2.cvtColor(frame, cv2.COLOR_RGB2BGR),
-                [cv2.IMWRITE_JPEG_QUALITY, quality]
-            )
-
-            if not success:
-                context.set_code(grpc.StatusCode.INTERNAL)
-                context.set_details("Failed to encode image")
-                return tars_pb2.CaptureResponse()
-
-            jpeg_bytes = buffer.tobytes()
-
-            logger.info(f"Captured frame: {width}x{height}, {len(jpeg_bytes)} bytes")
-
+            result = self.hw.capture_camera(width, height, quality)
+            
             return tars_pb2.CaptureResponse(
-                image=jpeg_bytes,
-                width=width,
-                height=height,
-                format="jpeg"
+                image=result["image"],
+                width=result["width"],
+                height=result["height"],
+                format=result["format"]
             )
 
+        except ValueError as e:
+            logger.error(f"CaptureCamera failed: {e}")
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details(str(e))
+            return tars_pb2.CaptureResponse()
         except Exception as e:
             logger.error(f"CaptureCamera failed: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
@@ -272,40 +309,27 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
         """Get robot status."""
         logger.debug("gRPC GetStatus")
 
+        if not self.hw:
+            return tars_pb2.StatusResponse(connected=False)
+
         try:
-            # Battery status
+            status = self.hw.get_status()
+            
+            battery_data = status["battery"]
             battery_status = tars_pb2.BatteryStatus(
-                level=0,
-                charging=False,
-                voltage=0.0,
-                current=0.0
+                level=battery_data["level"],
+                charging=battery_data["charging"],
+                voltage=battery_data["voltage"],
+                current=battery_data["current"]
             )
 
-            if self.battery is not None:
-                battery_status.level = int(self.battery.normalized_percentage)
-                battery_status.charging = self.battery.charging_state == "CHARGING"
-                battery_status.voltage = self.battery.voltage
-                battery_status.current = self.battery.current
-
-            # Display status
-            current_emotion = "default"
-            current_eye_state = "idle"
-
-            if self.display is not None:
-                current_emotion = self.display.state.emotion
-                current_eye_state = self.display.state.eye_state
-
-            # Movement status
-            is_moving = module_servoctl.MOVING
-            current_movement = ""
-
             return tars_pb2.StatusResponse(
-                connected=True,
+                connected=status["connected"],
                 battery=battery_status,
-                current_emotion=current_emotion,
-                current_eye_state=current_eye_state,
-                is_moving=is_moving,
-                current_movement=current_movement
+                current_emotion=status["current_emotion"],
+                current_eye_state=status["current_eye_state"],
+                is_moving=status["is_moving"],
+                current_movement=status["current_movement"]
             )
 
         except Exception as e:
@@ -318,8 +342,13 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
         """Reset robot to neutral position."""
         logger.info("gRPC Reset")
 
+        if not self.hw:
+            context.set_code(grpc.StatusCode.UNAVAILABLE)
+            context.set_details("Hardware controller not available")
+            return tars_pb2.Empty()
+
         try:
-            module_servoctl.reset_positions()
+            self.hw.reset_position()
             return tars_pb2.Empty()
 
         except Exception as e:
@@ -371,8 +400,8 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
 
                 status = tars_pb2.MovementStatus(
                     moving=is_moving,
-                    movement="",  # Could track current movement if needed
-                    progress=0.0   # Could track progress if needed
+                    movement="",
+                    progress=0.0
                 )
 
                 yield status
@@ -392,7 +421,7 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
         try:
             for request in request_iterator:
                 level = request.level
-                # Process audio level (e.g., update display animation)
+                # Process audio level
                 if self.display is not None:
                     self.display.set_audio_level(level, "grpc")
 

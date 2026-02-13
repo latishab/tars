@@ -1,7 +1,7 @@
 """TARS gRPC Client for remote robot control."""
 
 import os
-from typing import Optional, Iterator
+from typing import Optional, Iterator, Dict, Any
 
 import grpc
 from loguru import logger
@@ -21,11 +21,12 @@ class TarsClient:
         result = client.move("wave")
         print(result.success, result.duration)
 
-        health = client.health()
-        print(health.status, health.hardware.servos)
+        version = client.get_version()
+        print(version.version, version.git_commit)
 
-        status = client.get_status()
-        print(status.connected, status.battery.level)
+        update = client.check_update()
+        if update.update_available:
+            print(f"Update available: {update.latest_version}")
     """
 
     def __init__(self, address: Optional[str] = None, timeout: int = 10):
@@ -46,6 +47,36 @@ class TarsClient:
         self.stub = tars_pb2_grpc.TarsServiceStub(self.channel)
 
         logger.info(f"TarsClient connected to {address}")
+
+    def get_version(self) -> tars_pb2.VersionResponse:
+        """
+        Get daemon version information.
+
+        Returns:
+            VersionResponse with .version, .git_commit, .build_date,
+            .python_version, .platform, .minimum_client fields
+        """
+        try:
+            response = self.stub.GetVersion(tars_pb2.Empty(), timeout=self.timeout)
+            return response
+        except grpc.RpcError as e:
+            logger.error(f"gRPC error during get_version: {e}")
+            raise
+
+    def check_update(self) -> tars_pb2.UpdateCheckResponse:
+        """
+        Check for available updates.
+
+        Returns:
+            UpdateCheckResponse with .update_available, .current_version,
+            .latest_version, .severity, .release_notes, .pypi_url, .github_url fields
+        """
+        try:
+            response = self.stub.CheckUpdate(tars_pb2.Empty(), timeout=self.timeout)
+            return response
+        except grpc.RpcError as e:
+            logger.error(f"gRPC error during check_update: {e}")
+            raise
 
     def move(self, movement: str, speed: float = 1.0) -> tars_pb2.MoveResponse:
         """

@@ -2,6 +2,12 @@
 
 from .client import TarsClient
 from .async_client import AsyncTarsClient
+from ._version import __version__, __version_tuple__, __minimum_compatible_client__
 
-__version__ = "0.1.0"
-__all__ = ["TarsClient", "AsyncTarsClient"]
+__all__ = [
+    "TarsClient",
+    "AsyncTarsClient",
+    "__version__",
+    "__version_tuple__",
+    "__minimum_compatible_client__",
+]

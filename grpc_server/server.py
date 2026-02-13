@@ -25,6 +25,7 @@ class TARSgRPCServer:
         self,
         port: int = 50051,
         max_workers: int = 10,
+        hardware_controller=None,
         camera=None,
         display=None,
         battery=None,
@@ -46,8 +47,9 @@ class TARSgRPCServer:
         self.port = port
         self.max_workers = max_workers
 
-        # Create servicer with module references
+        # Create servicer with hardware controller
         self.servicer = TarsServiceServicer(
+            hardware_controller=hardware_controller,
             camera=camera,
             display=display,
             battery=battery,

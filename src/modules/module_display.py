@@ -29,7 +29,7 @@ class DisplayMode(Enum):
 class DisplayState:
     mode: DisplayMode = DisplayMode.EYES
     eye_state: str = "idle"
-    emotion: str = "default"
+    emotion: str = "neutral"
     audio_level: float = 0.0
     audio_source: str = "none"
     face_detected: bool = False
@@ -37,7 +37,6 @@ class DisplayState:
     face_y: float = 0.0
     battery_percentage: Optional[float] = None
     battery_voltage: Optional[float] = None
-    battery_charging: bool = False
 
 
 class DisplayManager:
@@ -52,6 +51,7 @@ class DisplayManager:
 
         # State
         self.state = DisplayState()
+        self._last_fps_print = 0.0
 
         # Modules (initialized in _run)
         self.eyes: Optional[RoboEyes] = None
@@ -90,7 +90,16 @@ class DisplayManager:
                 self.eyes.set_state(state)
 
     def set_emotion(self, emotion: str):
-        """Set emotion: default, happy, angry, tired, surprised, confused"""
+        """Set emotion: neutral, happy, sad, angry, excited, skeptical, shy, love, fear, bored, disgust, worried, curious, sleepy, focused, playful"""
+        # Backward compatibility aliases
+        emotion_map = {
+            "default": "neutral",
+            "tired": "sleepy",
+            "surprised": "excited",
+            "confused": "curious"
+        }
+        emotion = emotion_map.get(emotion.lower(), emotion.lower())
+        
         with self._lock:
             self.state.emotion = emotion
             if self.eyes:
@@ -150,12 +159,11 @@ class DisplayManager:
 
     # ========== Battery ==========
 
-    def set_battery_status(self, percentage: float, voltage: float, charging: bool):
+    def set_battery_status(self, percentage: float, voltage: float):
         """Update battery status for display"""
         with self._lock:
             self.state.battery_percentage = percentage
             self.state.battery_voltage = voltage
-            self.state.battery_charging = charging
 
     # ========== Main Loop ==========
 
@@ -217,11 +225,20 @@ class DisplayManager:
                 self._draw_battery_indicator(portrait_surface)
 
             # Rotate portrait (480x800) -> landscape (800x480) and blit to screen
-            rotated = pygame.transform.rotate(portrait_surface, 270)
+            # Using rotozoom with scale=1.0 is faster than rotate()
+            rotated = pygame.transform.rotozoom(portrait_surface, 270, 1.0)
             screen.blit(rotated, (0, 0))
 
             pygame.display.flip()
             clock.tick(60)
+            
+            # FPS monitoring (print every 5 seconds)
+            now = time.time()
+            if now - self._last_fps_print >= 5.0:
+                fps = clock.get_fps()
+                if fps < 55:  # Only print if below target
+                    print(f"Display FPS: {fps:.1f} (target: 60)")
+                self._last_fps_print = now
 
         pygame.quit()
 

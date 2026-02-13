@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tars-sdk"
-version = "0.1.0"
+version = "0.3.0"
 description = "Python SDK for controlling TARS robot via gRPC"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -12,26 +12,33 @@ license = {text = "CC-BY-NC-4.0"}
 authors = [
     {name = "TARS Team"}
 ]
-keywords = ["robotics", "grpc", "tars"]
+keywords = ["robotics", "grpc", "tars", "raspberry-pi", "robot"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Robotics",
+    "Operating System :: OS Independent",
 ]
 
 dependencies = [
     "grpcio>=1.60.0",
+    "grpcio-tools>=1.60.0",
     "protobuf>=4.25.0",
     "loguru>=0.7.0",
+    "build>=1.0.0",
+    "twine>=4.0.0",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "grpcio-tools>=1.60.0",
-]
+[project.urls]
+Homepage = "https://github.com/latishab/tars-conversation-app"
+Repository = "https://github.com/latishab/tars-conversation-app"
+Documentation = "https://github.com/latishab/tars-conversation-app#readme"
+Issues = "https://github.com/latishab/tars-conversation-app/issues"
 
 [tool.setuptools.packages.find]
 include = ["tars_sdk", "tars_sdk.*"]

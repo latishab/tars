@@ -9,6 +9,10 @@ service TarsService {
   rpc Health(Empty) returns (HealthResponse);
   rpc GetStatus(Empty) returns (StatusResponse);
 
+  // Version & Updates
+  rpc GetVersion(Empty) returns (VersionResponse);
+  rpc CheckUpdate(Empty) returns (UpdateCheckResponse);
+
   // Movement Control
   rpc Move(MoveRequest) returns (MoveResponse);
   rpc Reset(Empty) returns (Empty);
@@ -48,6 +52,25 @@ message HardwareStatus {
   bool display = 4;
   bool battery = 5;
   bool moving = 6;
+}
+
+message VersionResponse {
+  string version = 1;             // Semantic version "0.2.0"
+  string git_commit = 2;          // Git commit hash (short)
+  string build_date = 3;          // Build date ISO format
+  string python_version = 4;      // Python version
+  string platform = 5;            // Platform info
+  string minimum_client = 6;      // Minimum compatible client version
+}
+
+message UpdateCheckResponse {
+  bool update_available = 1;
+  string current_version = 2;
+  string latest_version = 3;
+  string severity = 4;            // "none", "optional", "recommended", "required"
+  string release_notes = 5;       // Brief release notes
+  string pypi_url = 6;            // PyPI package URL
+  string github_url = 7;          // GitHub release URL
 }
 
 message MoveRequest {
