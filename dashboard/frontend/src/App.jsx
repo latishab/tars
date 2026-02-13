@@ -1,12 +1,13 @@
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { Activity, Gamepad2, MessageSquare, Settings, Wifi, Sun, Moon } from 'lucide-react'
+import { Activity, Gamepad2, MessageSquare, Settings, Wifi, Sun, Moon, Store } from 'lucide-react'
 import { Button } from './components/ui/button'
 import Status from './pages/Status'
 import Control from './pages/Control'
 import Chat from './pages/Chat'
 import SettingsPage from './pages/Settings'
 import Setup from './pages/Setup'
+import AppStore from './pages/AppStore'
 
 function App() {
   const [needsSetup, setNeedsSetup] = useState(false)
@@ -74,6 +75,7 @@ function App() {
           <Route path="/" element={<Status />} />
           <Route path="/control" element={<Control />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/apps" element={<AppStore />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/setup" element={<Setup onComplete={() => setNeedsSetup(false)} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -123,6 +125,20 @@ function App() {
           >
             <MessageSquare className="w-5 h-5" />
             <span className="text-xs font-medium">Chat</span>
+          </NavLink>
+
+          <NavLink
+            to="/apps"
+            className={({ isActive }) =>
+              `flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-200 ${
+                isActive
+                  ? 'text-primary bg-primary/10'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              }`
+            }
+          >
+            <Store className="w-5 h-5" />
+            <span className="text-xs font-medium">Apps</span>
           </NavLink>
 
           <NavLink
