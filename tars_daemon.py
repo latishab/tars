@@ -83,6 +83,18 @@ except ImportError:
     GRPC_AVAILABLE = False
     logger.warning("gRPC server not available")
 
+# Import dashboard
+try:
+    from dashboard.backend import server as dashboard_server
+    from dashboard.backend.routes import status as dashboard_status
+    from dashboard.backend.routes import movements as dashboard_movements
+    from dashboard.backend.routes import settings as dashboard_settings
+    from dashboard.backend.wifi_manager import WiFiManager
+    DASHBOARD_AVAILABLE = True
+except ImportError:
+    DASHBOARD_AVAILABLE = False
+    logger.warning("Dashboard not available")
+
 class TARSDaemon:
     """
     Daemon for TARS robot.
@@ -105,6 +117,8 @@ class TARSDaemon:
         face_tracking_enabled: bool = False,
         webrtc_enabled: bool = True,
         grpc_port: int = 50051,
+        dashboard_enabled: bool = True,
+        dashboard_port: int = 8080,
     ):
         self.api_port = api_port
         self.display_enabled = display_enabled
@@ -112,6 +126,8 @@ class TARSDaemon:
         self.webrtc_enabled = webrtc_enabled
         self.grpc_enabled = True  # Always enabled
         self.grpc_port = grpc_port
+        self.dashboard_enabled = dashboard_enabled and DASHBOARD_AVAILABLE
+        self.dashboard_port = dashboard_port
 
         # Components (initialized in startup)
         self.webrtc: Optional[WebRTCServer] = None
@@ -121,6 +137,8 @@ class TARSDaemon:
         self.audio: Optional[AudioModule] = None
         self.face_tracker: Optional[FaceTracker] = None
         self.battery: Optional[BatteryModule] = None
+        self.wifi_manager: Optional[WiFiManager] = None if not DASHBOARD_AVAILABLE else None
+        self._dashboard_server = None
 
         # FastAPI app
         self.app = self._create_app()
@@ -327,17 +345,69 @@ class TARSDaemon:
             except Exception as e:
                 logger.warning(f"✗ Face tracking not available: {e}")
 
+        # Start dashboard server
+        if self.dashboard_enabled:
+            try:
+                # Initialize WiFi manager
+                self.wifi_manager = WiFiManager()
+
+                # Set module references for dashboard
+                dashboard_status.set_modules(
+                    battery=self.battery,
+                    display=self.display,
+                    camera=self.camera,
+                    webrtc=self.webrtc
+                )
+                dashboard_settings.set_display_module(self.display)
+
+                # Import movement map from grpc servicer
+                try:
+                    from grpc_server.servicer import MOVEMENT_MAP
+                    from modules import module_servoctl
+                    dashboard_movements.set_movement_modules(MOVEMENT_MAP, module_servoctl)
+                except ImportError:
+                    logger.warning("Could not import movement map for dashboard")
+
+                # Start dashboard in background
+                import threading
+                import uvicorn
+
+                def run_dashboard():
+                    uvicorn.run(
+                        dashboard_server.app,
+                        host="0.0.0.0",
+                        port=self.dashboard_port,
+                        log_level="warning"
+                    )
+
+                dashboard_thread = threading.Thread(target=run_dashboard, daemon=True)
+                dashboard_thread.start()
+                self._dashboard_server = dashboard_thread
+
+                # Check if WiFi setup is needed
+                if self.wifi_manager.needs_setup():
+                    logger.info("No WiFi connection - starting setup hotspot...")
+                    self.wifi_manager.start_hotspot()
+                    logger.info(f"  Connect to 'tars-wifi-setup' (password: tarscoffee)")
+                    logger.info(f"  Then open http://192.168.4.1:{self.dashboard_port}/setup")
+
+                logger.info(f"✓ Dashboard started on port {self.dashboard_port}")
+            except Exception as e:
+                logger.warning(f"✗ Dashboard failed to start: {e}")
+
         self._running = True
         logger.info("=" * 60)
         logger.info("TARS Daemon ready")
         logger.info(f"  HTTP API:     http://0.0.0.0:{self.api_port} (WebRTC signaling + health)")
         logger.info(f"  gRPC API:     0.0.0.0:{self.grpc_port} (hardware control)")
+        if self.dashboard_enabled:
+            logger.info(f"  Dashboard:    http://0.0.0.0:{self.dashboard_port}")
         if self.webrtc:
             logger.info(f"  WebRTC:       Waiting for AI brain (POST /api/offer)")
         if self.face_tracker:
             logger.info(f"  Tracking:     Face tracking enabled")
         logger.info("=" * 60)
-        logger.info("🎯 All hardware control now via gRPC - use tars_sdk.TarsClient")
+        logger.info("All hardware control now via gRPC - use tars_sdk.TarsClient")
         logger.info("=" * 60)
 
     async def _shutdown(self):
@@ -467,6 +537,17 @@ def main():
         default=50051,
         help="gRPC server port (default: 50051)"
     )
+    parser.add_argument(
+        "--no-dashboard",
+        action="store_true",
+        help="Disable dashboard web interface"
+    )
+    parser.add_argument(
+        "--dashboard-port",
+        type=int,
+        default=8080,
+        help="Dashboard port (default: 8080)"
+    )
     args = parser.parse_args()
 
     # Configure logging
@@ -483,6 +564,8 @@ def main():
         webrtc_enabled=not args.no_webrtc,
         face_tracking_enabled=args.face_tracking,
         grpc_port=args.grpc_port,
+        dashboard_enabled=not args.no_dashboard,
+        dashboard_port=args.dashboard_port,
     )
 
     # Handle signals

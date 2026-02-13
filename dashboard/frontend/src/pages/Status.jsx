@@ -1,0 +1,174 @@
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Battery, Cpu, Thermometer, Wifi, Radio, Eye } from 'lucide-react'
+
+function Status() {
+  const [status, setStatus] = useState(null)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch('/api/status')
+        const data = await res.json()
+        setStatus(data)
+        setError(null)
+      } catch (err) {
+        setError('Failed to fetch status')
+      }
+    }
+
+    fetchStatus()
+    const interval = setInterval(fetchStatus, 2000)
+    return () => clearInterval(interval)
+  }, [])
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!status) {
+    return (
+      <div className="p-4">
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground">Loading...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const battery = status.battery || {}
+  const system = status.system || {}
+  const display = status.display || {}
+  const connections = status.connections || {}
+
+  return (
+    <div className="p-4 space-y-4">
+      <h1 className="text-2xl font-bold">TARS Status</h1>
+
+      {/* Battery */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Battery className="w-5 h-5" />
+            Battery
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="text-4xl font-bold">{battery.level}%</div>
+              <div className="text-sm text-muted-foreground">
+                {battery.charging ? 'Charging' : 'Discharging'}
+              </div>
+            </div>
+            <div className="text-right text-sm text-muted-foreground">
+              <div>{battery.voltage?.toFixed(2)}V</div>
+              <div>{battery.current?.toFixed(0)}mA</div>
+            </div>
+          </div>
+          <div className="mt-2 h-2 bg-secondary rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all ${
+                battery.level > 20 ? 'bg-green-500' : 'bg-red-500'
+              }`}
+              style={{ width: `${battery.level}%` }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* System */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Cpu className="w-5 h-5" />
+            System
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <div className="text-sm text-muted-foreground">CPU</div>
+              <div className="text-xl font-semibold">{system.cpu_percent?.toFixed(0)}%</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Memory</div>
+              <div className="text-xl font-semibold">{system.memory_percent?.toFixed(0)}%</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground flex items-center gap-1">
+                <Thermometer className="w-3 h-3" /> Temp
+              </div>
+              <div className="text-xl font-semibold">
+                {system.cpu_temp ? `${system.cpu_temp.toFixed(1)}C` : 'N/A'}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Connections */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Wifi className="w-5 h-5" />
+            Connections
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <Radio className={`w-4 h-4 ${connections.webrtc ? 'text-green-500' : 'text-red-500'}`} />
+              <span>WebRTC</span>
+              <span className={`text-sm ${connections.webrtc ? 'text-green-500' : 'text-muted-foreground'}`}>
+                {connections.webrtc ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Radio className={`w-4 h-4 ${connections.grpc ? 'text-green-500' : 'text-red-500'}`} />
+              <span>gRPC</span>
+              <span className={`text-sm ${connections.grpc ? 'text-green-500' : 'text-muted-foreground'}`}>
+                {connections.grpc ? 'Ready' : 'Error'}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Display State */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Eye className="w-5 h-5" />
+            Display
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-sm text-muted-foreground">Emotion</div>
+              <div className="text-xl font-semibold capitalize">{display.emotion}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Eye State</div>
+              <div className="text-xl font-semibold capitalize">{display.eye_state}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+export default Status
