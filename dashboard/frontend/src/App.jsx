@@ -55,15 +55,15 @@ function App() {
             </span>
           </div>
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             onClick={toggleDarkMode}
-            className="h-9 w-9"
+            className="h-9 w-9 border-border/50"
           >
             {darkMode ? (
-              <Sun className="h-5 w-5" />
+              <Sun className="h-5 w-5 text-yellow-500" />
             ) : (
-              <Moon className="h-5 w-5" />
+              <Moon className="h-5 w-5 text-slate-700" />
             )}
           </Button>
         </div>
