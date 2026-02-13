@@ -18,7 +18,7 @@
 **New Architecture:** RPi is self-contained and runs a WebRTC server + gRPC server. The host computer connects to it as a client.
 
 ```
-RPi 5 (tars) - Standalone Robot            Host Computer (tars-omni) - AI Brain
+RPi 5 (tars) - Standalone Robot            Host Computer (tars-conversation-app) - AI Brain
 ┌──────────────────────────────┐        ┌─────────────────────────────┐
 │ WEBRTC + gRPC SERVERS        │        │ WEBRTC CLIENT + AI          │
 │                              │        │                             │

@@ -15,10 +15,6 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional
 
-# Set SDL video driver for framebuffer access
-os.environ["SDL_VIDEODRIVER"] = "kmsdrm"
-os.environ["SDL_FBDEV"] = "/dev/fb0"
-
 # Add src to path for module imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
@@ -31,7 +27,6 @@ from pydantic import BaseModel
 
 # Import existing modules (for state tracking only)
 from modules.module_servoctl import MOVING, disable_all_servos
-from src.services.hardware_controller import HardwareController
 
 # Optional imports (may not be available on all systems)
 try:
@@ -121,7 +116,6 @@ class TARSDaemon:
         # Components (initialized in startup)
         self.webrtc: Optional[WebRTCServer] = None
         self.grpc_server: Optional[TARSgRPCServer] = None
-        self.hardware_controller: Optional[HardwareController] = None
         self.display: Optional[DisplayManager] = None
         self.camera: Optional[CameraModule] = None
         self.audio: Optional[AudioModule] = None
@@ -236,57 +230,6 @@ class TARSDaemon:
             _, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
             return Response(content=jpeg.tobytes(), media_type="image/jpeg")
 
-        @app.get("/api/battery")
-        def get_battery_status():
-            """Get detailed battery status from hardware controller."""
-            if not self.battery:
-                raise HTTPException(503, "Battery not available")
-            
-            try:
-                status = self.battery.get_battery_status()
-                return status
-            except Exception as e:
-                logger.error(f"Failed to get battery status: {e}")
-                raise HTTPException(500, str(e))
-
-
-        # === Display Control (for dashboard) ===
-        class EmotionRequest(BaseModel):
-            emotion: str
-
-        class EyeStateRequest(BaseModel):
-            state: str
-
-        @app.post("/api/emotion")
-        async def set_emotion(request: EmotionRequest):
-            """Set display emotion (for dashboard)."""
-            if not self.hardware_controller:
-                raise HTTPException(503, "Hardware controller not available")
-
-            try:
-                result = self.hardware_controller.set_emotion(request.emotion)
-                return result
-            except ValueError as e:
-                raise HTTPException(400, str(e))
-            except Exception as e:
-                logger.error(f"Failed to set emotion: {e}")
-                raise HTTPException(500, str(e))
-
-        @app.post("/api/eye-state")
-        async def set_eye_state(request: EyeStateRequest):
-            """Set eye state (for dashboard)."""
-            if not self.hardware_controller:
-                raise HTTPException(503, "Hardware controller not available")
-
-            try:
-                result = self.hardware_controller.set_eye_state(request.state)
-                return result
-            except ValueError as e:
-                raise HTTPException(400, str(e))
-            except Exception as e:
-                logger.error(f"Failed to set eye state: {e}")
-                raise HTTPException(500, str(e))
-
     async def _startup(self):
         """Initialize all components"""
         logger.info("=" * 60)
@@ -351,27 +294,11 @@ class TARSDaemon:
                 logger.warning(f"✗ WebRTC server failed to start: {e}")
                 logger.info("  Running in standalone mode (REST API only)")
 
-        # Initialize hardware controller (shared logic for HTTP and gRPC)
-        from src.modules import module_servoctl
-        from grpc_server.servicer import MOVEMENT_MAP
-        
-        self.hardware_controller = HardwareController(
-            display=self.display,
-            camera=self.camera,
-            battery=self.battery,
-            audio=self.audio,
-            webrtc=self.webrtc,
-            movement_map=MOVEMENT_MAP,
-            servo_module=module_servoctl
-        )
-        logger.info("✓ Hardware controller initialized")
-
         # Start gRPC server (required for hardware control)
         if GRPC_AVAILABLE:
             try:
                 self.grpc_server = TARSgRPCServer(
                     port=self.grpc_port,
-                    hardware_controller=self.hardware_controller,
                     camera=self.camera,
                     display=self.display,
                     battery=self.battery,
@@ -488,7 +415,8 @@ class TARSDaemon:
                     status = self.battery.get_battery_status()
                     self.display.set_battery_status(
                         percentage=status['normalized_percentage'],
-                        voltage=status['voltage']
+                        voltage=status['voltage'],
+                        charging=status['is_charging']
                     )
                 await asyncio.sleep(2.0)  # Update every 2 seconds
             except Exception as e:

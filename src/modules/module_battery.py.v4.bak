@@ -1,5 +1,5 @@
 """
-Module: BATTERY MONITOR - V5 (Hybrid Coulomb Counting + Voltage Lookup)
+Module: BATTERY MONITOR - V4 (Hybrid Coulomb Counting + Voltage Lookup)
 Author: Latisha Besariani Hendra
 Contact: atomikspace.labs@gmail.com
 Copyright (c) 2026 Latisha Besariani Hendra
@@ -28,28 +28,28 @@ from modules.module_config import load_config
 CONFIG = load_config()
 
 # Voltage-to-SoC lookup table for 3S Li-ion with 10V cutoff
-VOLTAGE_TO_SOC_3S_LION = [
-    (12.60, 100),
-    (12.50, 95),
-    (12.42, 90),
-    (12.32, 85),
-    (12.20, 80),
-    (12.06, 75),
-    (11.90, 70),
-    (11.76, 65),
-    (11.64, 60),
-    (11.52, 55),
-    (11.40, 50),
-    (11.28, 45),
-    (11.18, 40),
-    (11.08, 35),
-    (10.98, 30),
-    (10.86, 25),
-    (10.74, 20),
-    (10.56, 15),
-    (10.38, 10),
-    (10.20, 5),
-    (10.00, 0),
+VOLTAGE_TO_SOC_3S = [
+    (12.60, 100),  # 4.20V/cell - Full charge
+    (12.45, 95),
+    (12.30, 90),
+    (12.15, 85),
+    (12.00, 80),
+    (11.82, 75),
+    (11.64, 70),
+    (11.46, 65),
+    (11.28, 60),
+    (11.10, 55),  # Nominal
+    (10.98, 50),
+    (10.86, 45),
+    (10.74, 40),
+    (10.62, 35),
+    (10.50, 30),
+    (10.38, 25),
+    (10.26, 20),
+    (10.14, 15),
+    (10.08, 10),
+    (10.04,  5),
+    (10.00,  0),  # Cutoff
 ]
 
 STATE_FILE = Path("/tmp/tars_battery_state.json")
@@ -78,6 +78,11 @@ class BatteryModule:
         self.zero_percent_start_time = None
         self.shutdown_delay_seconds = 60
         
+        self.voltage_history = deque(maxlen=15)
+        self.baseline_voltage = None
+        self.charging_state = "DISCHARGING"
+        self.last_printed_state = None
+        
         self.last_servo_activity_time = 0
         self.servo_cooldown_seconds = 10
         self.verbose = False
@@ -88,11 +93,6 @@ class BatteryModule:
         self.rest_time = 0.0
         self.voltage_calibration_history = deque(maxlen=10)
         self.last_state_save_time = 0
-        self.soc_method = 'voltage'  # Track which method was last used
-        
-        # Charging detection via voltage trend
-        self._last_charging_state = False
-        self.voltage_trend_history = deque(maxlen=30)
 
         try:
             self.i2c = board.I2C()
@@ -109,15 +109,15 @@ class BatteryModule:
     def voltage_to_soc(self, voltage):
         """Convert voltage to SoC percentage using interpolation."""
         # Clamp voltage to table bounds
-        if voltage >= VOLTAGE_TO_SOC_3S_LION[0][0]:
-            return VOLTAGE_TO_SOC_3S_LION[0][1]
-        if voltage <= VOLTAGE_TO_SOC_3S_LION[-1][0]:
-            return VOLTAGE_TO_SOC_3S_LION[-1][1]
+        if voltage >= VOLTAGE_TO_SOC_3S[0][0]:
+            return VOLTAGE_TO_SOC_3S[0][1]
+        if voltage <= VOLTAGE_TO_SOC_3S[-1][0]:
+            return VOLTAGE_TO_SOC_3S[-1][1]
         
         # Find bracketing points
-        for i in range(len(VOLTAGE_TO_SOC_3S_LION) - 1):
-            v_high, soc_high = VOLTAGE_TO_SOC_3S_LION[i]
-            v_low, soc_low = VOLTAGE_TO_SOC_3S_LION[i + 1]
+        for i in range(len(VOLTAGE_TO_SOC_3S) - 1):
+            v_high, soc_high = VOLTAGE_TO_SOC_3S[i]
+            v_low, soc_low = VOLTAGE_TO_SOC_3S[i + 1]
             
             if v_low <= voltage <= v_high:
                 # Linear interpolation
@@ -173,8 +173,8 @@ class BatteryModule:
     def signal_servo_activity(self):
         """Signal that servos are active - clear calibration state."""
         self.last_servo_activity_time = time.time()
+        self.voltage_history.clear()
         self.voltage_calibration_history.clear()
-        self.voltage_trend_history.clear()
         self.rest_time = 0.0
 
     def set_verbose(self, enabled):
@@ -199,6 +199,55 @@ class BatteryModule:
             normalized = sum(self.percentage_history) / len(self.percentage_history)
             return int(normalized)  
         return int(percentage)
+
+    def _get_voltage_trend(self):
+        if len(self.voltage_history) < 3:
+            return 0.0
+        voltages = list(self.voltage_history)
+        total_change = sum(voltages[i] - voltages[i-1] for i in range(1, len(voltages)))
+        return total_change / (len(voltages) - 1)
+
+    def _update_charging_state(self):
+        """Detect charging state via voltage trend and elevation."""
+        if self._is_servo_cooldown_active():
+            return
+        
+        self.voltage_history.append(self.voltage)
+        trend = self._get_voltage_trend()
+        
+        if self.baseline_voltage is None and len(self.voltage_history) >= 5:
+            self.baseline_voltage = sum(self.voltage_history) / len(self.voltage_history)
+        
+        if self.baseline_voltage is None:
+            return
+        
+        elevation = (self.voltage - self.baseline_voltage) * 1000
+        was_charging = self.charging_state == "CHARGING"
+        
+        if trend > 0.002:
+            self.charging_state = "CHARGING"
+            self.baseline_voltage = min(self.baseline_voltage, min(list(self.voltage_history)[-5:]) - 0.02)
+        elif was_charging and elevation >= 5:
+            self.charging_state = "CHARGING"
+        elif was_charging and elevation < 5 and trend < -0.002:
+            self.charging_state = "DISCHARGING"
+            self.baseline_voltage = sum(self.voltage_history) / len(self.voltage_history)
+        elif was_charging:
+            self.charging_state = "CHARGING"
+        elif self.current > 50:
+            self.charging_state = "DISCHARGING"
+            if trend < 0:
+                self.baseline_voltage = min(self.baseline_voltage, self.voltage)
+        else:
+            self.charging_state = "IDLE"
+        
+        if self.last_printed_state != self.charging_state:
+            if self.verbose:
+                if self.charging_state == "CHARGING":
+                    print("Battery is charging")
+                elif self.charging_state == "DISCHARGING":
+                    print("Battery is discharging")
+            self.last_printed_state = self.charging_state
     
     def _perform_coulomb_counting(self, dt_seconds):
         """Update remaining_mAh via coulomb counting."""
@@ -208,15 +257,15 @@ class BatteryModule:
         dt_hours = dt_seconds / 3600.0
         
         # Integrate current over time
-        # Current draining from battery = positive in our wiring
+        # Positive current = charging, negative = discharging
+        # INA260 returns current in mA
         self.remaining_mAh -= self.current * dt_hours
         
         # Clamp to valid range
         self.remaining_mAh = max(0.0, min(self.battery_capacity_mAh, self.remaining_mAh))
-        self.soc_method = 'coulomb'
     
     def _check_voltage_recalibration(self):
-        """Recalibrate coulomb counter from voltage when resting."""
+        """Recalibrate coulomb counter from voltage when stable."""
         # Check all conditions
         if abs(self.current) >= 50:
             # High current - not stable
@@ -258,9 +307,8 @@ class BatteryModule:
         # All conditions met - recalibrate
         voltage_mAh = self._voltage_to_mAh(avg_voltage)
         
-        # Gentle blend: 90% coulomb counter, 10% voltage
-        self.remaining_mAh = self.remaining_mAh * 0.9 + voltage_mAh * 0.1
-        self.soc_method = 'voltage'
+        # Gentle blend: 95% coulomb counter, 5% voltage
+        self.remaining_mAh = self.remaining_mAh * 0.95 + voltage_mAh * 0.05
         
         if self.verbose:
             print(f"Voltage recalibration: {avg_voltage:.3f}V → {voltage_mAh:.0f}mAh (blended to {self.remaining_mAh:.0f}mAh)")
@@ -269,35 +317,9 @@ class BatteryModule:
         self.voltage_calibration_history.clear()
         self.rest_time = 0.0
     
-    def _detect_charging_trend(self):
-        """Detect charging via voltage trend (charger bypasses INA260)."""
-        # Skip during servo activity
-        if self._is_servo_cooldown_active():
-            return
-        
-        self.voltage_trend_history.append(self.voltage)
-        
-        if len(self.voltage_trend_history) < 30:
-            return
-        
-        recent = list(self.voltage_trend_history)
-        
-        # Compare early avg (first 10) vs late avg (last 10)
-        early_avg = sum(recent[:10]) / 10
-        late_avg = sum(recent[-10:]) / 10
-        trend = late_avg - early_avg
-        
-        # Charging = voltage rising > 30mV
-        # Discharging = voltage falling > 30mV
-        if trend > 0.030:  # 30mV rising
-            self._last_charging_state = True
-        elif trend < -0.030:  # 30mV falling
-            self._last_charging_state = False
-        # else: keep previous state (hysteresis)
-    
     def _check_charging_recalibration(self):
         """Recalibrate toward full when charging near full voltage."""
-        if not self._last_charging_state:
+        if self.charging_state != "CHARGING":
             return
         
         if self.voltage < 12.5:
@@ -317,21 +339,17 @@ class BatteryModule:
         
         # If state was not loaded or was stale, estimate from voltage after first reading
         if not STATE_FILE.exists() or self.remaining_mAh == self.battery_capacity_mAh:
-            # Wait for first voltage reading when current is low
-            for _ in range(10):
-                time.sleep(0.5)
-                try:
-                    self.current = self.ina260.current
-                    self.voltage = self.ina260.voltage
-                    if abs(self.current) < 50:
-                        initial_mAh = self._voltage_to_mAh(self.voltage)
-                        self.remaining_mAh = initial_mAh
-                        if self.verbose:
-                            print(f"Initialized from voltage: {self.voltage:.3f}V → {initial_mAh:.0f}mAh")
-                        break
-                except Exception as e:
-                    if self.verbose:
-                        print(f"Failed to initialize from voltage: {e}")
+            # Wait for first voltage reading
+            time.sleep(0.5)
+            try:
+                self.voltage = self.ina260.voltage
+                initial_mAh = self._voltage_to_mAh(self.voltage)
+                self.remaining_mAh = initial_mAh
+                if self.verbose:
+                    print(f"Initialized from voltage: {self.voltage:.3f}V → {initial_mAh:.0f}mAh")
+            except Exception as e:
+                if self.verbose:
+                    print(f"Failed to initialize from voltage: {e}")
         
         while self.is_running and self.sensor_initialized:
             try:
@@ -343,20 +361,23 @@ class BatteryModule:
                 self.voltage = self.ina260.voltage  
                 self.power = self.ina260.power  
                 
-                # Coulomb counting (PRIMARY method)
+                # Coulomb counting
                 self._perform_coulomb_counting(dt)
                 
-                # Voltage recalibration (when stable and resting)
-                self._check_voltage_recalibration()
+                # Update charging state detection
+                self._update_charging_state()
                 
-                # Charging detection via voltage trend
-                self._detect_charging_trend()
+                # Voltage recalibration (when stable)
+                self._check_voltage_recalibration()
                 
                 # Charging recalibration
                 self._check_charging_recalibration()
                 
                 # Calculate percentage from coulomb counter
                 coulomb_percentage = (self.remaining_mAh / self.battery_capacity_mAh) * 100.0
+                
+                # Also keep legacy voltage-based percentage for compatibility
+                self.battery_percentage = self.calculate_battery_percentage(self.voltage)
                 
                 # Use coulomb-counted percentage as the primary value
                 self.battery_percentage = coulomb_percentage
@@ -421,6 +442,9 @@ class BatteryModule:
             return True
         return False
 
+    def is_charging(self):
+        return self.charging_state == "CHARGING"
+
     def get_battery_status(self):
         return {
             'current': self.current,  
@@ -430,7 +454,8 @@ class BatteryModule:
             'normalized_percentage': self.normalized_percentage,  
             'capacity': self.battery_capacity_mAh,
             'remaining_mAh': self.remaining_mAh,
-            'soc_method': self.soc_method,
+            'is_charging': self.is_charging(),
+            'charging_state': self.charging_state,
             'sensor_initialized': self.sensor_initialized  
         }
 
@@ -441,14 +466,14 @@ class BatteryModule:
         return self.normalized_percentage
 
     def print_debug(self):
+        trend = self._get_voltage_trend()
+        baseline_str = f"{self.baseline_voltage:.3f}V" if self.baseline_voltage else "---"
+        elevation = (self.voltage - self.baseline_voltage) * 1000 if self.baseline_voltage else 0
         cooldown = "COOLDOWN" if self._is_servo_cooldown_active() else ""
         soc_from_voltage = self.voltage_to_soc(self.voltage)
-        charging_str = "⚡" if self._last_charging_state else ""
         
-        cooldown_str = f"{cooldown}  |  " if cooldown else ""
         print(f"V: {self.voltage:.3f}V ({soc_from_voltage:.0f}% SoC)  |  "
               f"I: {self.current:+.0f}mA  |  "
               f"Remaining: {self.remaining_mAh:.0f}/{self.battery_capacity_mAh}mAh ({self.normalized_percentage}%)  |  "
-              f"{cooldown_str}"
-              f"Method: {self.soc_method} {charging_str}  |  "
+              f"{self.charging_state} {cooldown}  |  "
               f"Rest: {self.rest_time:.0f}s")
