@@ -1,30 +1,30 @@
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Download, Github, MessageSquare, ExternalLink } from 'lucide-react'
+import { Download, Github, MessageSquare, ExternalLink, X } from 'lucide-react'
 
 function AppStore() {
+  const [selectedApp, setSelectedApp] = useState(null)
+
   const apps = [
     {
       id: 'tars-conversation-app',
-      name: 'TARS Conversation App',
-      description: 'Desktop application for voice conversations with TARS. Features real-time audio streaming, push-to-talk, and seamless integration with your TARS robot.',
+      name: 'TARS Conversation',
+      description: 'Voice conversations with TARS using real-time audio streaming and push-to-talk.',
       icon: MessageSquare,
       github: 'https://github.com/latishab/tars-conversation-app',
       downloads: [
         {
           platform: 'macOS',
-          label: 'Download for macOS',
           url: 'https://github.com/latishab/tars-conversation-app/releases/latest/download/tars-conversation-app-macos.dmg',
         },
         {
           platform: 'Windows',
-          label: 'Download for Windows',
           url: 'https://github.com/latishab/tars-conversation-app/releases/latest/download/tars-conversation-app-windows.exe',
         },
         {
           platform: 'Linux',
-          label: 'Download for Linux',
           url: 'https://github.com/latishab/tars-conversation-app/releases/latest/download/tars-conversation-app-linux.AppImage',
         },
       ],
@@ -35,7 +35,7 @@ function AppStore() {
         'Automatic TARS discovery',
         'Cross-platform support',
       ],
-      tags: ['Voice', 'AI', 'Desktop'],
+      tags: ['Voice', 'AI'],
     },
   ]
 
@@ -50,27 +50,96 @@ function AppStore() {
         </div>
       </div>
 
-      <div className="grid gap-6">
+      {/* Grid of apps */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {apps.map((app) => (
-          <Card key={app.id} className="border-border/50 hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-4">
-              <div className="flex items-start gap-4">
-                <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+          <Card
+            key={app.id}
+            className="border-border/50 hover:border-primary/50 transition-all cursor-pointer hover:shadow-lg"
+            onClick={() => setSelectedApp(app)}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
                   <app.icon className="w-8 h-8 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <CardTitle className="text-2xl mb-2">{app.name}</CardTitle>
-                  <CardDescription className="text-base">
-                    {app.description}
-                  </CardDescription>
-                  <div className="flex gap-2 mt-3">
-                    {app.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
-                    ))}
+                <div>
+                  <CardTitle className="text-base leading-tight">
+                    {app.name}
+                  </CardTitle>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-xs text-muted-foreground text-center line-clamp-3">
+                {app.description}
+              </p>
+              <div className="flex gap-1 mt-3 justify-center flex-wrap">
+                {app.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs px-2 py-0">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+
+        {/* Coming Soon placeholder cards */}
+        {[...Array(7)].map((_, i) => (
+          <Card
+            key={`coming-${i}`}
+            className="border-dashed border-border/50 opacity-50"
+          >
+            <CardContent className="flex items-center justify-center h-full min-h-[200px]">
+              <p className="text-xs text-muted-foreground text-center">
+                Coming Soon
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* App Detail Modal */}
+      {selectedApp && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedApp(null)}
+        >
+          <Card
+            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CardHeader className="pb-4">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4 flex-1">
+                  <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+                    <selectedApp.icon className="w-8 h-8 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-2xl mb-2">
+                      {selectedApp.name}
+                    </CardTitle>
+                    <CardDescription className="text-base">
+                      {selectedApp.description}
+                    </CardDescription>
+                    <div className="flex gap-2 mt-3">
+                      {selectedApp.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedApp(null)}
+                  className="h-8 w-8 ml-2"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -80,7 +149,7 @@ function AppStore() {
                   Features
                 </h3>
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {app.features.map((feature) => (
+                  {selectedApp.features.map((feature) => (
                     <li
                       key={feature}
                       className="flex items-center gap-2 text-sm"
@@ -98,7 +167,7 @@ function AppStore() {
                   Downloads
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {app.downloads.map((download) => (
+                  {selectedApp.downloads.map((download) => (
                     <Button
                       key={download.platform}
                       variant="outline"
@@ -129,7 +198,7 @@ function AppStore() {
               <div className="flex gap-3 pt-2 border-t border-border/50">
                 <Button variant="ghost" size="sm" asChild>
                   <a
-                    href={app.github}
+                    href={selectedApp.github}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -139,7 +208,7 @@ function AppStore() {
                 </Button>
                 <Button variant="ghost" size="sm" asChild>
                   <a
-                    href={`${app.github}/releases`}
+                    href={`${selectedApp.github}/releases`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -150,17 +219,8 @@ function AppStore() {
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {/* Coming Soon */}
-      <Card className="border-dashed">
-        <CardContent className="py-12 text-center">
-          <p className="text-muted-foreground">
-            More apps coming soon. Check back later!
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   )
 }
