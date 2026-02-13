@@ -83,7 +83,7 @@ function Status() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto p-4 space-y-6 animate-in fade-in duration-500">
+    <div className="container max-w-7xl mx-auto p-4 space-y-6 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -96,8 +96,10 @@ function Status() {
         </Badge>
       </div>
 
-      {/* Battery Card */}
-      <Card className="overflow-hidden border-border/50 hover:border-primary/50 transition-colors">
+      {/* Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Battery Card */}
+        <Card className="overflow-hidden border-border/50 hover:border-primary/50 transition-colors">
         <CardHeader className="pb-3 bg-gradient-to-r from-primary/10 via-transparent to-transparent">
           <CardTitle className="text-lg flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10">
@@ -136,10 +138,10 @@ function Status() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
 
-      {/* System Resources */}
-      <Card className="border-border/50 hover:border-primary/50 transition-colors">
+        {/* System Resources */}
+        <Card className="border-border/50 hover:border-primary/50 transition-colors">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10">
@@ -188,10 +190,10 @@ function Status() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
 
-      {/* Network & Connections */}
-      <Card className="border-border/50 hover:border-primary/50 transition-colors">
+        {/* Network & Connections */}
+        <Card className="border-border/50 hover:border-primary/50 transition-colors">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10">
@@ -260,10 +262,10 @@ function Status() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
 
-      {/* Display State */}
-      <Card className="border-border/50 hover:border-primary/50 transition-colors">
+        {/* Display State */}
+        <Card className="border-border/50 hover:border-primary/50 transition-colors">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <div className="p-2 rounded-lg bg-primary/10">
@@ -288,7 +290,8 @@ function Status() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   )
 }

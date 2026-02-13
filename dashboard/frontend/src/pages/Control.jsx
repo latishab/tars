@@ -84,11 +84,13 @@ function Control() {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Control</h1>
+    <div className="container max-w-7xl mx-auto p-4 space-y-6">
+      <h1 className="text-3xl font-bold tracking-tight">Control</h1>
 
-      {/* Camera Preview */}
-      <Card>
+      {/* Top Row - Camera and Emotions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Camera Preview */}
+        <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center justify-between">
             <span className="flex items-center gap-2">
@@ -105,19 +107,19 @@ function Control() {
             <img
               src={cameraUrl}
               alt="Camera"
-              className="w-full rounded-lg bg-muted"
+              className="w-full max-w-md mx-auto rounded-lg bg-muted"
               onError={() => setCameraUrl(null)}
             />
           ) : (
-            <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
+            <div className="w-full max-w-md mx-auto aspect-video bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
               Click Capture to view camera
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
 
-      {/* Emotions */}
-      <Card>
+        {/* Emotions */}
+        <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Emotion</CardTitle>
         </CardHeader>
@@ -136,7 +138,8 @@ function Control() {
             ))}
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </div>
 
       {/* Movement Controls */}
       <Card>

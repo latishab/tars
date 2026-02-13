@@ -2,47 +2,41 @@
 
 ## PyPI Installation
 
-The `tars-robot` package is available on PyPI with multiple installation options depending on your use case.
+The `tars-robot` package is available on PyPI.
 
-### For Raspberry Pi 5 (Default - Full Installation)
+### For Raspberry Pi 5
 
-The default installation includes everything needed to run TARS on Raspberry Pi 5:
+Default installation includes daemon and SDK:
 
 ```bash
 pip install tars-robot
 ```
 
 This includes:
+- Daemon (hardware control, gRPC server, web dashboard)
 - SDK (gRPC client)
-- Daemon (gRPC server)
-- Hardware control (servos, battery, camera)
-- Display support (animated eyes)
-- Web dashboard
-- WiFi manager
 
-Available commands after installation:
+Commands:
 ```bash
 # Start the daemon
 tars-daemon
 
-# Run servo calibration GUI
+# Calibrate servos
 tars-servo-tester
 
-# Daemon with options
+# Daemon options
 tars-daemon --port 8001 --grpc-port 50051 --dashboard-port 8080
-tars-daemon --no-display --no-webrtc  # Headless mode
-tars-daemon --face-tracking           # Enable face tracking
+tars-daemon --no-display --no-webrtc
+tars-daemon --face-tracking
 ```
 
-### For Host Computers (SDK Only)
+### For Host Computers
 
-If you only need to control a TARS robot from your computer (no hardware):
+SDK only (no hardware dependencies):
 
 ```bash
 pip install tars-robot[sdk]
 ```
-
-This installs only the minimal SDK with gRPC client support.
 
 Usage:
 ```python

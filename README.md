@@ -116,22 +116,22 @@ The RPi will:
 Install from PyPI:
 
 ```bash
-# Full installation (Raspberry Pi 5 - includes daemon, SDK, dashboard)
+# Daemon and SDK (for Raspberry Pi 5)
 pip install tars-robot
 
-# SDK only (for host computers - just the gRPC client)
+# SDK only (for host computers)
 pip install tars-robot[sdk]
 
-# Development installation
+# Development
 git clone https://github.com/latishab/tars.git
 cd tars
 pip install -e .[dev]
 ```
 
-After installation, use these commands:
+Commands available after installation:
 ```bash
-tars-daemon          # Start the TARS daemon
-tars-servo-tester    # Calibrate servos (GUI)
+tars-daemon          # Start the daemon
+tars-servo-tester    # Calibrate servos
 ```
 
 See [INSTALL.md](./INSTALL.md) for detailed installation options and troubleshooting.
