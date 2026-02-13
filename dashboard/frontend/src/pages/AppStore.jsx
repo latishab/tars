@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Download, Github, MessageSquare, ExternalLink, X } from 'lucide-react'
+import { Download, Github, MessageSquare, ExternalLink, X, ChevronDown } from 'lucide-react'
 
 function AppStore() {
   const [selectedApp, setSelectedApp] = useState(null)
+  const [expandedApp, setExpandedApp] = useState(null)
 
   const apps = [
     {
@@ -50,54 +51,113 @@ function AppStore() {
         </div>
       </div>
 
-      {/* Grid of apps */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {apps.map((app) => (
-          <Card
-            key={app.id}
-            className="border-border/50 hover:border-primary/50 transition-all cursor-pointer hover:shadow-lg"
-            onClick={() => setSelectedApp(app)}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex flex-col items-center text-center gap-3">
-                <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
-                  <app.icon className="w-8 h-8 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-base leading-tight">
-                    {app.name}
-                  </CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-xs text-muted-foreground text-center line-clamp-3">
-                {app.description}
-              </p>
-              <div className="flex gap-1 mt-3 justify-center flex-wrap">
-                {app.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs px-2 py-0">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Official Apps Section */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-semibold">Official Apps</h2>
+          <Badge variant="default" className="text-xs">
+            {apps.length}
+          </Badge>
+        </div>
 
-        {/* Coming Soon placeholder cards */}
-        {[...Array(7)].map((_, i) => (
-          <Card
-            key={`coming-${i}`}
-            className="border-dashed border-border/50 opacity-50"
-          >
-            <CardContent className="flex items-center justify-center h-full min-h-[200px]">
-              <p className="text-xs text-muted-foreground text-center">
-                Coming Soon
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {apps.map((app) => (
+            <Card
+              key={app.id}
+              className="border-border/50 hover:border-primary/50 transition-all"
+            >
+              <CardHeader className="pb-3">
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
+                    <app.icon className="w-8 h-8 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base leading-tight">
+                      {app.name}
+                    </CardTitle>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-3">
+                <p className="text-xs text-muted-foreground text-center line-clamp-2">
+                  {app.description}
+                </p>
+                <div className="flex gap-1 justify-center flex-wrap">
+                  {app.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs px-2 py-0">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+
+                {/* Install Dropdown */}
+                <div className="relative">
+                  <Button
+                    className="w-full"
+                    size="sm"
+                    onClick={() => setExpandedApp(expandedApp === app.id ? null : app.id)}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Install
+                    <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${expandedApp === app.id ? 'rotate-180' : ''}`} />
+                  </Button>
+
+                  {expandedApp === app.id && (
+                    <div className="absolute top-full left-0 right-0 mt-2 z-10">
+                      <Card className="border-border/50 shadow-lg">
+                        <CardContent className="p-2 space-y-1">
+                          {app.downloads.map((download) => (
+                            <Button
+                              key={download.platform}
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-start"
+                              asChild
+                            >
+                              <a
+                                href={download.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Download className="w-4 h-4 mr-2" />
+                                {download.platform}
+                              </a>
+                            </Button>
+                          ))}
+                          <div className="pt-1 border-t border-border/50">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full justify-start text-xs"
+                              onClick={() => setSelectedApp(app)}
+                            >
+                              <ExternalLink className="w-3 h-3 mr-2" />
+                              View Details
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {/* Coming Soon placeholder cards */}
+          {[...Array(7)].map((_, i) => (
+            <Card
+              key={`coming-${i}`}
+              className="border-dashed border-border/50 opacity-50"
+            >
+              <CardContent className="flex items-center justify-center h-full min-h-[250px]">
+                <p className="text-xs text-muted-foreground text-center">
+                  Coming Soon
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
 
       {/* App Detail Modal */}
