@@ -30,38 +30,26 @@ dependencies = [
     "grpcio-tools>=1.60.0",
     "protobuf>=4.25.0",
     "loguru>=0.7.0",
-    "build>=1.0.0",
-    "twine>=4.0.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "aiortc>=1.6.0",
+    "opencv-python>=4.8.0",
+    "numpy>=1.24.0",
+    "pygame>=2.5.0",
+    "pyserial>=3.5",
+    "adafruit-circuitpython-pca9685>=3.4.0",
+    "adafruit-circuitpython-ina260>=1.4.0",
+    "psutil>=5.9.0",
+    "aiofiles>=23.0.0",
 ]
 
 
 [project.optional-dependencies]
-sdk = []
-daemon = [
-    "fastapi>=0.104.0",
-    "uvicorn>=0.24.0",
-    "aiortc>=1.6.0",
-    "opencv-python>=4.8.0",
-    "numpy>=1.24.0",
-    "pygame>=2.5.0",
-    "pyserial>=3.5",
-    "adafruit-circuitpython-pca9685>=3.4.0",
-    "adafruit-circuitpython-ina260>=1.4.0",
-    "psutil>=5.9.0",
-    "aiofiles>=23.0.0",
-]
-all = [
-    "fastapi>=0.104.0",
-    "uvicorn>=0.24.0",
-    "aiortc>=1.6.0",
-    "opencv-python>=4.8.0",
-    "numpy>=1.24.0",
-    "pygame>=2.5.0",
-    "pyserial>=3.5",
-    "adafruit-circuitpython-pca9685>=3.4.0",
-    "adafruit-circuitpython-ina260>=1.4.0",
-    "psutil>=5.9.0",
-    "aiofiles>=23.0.0",
+sdk = [
+    "grpcio>=1.60.0",
+    "grpcio-tools>=1.60.0",
+    "protobuf>=4.25.0",
+    "loguru>=0.7.0",
 ]
 
 [project.urls]

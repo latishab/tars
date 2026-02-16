@@ -4,39 +4,32 @@
 
 The TARS robot software is available on PyPI as **tars-robot**.
 
-### SDK Only (Client Library)
+### Full Installation (Default)
 
-For controlling a TARS robot remotely via gRPC:
+Install everything needed to run the complete robot:
 
 ```bash
 pip install tars-robot
 ```
 
-This installs only the gRPC client SDK for communicating with the robot daemon.
+This includes:
+- gRPC SDK (client library)
+- Daemon server (WebRTC, FastAPI)
+- Hardware control (servos, camera, display)
+- All dependencies for running on Raspberry Pi
 
-### With Daemon Dependencies
+### SDK Only (Lightweight Client)
 
-For running the full robot daemon on Raspberry Pi:
-
-```bash
-pip install tars-robot[daemon]
-```
-
-This includes all dependencies needed to run the robot daemon:
-- FastAPI & Uvicorn (HTTP API server)
-- aiortc (WebRTC audio streaming)
-- OpenCV (camera processing)
-- pygame (display/roboeyes)
-- pyserial (servo control)
-- Adafruit libraries (PCA9685 servos, INA260 battery monitor)
-
-### All Dependencies
-
-To install everything:
+For controlling a remote robot without running the daemon:
 
 ```bash
-pip install tars-robot[all]
+pip install tars-robot[sdk]
 ```
+
+This installs only the gRPC client SDK - perfect for:
+- Remote control scripts
+- Host computer controlling a Pi
+- Lightweight client applications
 
 ---
 
@@ -91,15 +84,15 @@ git clone https://github.com/latishab/tars.git
 cd tars
 ```
 
-### 2. Install Dependencies
+### 2. Install Package
 
 ```bash
 # Create virtual environment
 python -m venv venv
 source venv/bin/activate
 
-# Install daemon
-pip install -e .[daemon]
+# Install (includes daemon + SDK)
+pip install -e .
 ```
 
 ### 3. Run Daemon
@@ -121,11 +114,12 @@ The daemon will:
 
 ## System Requirements
 
-### For SDK (Client)
+### For SDK Client
 - Python 3.9+
 - Any OS (Windows, macOS, Linux)
+- Only needs: grpcio, protobuf, loguru
 
-### For Daemon (Raspberry Pi)
+### For Full Daemon (Raspberry Pi)
 - Raspberry Pi 5 (or 4 with 4GB+ RAM)
 - Raspberry Pi OS (64-bit recommended)
 - Python 3.9+
