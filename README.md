@@ -61,6 +61,35 @@ RPi 5 (tars) - Standalone Robot            Host Computer (tars-conversation-app)
 
 ---
 
+
+## 📦 Installation
+
+### SDK Only (Client Library)
+
+Control a TARS robot remotely via gRPC:
+
+```bash
+pip install tars-robot
+```
+
+### Full Daemon (Raspberry Pi)
+
+Run the complete robot daemon with all dependencies:
+
+```bash
+pip install tars-robot[daemon]
+```
+
+### All Dependencies
+
+```bash
+pip install tars-robot[all]
+```
+
+📖 **[Full Installation Guide](./INSTALLATION.md)** - Detailed instructions, usage examples, and troubleshooting
+
+---
+
 ## What This Repo Contains
 
 - **gRPC-based control system** for Raspberry Pi 5 (low-latency hardware control)
