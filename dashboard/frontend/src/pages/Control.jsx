@@ -6,7 +6,8 @@ import {
   Hand, Smile, Frown, Meh, Zap, RotateCcw, Camera
 } from 'lucide-react'
 
-const EMOTIONS = ['neutral', 'happy', 'sad', 'angry', 'excited', 'skeptical', 'shy', 'love', 'fear', 'bored', 'disgust', 'worried', 'curious', 'sleepy', 'focused', 'playful']
+const EMOTIONS = ['neutral', 'happy', 'sad', 'angry', 'excited', 'afraid', 'sideeye_left', 'sideeye_right', 'sleepy']
+const EMOTION_LABELS = {  'neutral': 'Neutral',  'happy': 'Happy',  'sad': 'Sad',  'angry': 'Angry',  'excited': 'Excited',  'sleepy': 'Sleepy',  'afraid': 'Afraid',  'sideeye_left': 'Side Eye Left',  'sideeye_right': 'Side Eye Right'}
 
 const MOVEMENT_GROUPS = {
   walking: [
@@ -87,37 +88,39 @@ function Control() {
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">Control</h1>
 
-      {/* Camera Preview */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <Camera className="w-5 h-5" />
-              Camera
-            </span>
-            <Button size="sm" variant="outline" onClick={captureCamera}>
-              Capture
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {cameraUrl ? (
-            <img
-              src={cameraUrl}
-              alt="Camera"
-              className="w-full rounded-lg bg-muted"
-              onError={() => setCameraUrl(null)}
-            />
-          ) : (
-            <div className="w-full aspect-video bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
-              Click Capture to view camera
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* 2x2 Grid: Row 1 */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Camera */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Camera className="w-4 h-4" />
+                Camera
+              </span>
+              <Button size="sm" variant="outline" onClick={captureCamera}>
+                Capture
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3">
+            {cameraUrl ? (
+              <img
+                src={cameraUrl}
+                alt="Camera"
+                className="w-full h-64 object-cover rounded-lg bg-muted"
+                onError={() => setCameraUrl(null)}
+              />
+            ) : (
+              <div className="w-full h-64 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground">
+                Click Capture
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Emotions */}
-      <Card>
+        {/* Emotions */}
+        <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Emotion</CardTitle>
         </CardHeader>
@@ -131,14 +134,16 @@ function Control() {
                 onClick={() => setEmotionApi(e)}
                 className="capitalize"
               >
-                {e}
+                {EMOTION_LABELS[e] || e}
               </Button>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Movement Controls */}
+      </div>
+
+      {/* Row 2: Movement Controls */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center justify-between">

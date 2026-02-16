@@ -109,7 +109,7 @@ async def update_settings(update: SettingsUpdate):
 @router.post("/emotion")
 async def set_emotion(request: EmotionRequest):
     """Set display emotion by proxying to daemon."""
-    valid_emotions = ["default", "happy", "angry", "tired", "surprised", "confused"]
+    valid_emotions = ['neutral', 'happy', 'sad', 'angry', 'excited', 'afraid', 'sideeye_left', 'sideeye_right', 'sleepy']
     if request.emotion not in valid_emotions:
         raise HTTPException(
             status_code=400,

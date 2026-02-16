@@ -4,10 +4,13 @@ Both HTTP and gRPC APIs call these internal functions.
 """
 
 from typing import Optional, Dict, Any
+from modules.modules_roboeyes import Mood
 from loguru import logger
 
+# Valid values - generated from Mood enum
+VALID_EMOTIONS = [mood.name.lower() for mood in Mood]
+
 # Valid values
-VALID_EMOTIONS = ['neutral', 'happy', 'sad', 'angry', 'excited', 'skeptical', 'shy', 'love', 'fear', 'bored', 'disgust', 'worried', 'curious', 'sleepy', 'focused', 'playful']
 VALID_EYE_STATES = ["idle", "listening", "thinking", "speaking"]
 
 
