@@ -14,17 +14,10 @@ class Mood(Enum):
     SAD = auto()
     ANGRY = auto()
     EXCITED = auto()
-    SKEPTICAL = auto()
-    SHY = auto()
-    LOVE = auto()
-    FEAR = auto()
-    BORED = auto()
-    DISGUST = auto()
-    WORRIED = auto()
-    CURIOUS = auto()
+    AFRAID = auto()
+    SIDEEYE_LEFT = auto()
+    SIDEEYE_RIGHT = auto()
     SLEEPY = auto()
-    FOCUSED = auto()
-    PLAYFUL = auto()
 
 
 class EyeState(Enum):
@@ -37,43 +30,45 @@ class EyeState(Enum):
 
 # Emotion transition speeds (higher = faster)
 EMOTION_TRANSITION_SPEEDS = {
-    Mood.EXCITED: 15.0,
-    Mood.FEAR: 18.0,
+    Mood.EXCITED: 8.0,
+    
     # Mood.SURPRISED (removed): 15.0,
-    Mood.ANGRY: 10.0,
-    Mood.HAPPY: 8.0,
-    Mood.NEUTRAL: 6.0,
-    Mood.SAD: 3.0,
-    Mood.SLEEPY: 2.0,
-    Mood.BORED: 4.0,
-    Mood.WORRIED: 7.0,
-    Mood.CURIOUS: 9.0,
-    Mood.FOCUSED: 8.0,
-    Mood.PLAYFUL: 10.0,
-    Mood.SKEPTICAL: 7.0,
-    Mood.SHY: 5.0,
-    Mood.LOVE: 6.0,
-    Mood.DISGUST: 8.0,
+    Mood.ANGRY: 6.0,
+    Mood.HAPPY: 5.0,
+    Mood.NEUTRAL: 4.0,
+    Mood.SAD: 2.0,
+    Mood.SLEEPY: 1.5,
+    
+    Mood.AFRAID: 7.0,
+    Mood.SIDEEYE_LEFT: 4.0,
+    Mood.SIDEEYE_RIGHT: 4.0,
+    
+    
+    
+    
+    
+    
 }
 
 # Blink intervals per mood (min, max in seconds)
 BLINK_INTERVALS = {
     Mood.NEUTRAL: (3.0, 5.0),
     Mood.EXCITED: (1.5, 3.0),
-    Mood.FEAR: (0.5, 1.5),
+    
     Mood.HAPPY: (2.5, 4.5),
     Mood.SAD: (4.0, 7.0),
     Mood.SLEEPY: (5.0, 10.0),
-    Mood.BORED: (5.0, 10.0),
+    
     Mood.ANGRY: (2.0, 4.0),
-    Mood.WORRIED: (2.0, 3.5),
-    Mood.CURIOUS: (2.5, 4.0),
-    Mood.FOCUSED: (4.0, 6.0),
-    Mood.PLAYFUL: (2.0, 4.0),
-    Mood.SKEPTICAL: (3.0, 5.0),
-    Mood.SHY: (4.0, 6.0),
-    Mood.LOVE: (3.0, 5.0),
-    Mood.DISGUST: (3.0, 5.0),
+    
+    Mood.AFRAID: (2.0, 3.5),
+    Mood.SIDEEYE_LEFT: (3.0, 5.0),
+    Mood.SIDEEYE_RIGHT: (3.0, 5.0),
+    
+    
+    
+    
+    
 }
 
 # Glow colors per mood (R, G, B)
@@ -83,17 +78,13 @@ GLOW_COLORS = {
     Mood.SAD: (100, 149, 237),        # Cornflower blue
     Mood.ANGRY: (255, 69, 0),         # Red-orange
     Mood.EXCITED: (255, 165, 0),      # Orange
-    Mood.LOVE: (255, 105, 180),       # Hot pink
-    Mood.FEAR: (255, 255, 255),       # White
-    Mood.BORED: (128, 128, 128),      # Gray
+    
+    
     Mood.SLEEPY: (147, 112, 219),     # Purple
-    Mood.WORRIED: (255, 215, 0),      # Gold
-    Mood.CURIOUS: (0, 255, 255),      # Cyan bright
-    Mood.FOCUSED: (0, 191, 255),      # Deep sky blue
-    Mood.PLAYFUL: (255, 192, 203),    # Pink
-    Mood.SKEPTICAL: (255, 255, 0),    # Yellow
-    Mood.SHY: (255, 182, 193),        # Light pink
-    Mood.DISGUST: (173, 255, 47),     # Green yellow
+    
+    
+    
+    
 }
 
 
@@ -128,13 +119,15 @@ class RoboEyes:
             width=int(100 * scale),
             height=int(140 * scale),
             border_radius=int(25 * scale),
-            space_between=int(60 * scale)
+            space_between=int(150 * scale)
         )
         
         # State
         self._state = EyeState.IDLE
         self._mood = Mood.NEUTRAL
         self._mood_intensity = 1.0
+        self._prev_mood = Mood.NEUTRAL
+        self._mood_transition_progress = 1.0  # 0.0 to 1.0
         
         # Look direction
         self._look_x = 0.0
@@ -149,6 +142,12 @@ class RoboEyes:
         self._lid_bottom_right = 0.0
         self._lid_angle_left = 0.0
         self._lid_angle_right = 0.0
+        
+        # Curved eyelid state
+        self._curved_bottom_left = False
+        self._curved_bottom_right = False
+        self._curved_amount_left = 0.0
+        self._curved_amount_right = 0.0
         
         # Eye openness (0.0 to 1.5 - can be > 1.0 for wide eyes)
         self._left_open = 1.0
@@ -252,6 +251,9 @@ class RoboEyes:
     
     def set_mood(self, mood: Mood, intensity: float = 1.0):
         """Set emotional mood with intensity (0.0 to 1.0)"""
+        if self._mood != mood:
+            self._prev_mood = self._mood
+            self._mood_transition_progress = 0.0
         self._mood = mood
         self._mood_intensity = max(0.0, min(1.0, intensity))
         self._next_blink = self._random_blink_time()
@@ -476,10 +478,15 @@ class RoboEyes:
         # Smooth all values
         speed = EMOTION_TRANSITION_SPEEDS.get(self._mood, 6.0)
         
+        # Smooth mood transition progress
+        if self._mood_transition_progress < 1.0:
+            self._mood_transition_progress += dt * 2.0  # 0.5 second transition
+            self._mood_transition_progress = min(1.0, self._mood_transition_progress)
+        
         self._look_x = smooth_lerp(self._look_x, self._target_look_x, 8.0, dt)
         self._look_y = smooth_lerp(self._look_y, self._target_look_y, 8.0, dt)
-        self._left_open = smooth_lerp(self._left_open, self._left_open_target, speed * 2, dt)
-        self._right_open = smooth_lerp(self._right_open, self._right_open_target, speed * 2, dt)
+        self._left_open = smooth_lerp(self._left_open, self._left_open_target, speed, dt)
+        self._right_open = smooth_lerp(self._right_open, self._right_open_target, speed, dt)
         self._glow_intensity = smooth_lerp(self._glow_intensity, self._glow_target, 8.0, dt)
         self._pupil_scale = smooth_lerp(self._pupil_scale, self._pupil_scale_target, 10.0, dt)
         self._squint_intensity = smooth_lerp(self._squint_intensity, self._squint_target, 6.0, dt)
@@ -593,133 +600,141 @@ class RoboEyes:
             self._squint_target = 0.0
     
     def _update_mood(self, dt: float):
-        """Update eyelid positions based on mood and intensity"""
+        """Update eyelid positions based on mood"""
         target_top_l = 0.0
         target_top_r = 0.0
         target_bot_l = 0.0
         target_bot_r = 0.0
         target_angle_l = 0.0
         target_angle_r = 0.0
+        target_curve_l = 0.0
+        target_curve_r = 0.0
+        use_curved_bottom = False
         
-        h = self.config.height * 0.35
+        
+        h = self.config.height * 0.5
         intensity = self._mood_intensity
         
         if self._mood == Mood.HAPPY:
-            target_bot_l = h * 0.5 * intensity
-            target_bot_r = h * 0.5 * intensity
-            self._left_open_target = max(0.7, 1.0 - 0.3 * intensity)
-            self._right_open_target = max(0.7, 1.0 - 0.3 * intensity)
-        
-        elif self._mood == Mood.SAD:
-            target_top_l = h * 0.6 * intensity
-            target_top_r = h * 0.6 * intensity
-            target_angle_l = 15 * intensity
-            target_angle_r = -15 * intensity
-            self._left_open_target = max(0.5, 1.0 - 0.5 * intensity)
-            self._right_open_target = max(0.5, 1.0 - 0.5 * intensity)
-        
-        elif self._mood == Mood.ANGRY:
-            target_top_l = h * 0.45 * intensity
-            target_top_r = h * 0.45 * intensity
-            target_angle_l = -25 * intensity
-            target_angle_r = 25 * intensity
+            # Happy: curved bottom lids (smile eyes ^_^)
+            use_curved_bottom = True
+            target_curve_l = 0.48
+            target_curve_r = 0.48
+            self._left_open_target = 0.85
+            self._right_open_target = 0.85
         
         elif self._mood == Mood.EXCITED:
-            target_top_l = h * 0.15 * intensity
-            target_top_r = h * 0.15 * intensity
-            self._left_open_target = min(1.5, 1.0 + 0.5 * intensity)
-            self._right_open_target = min(1.5, 1.0 + 0.5 * intensity)
-            self._pupil_scale_target = min(1.5, 1.0 + 0.3 * intensity)
+            # Like happy (curved smile) but with vertical shake
+            use_curved_bottom = True
+            target_curve_l = 0.48
+            target_curve_r = 0.48
+            self._left_open_target = 1.0
+            self._right_open_target = 1.0
+            # Vertical shake animation
+            import math
+            shake = math.sin(pygame.time.get_ticks() * 0.02) * 8
+            self._anim_offset_y = shake
         
-        elif self._mood == Mood.SKEPTICAL:
-            target_top_l = h * 0.2 * intensity
-            target_top_r = h * 0.5 * intensity
-            target_angle_l = 20 * intensity
         
-        elif self._mood == Mood.SHY:
-            self._target_look_y = 0.4 * intensity
-            target_top_l = h * 0.3 * intensity
-            target_top_r = h * 0.3 * intensity
-            self._left_open_target = max(0.7, 1.0 - 0.3 * intensity)
-            self._right_open_target = max(0.7, 1.0 - 0.3 * intensity)
-        
-        elif self._mood == Mood.LOVE:
-            target_bot_l = h * 0.3 * intensity
-            target_bot_r = h * 0.3 * intensity
-            self._left_open_target = min(1.3, 1.0 + 0.3 * intensity)
-            self._right_open_target = min(1.3, 1.0 + 0.3 * intensity)
-        
-        elif self._mood == Mood.FEAR:
-            self._left_open_target = min(1.5, 1.0 + 0.5 * intensity)
-            self._right_open_target = min(1.5, 1.0 + 0.5 * intensity)
-            self._pupil_scale_target = max(0.5, 1.0 - 0.5 * intensity)
-        
-        elif self._mood == Mood.BORED:
+        elif self._mood == Mood.SAD:
+            # Droopy outer corners
             target_top_l = h * 0.5 * intensity
             target_top_r = h * 0.5 * intensity
-            self._left_open_target = max(0.5, 1.0 - 0.5 * intensity)
-            self._right_open_target = max(0.5, 1.0 - 0.5 * intensity)
-        
-        elif self._mood == Mood.DISGUST:
-            target_top_l = h * 0.4 * intensity
-            target_top_r = h * 0.5 * intensity
-            target_bot_l = h * 0.2 * intensity
-            target_angle_l = -15 * intensity
-            target_angle_r = 10 * intensity
-        
-        elif self._mood == Mood.WORRIED:
-            target_top_l = h * 0.25 * intensity
-            target_top_r = h * 0.35 * intensity
-            target_angle_l = 10 * intensity
-            self._left_open_target = min(1.2, 1.0 + 0.2 * intensity)
-            self._right_open_target = min(1.2, 1.0 + 0.2 * intensity)
-        
-        elif self._mood == Mood.CURIOUS:
-            target_top_l = h * 0.2 * intensity
-            target_top_r = h * 0.4 * intensity
             target_angle_l = 15 * intensity
-            self._left_open_target = min(1.2, 1.0 + 0.2 * intensity)
+            target_angle_r = -15 * intensity
+            self._left_open_target = 0.8
+            self._right_open_target = 0.8
+        
+        elif self._mood == Mood.AFRAID:
+            # Like sad but with horizontal shake
+            target_top_l = h * 0.5 * intensity
+            target_top_r = h * 0.5 * intensity
+            target_angle_l = 15 * intensity
+            target_angle_r = -15 * intensity
+            self._left_open_target = 0.8
+            self._right_open_target = 0.8
+            # Horizontal shake
+            import math
+            shake = math.sin(pygame.time.get_ticks() * 0.03) * 6
+            self._anim_offset_x = shake
+        
+        elif self._mood == Mood.SIDEEYE_LEFT:
+            # Looking left
+            self._left_open_target = 1.3
+            self._right_open_target = 0.8
+            self._target_look_x = -0.9
+        
+        elif self._mood == Mood.SIDEEYE_RIGHT:
+            # Looking right
+            self._left_open_target = 0.8
+            self._right_open_target = 1.3
+            self._target_look_x = 0.9
+        
+        elif self._mood == Mood.ANGRY:
+            # Slanted inner corners down
+            target_top_l = h * 0.5 * intensity
+            target_top_r = h * 0.5 * intensity
+            target_angle_l = -30 * intensity
+            target_angle_r = 30 * intensity
+            self._left_open_target = 1.0
+            self._right_open_target = 1.0
         
         elif self._mood == Mood.SLEEPY:
-            target_top_l = h * 0.6 * intensity
-            target_top_r = h * 0.6 * intensity
-            self._left_open_target = max(0.3, 1.0 - 0.7 * intensity)
-            self._right_open_target = max(0.3, 1.0 - 0.7 * intensity)
-        
-        elif self._mood == Mood.FOCUSED:
-            target_top_l = h * 0.3 * intensity
-            target_top_r = h * 0.3 * intensity
-            self._left_open_target = max(0.8, 1.0 - 0.2 * intensity)
-            self._right_open_target = max(0.8, 1.0 - 0.2 * intensity)
-        
-        elif self._mood == Mood.PLAYFUL:
-            target_bot_l = h * 0.3 * intensity
-            target_angle_l = -10 * intensity
-            target_angle_r = 10 * intensity
-            self._left_open_target = 1.0
-            self._right_open_target = max(0.6, 1.0 - 0.4 * intensity)
+            # Narrow horizontal slits
+            self._left_open_target = 0.1
+            self._right_open_target = 0.1
         
         # Smooth transitions
-        speed = EMOTION_TRANSITION_SPEEDS.get(self._mood, 6.0)
+        # Update curved bottom state
+        self._curved_bottom_left = use_curved_bottom
+        self._curved_bottom_right = use_curved_bottom
+        
+        speed = EMOTION_TRANSITION_SPEEDS.get(self._mood, 4.0)
         self._lid_top_left = smooth_lerp(self._lid_top_left, target_top_l, speed, dt)
         self._lid_top_right = smooth_lerp(self._lid_top_right, target_top_r, speed, dt)
         self._lid_bottom_left = smooth_lerp(self._lid_bottom_left, target_bot_l, speed, dt)
         self._lid_bottom_right = smooth_lerp(self._lid_bottom_right, target_bot_r, speed, dt)
         self._lid_angle_left = smooth_lerp(self._lid_angle_left, target_angle_l, speed, dt)
         self._lid_angle_right = smooth_lerp(self._lid_angle_right, target_angle_r, speed, dt)
-    
-    # ========== Draw ==========
-    
+        self._curved_amount_left = smooth_lerp(self._curved_amount_left, target_curve_l, speed, dt)
+        self._curved_amount_right = smooth_lerp(self._curved_amount_right, target_curve_r, speed, dt)
     def draw(self, surface: pygame.Surface):
         """Draw eyes onto the surface"""
         center_y = self.screen_height // 2
         left_x = (self.screen_width - self.config.space_between) // 2 - self.config.width // 2
         right_x = (self.screen_width + self.config.space_between) // 2 - self.config.width // 2
         
-        self._draw_eye(surface, left_x, center_y, True)
-        self._draw_eye(surface, right_x, center_y, False)
+        self._draw_eye(surface, left_x, center_y, True, 
+                       curved_bottom=self._curved_bottom_left,
+                       curve_amount=self._curved_amount_left)
+        self._draw_eye(surface, right_x, center_y, False,
+                        curved_bottom=self._curved_bottom_right,
+                        curve_amount=self._curved_amount_right)
     
-    def _draw_eye(self, surface: pygame.Surface, x: int, y: int, is_left: bool):
+    def _draw_curved_bottom_lid(self, surface: pygame.Surface, x: int, y: int, w: int, h: int, curve_amount: float):
+        """Draw curved bottom eyelid for happy/smiling expression"""
+        print(f"DEBUG: Drawing curved lid - x={x}, y={y}, w={w}, h={h}, curve={curve_amount}")
+        if curve_amount < 0.01:
+            print("DEBUG: Curve amount too small, skipping")
+            return
+            
+        cfg = self.config
+        points = []
+        num_points = 20
+        curve_height = h * 0.5 * curve_amount
+        
+        for i in range(num_points + 1):
+            t = i / num_points
+            px = x + t * w
+            curve = math.sin(t * math.pi)
+            py = y + h * 0.75 - (curve * curve_height)
+            points.append((px, py))
+        
+        points.append((x + w + 5, y + h + 20))
+        points.append((x - 5, y + h + 20))
+        pygame.draw.polygon(surface, cfg.bg_color, points)
+    
+    def _draw_eye(self, surface: pygame.Surface, x: int, y: int, is_left: bool, curved_bottom: bool = False, curve_amount: float = 0.0):
         """Draw a single eye"""
         # Calculate positions with look direction
         look_offset_x = int(self._look_x * self.config.width * 0.3)
@@ -738,21 +753,6 @@ class RoboEyes:
         # Eye openness
         openness = (self._left_open if is_left else self._right_open) * self._speaking_pulse * self._listening_focus
         
-        # Glow layer
-        if self._glow_intensity > 0.1:
-            glow_surface = pygame.Surface(
-                (self.config.width + 40, int(self.config.height * openness) + 40),
-                pygame.SRCALPHA
-            )
-            glow_alpha = int(self.config.glow_alpha * self._glow_intensity)
-            glow_color = self._current_glow_color + (glow_alpha,)
-            pygame.draw.ellipse(
-                glow_surface,
-                glow_color,
-                (0, 0, self.config.width + 40, int(self.config.height * openness) + 40),
-                border_radius=self.config.border_radius + 20
-            )
-            surface.blit(glow_surface, (total_x - 20, total_y - int(self.config.height * openness / 2) - 20))
         
         # Main eye
         eye_height = int(self.config.height * openness)
@@ -762,17 +762,18 @@ class RoboEyes:
             self.config.width,
             eye_height
         )
-        pygame.draw.ellipse(surface, self.config.eye_color, eye_rect, border_radius=self.config.border_radius)
+        border_radius = min(self.config.border_radius, self.config.width // 2, eye_height // 2)
+        pygame.draw.rect(surface, self.config.eye_color, eye_rect, border_radius=border_radius)
         
-        # Pupil
-        pupil_size = int(self.config.width * 0.3 * self._pupil_scale)
-        pupil_rect = pygame.Rect(
-            total_x + self.config.width // 2 - pupil_size // 2,
-            total_y - pupil_size // 2,
-            pupil_size,
-            pupil_size
-        )
-        pygame.draw.ellipse(surface, (0, 0, 0), pupil_rect)
+        # Pupil - removed per user request
+        # pupil_size = int(self.config.width * 0.3 * self._pupil_scale)
+        # pupil_rect = pygame.Rect(
+        #     total_x + self.config.width // 2 - pupil_size // 2,
+        #     total_y - pupil_size // 2,
+        #     pupil_size,
+        #     pupil_size
+        # )
+        # pygame.draw.ellipse(surface, (0, 0, 0), pupil_rect)
         
         # Eyelids
         lid_color = self.config.bg_color
@@ -781,21 +782,56 @@ class RoboEyes:
         lid_top = self._lid_top_left if is_left else self._lid_top_right
         lid_angle = self._lid_angle_left if is_left else self._lid_angle_right
         
-        if lid_top > 0:
-            top_surface = pygame.Surface((self.config.width + 10, int(lid_top) + 10), pygame.SRCALPHA)
-            top_surface.fill((0, 0, 0, 0))
-            pygame.draw.rect(top_surface, lid_color, (0, 0, self.config.width + 10, int(lid_top) + 10))
+        if lid_top > 1:
+            top_y = total_y - eye_height // 2
             
-            if lid_angle != 0:
-                top_surface = pygame.transform.rotate(top_surface, lid_angle)
-            
-            surface.blit(top_surface, (total_x - 5, total_y - eye_height // 2 - 5))
+            if abs(lid_angle) > 1:
+                # Draw angled triangular lid for ANGRY/SAD
+                if is_left:
+                    if lid_angle < 0:
+                        # ANGRY left: slant down from right
+                        points = [
+                            (total_x, top_y - 1),
+                            (total_x + self.config.width, top_y - 1),
+                            (total_x + self.config.width, top_y + int(lid_top))
+                        ]
+                    else:
+                        # SAD left: droop from left
+                        points = [
+                            (total_x, top_y - 1),
+                            (total_x + self.config.width, top_y - 1),
+                            (total_x, top_y + int(lid_top))
+                        ]
+                else:
+                    if lid_angle > 0:
+                        # ANGRY right: slant down from left
+                        points = [
+                            (total_x, top_y - 1),
+                            (total_x + self.config.width, top_y - 1),
+                            (total_x, top_y + int(lid_top))
+                        ]
+                    else:
+                        # SAD right: droop from right
+                        points = [
+                            (total_x, top_y - 1),
+                            (total_x + self.config.width, top_y - 1),
+                            (total_x + self.config.width, top_y + int(lid_top))
+                        ]
+                pygame.draw.polygon(surface, lid_color, points)
+            else:
+                # Draw straight rectangle lid
+                pygame.draw.rect(surface, lid_color, 
+                               (total_x - 2, top_y - 2, self.config.width + 4, int(lid_top) + 2))
         
-        # Bottom lid
+        # Bottom eyelid overlay
         lid_bottom = self._lid_bottom_left if is_left else self._lid_bottom_right
-        if lid_bottom > 0:
-            pygame.draw.rect(
-                surface,
-                lid_color,
-                (total_x, total_y + eye_height // 2, self.config.width, int(lid_bottom))
-            )
+        print(f"DEBUG: Bottom lid - curved_bottom={curved_bottom}, curve_amount={curve_amount}")
+        if curved_bottom and curve_amount > 0.01:
+            # Use curved lid for happy expression
+            print("DEBUG: Calling curved bottom lid")
+            self._draw_curved_bottom_lid(surface, total_x, total_y - eye_height // 2, self.config.width, eye_height, curve_amount)
+        elif lid_bottom > 1:
+            # Straight bottom lid (default)
+            lid_h = int(lid_bottom)
+            lid_rect = pygame.Rect(total_x - 2, total_y + eye_height - int(lid_bottom), self.config.width + 4, lid_h + 10)
+            pygame.draw.rect(surface, lid_color, lid_rect)
