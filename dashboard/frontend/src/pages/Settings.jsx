@@ -216,13 +216,21 @@ function SettingsPage() {
                 <p className="text-2xl font-bold mt-1">{successInfo.ssid}</p>
               </div>
 
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 space-y-2">
-                <p className="font-medium text-sm">⚠️ Important - Save this address:</p>
-                <div className="bg-background p-3 rounded border">
-                  <p className="text-xs text-muted-foreground">Dashboard URL (via Tailscale):</p>
-                  <p className="text-lg font-mono font-bold select-all">http://{successInfo.tailscale_ip}:8080</p>
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 space-y-3">
+                <p className="font-medium text-sm">⚠️ Important - Dashboard Access:</p>
+
+                <div className="bg-background p-3 rounded border space-y-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Tailscale (works everywhere):</p>
+                    <p className="text-base font-mono font-bold select-all">http://{successInfo.tailscale_ip}:8080</p>
+                  </div>
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground">Local network (home WiFi only):</p>
+                    <p className="text-base font-mono font-bold select-all">http://tars.local:8080</p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">This link works from anywhere - home, dorm, or mobile data</p>
+
+                <p className="text-xs text-muted-foreground">💡 Tailscale works from anywhere - dorm, home, or mobile data</p>
               </div>
 
               <div className="space-y-2 text-sm bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
@@ -277,6 +285,27 @@ function SettingsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Dashboard Access URLs */}
+              {wifiStatus.mode === 'client' && (
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 space-y-2">
+                  <p className="text-sm font-medium">Dashboard Access:</p>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex items-start gap-2">
+                      <span className="text-muted-foreground min-w-20">Local:</span>
+                      <span className="font-mono">http://tars.local:8080</span>
+                      <span className="text-muted-foreground">(home networks)</span>
+                    </div>
+                    {wifiStatus.tailscale_ip && (
+                      <div className="flex items-start gap-2">
+                        <span className="text-muted-foreground min-w-20">Tailscale:</span>
+                        <span className="font-mono">http://{wifiStatus.tailscale_ip}:8080</span>
+                        <span className="text-muted-foreground">(works everywhere)</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-2 border-t">
                 {!showWifiSetup ? (
