@@ -3,6 +3,12 @@ TARS Display Manager
 Coordinates between eyes and spectrum modes
 """
 
+# Configure SDL for Wayland
+import os
+os.environ["SDL_VIDEODRIVER"] = "wayland"
+os.environ.setdefault("WAYLAND_DISPLAY", "wayland-0")
+os.environ.setdefault("XDG_RUNTIME_DIR", "/run/user/1000")
+
 import pygame
 import threading
 import time
@@ -36,6 +42,9 @@ class DisplayState:
     face_x: float = 0.0
     face_y: float = 0.0
     battery_percentage: Optional[float] = None
+    battery_charging: bool = False
+    wifi_mode: str = "unknown"  # hotspot, wlan, disconnected
+    wifi_ssid: Optional[str] = None
     battery_voltage: Optional[float] = None
 
 
@@ -59,6 +68,9 @@ class DisplayManager:
 
         # Colors
         self.bg_color = (13, 17, 23)  # #0d1117
+
+        # WiFi icons (loaded in _run to avoid pygame init issues)
+        self.wifi_icons = {}
 
     def start(self):
         """Start display thread"""
@@ -159,12 +171,20 @@ class DisplayManager:
 
     # ========== Battery ==========
 
-    def set_battery_status(self, percentage: float, voltage: float):
+    def set_battery_status(self, percentage: float, voltage: float, charging: bool = False):
         """Update battery status for display"""
         with self._lock:
             self.state.battery_percentage = percentage
             self.state.battery_voltage = voltage
+            self.state.battery_charging = charging
 
+    # ========== WiFi ==========
+
+    def set_wifi_status(self, mode: str, ssid: str = None):
+        """Update WiFi status for display"""
+        with self._lock:
+            self.state.wifi_mode = mode
+            self.state.wifi_ssid = ssid
     # ========== Main Loop ==========
 
     def _run(self):
@@ -193,13 +213,34 @@ class DisplayManager:
         self.eyes = RoboEyes(self.width, self.height)
         self.spectrum = SpectrumVisualizer(self.width, self.height)
 
+        # Load and scale WiFi icons
+        icon_size = 26  # Scale down from 250x250 to 26x26
+        assets_path = Path(__file__).parent.parent / "assets"
+        try:
+            self.wifi_icons["wlan"] = pygame.transform.scale(
+                pygame.image.load(str(assets_path / "wifi-blue.png")), (icon_size, icon_size)
+            )
+            self.wifi_icons["hotspot"] = pygame.transform.scale(
+                pygame.image.load(str(assets_path / "wifi-yellow.png")), (icon_size, icon_size)
+            )
+            self.wifi_icons["disconnected"] = pygame.transform.scale(
+                pygame.image.load(str(assets_path / "wifi-gray.png")), (icon_size, icon_size)
+            )
+        except Exception as e:
+            print(f"Warning: Failed to load WiFi icons: {e}")
+            self.wifi_icons = {}
+
         clock = pygame.time.Clock()
         last_time = time.time()
 
         while self.running:
             # Events
             for event in pygame.event.get():
+                # Only exit on ESC key or screen tap, ignore QUIT events
                 if event.type == pygame.QUIT:
+                    continue  # Ignore window close events from Wayland
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    # Tap screen to exit
                     self.running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
@@ -225,6 +266,7 @@ class DisplayManager:
                     self.spectrum.update(dt)
                     self.spectrum.draw(portrait_surface)
 
+                self._draw_wifi_indicator(portrait_surface)
                 self._draw_battery_indicator(portrait_surface)
 
             # Rotate portrait (480x800) -> landscape (800x480) and blit to screen
@@ -294,6 +336,26 @@ class DisplayManager:
             bolt = bolt_font.render("⚡", True, (255, 255, 100))
             screen.blit(bolt, (x - 15, y + 2))
 
+
+    def _draw_wifi_indicator(self, screen: pygame.Surface):
+        """Draw WiFi status indicator in top-left corner"""
+        if not self.wifi_icons:
+            return  # Icons not loaded yet
+
+        # Position: top-left with margin
+        margin = 15
+
+        # Select icon based on WiFi mode
+        if self.state.wifi_mode == "hotspot":
+            icon = self.wifi_icons.get("hotspot")
+        elif self.state.wifi_mode == "wlan":
+            icon = self.wifi_icons.get("wlan")
+        else:
+            icon = self.wifi_icons.get("disconnected")
+
+        # Draw icon if available
+        if icon:
+            screen.blit(icon, (margin, margin))
     def get_status(self) -> dict:
         """Get current display status"""
         with self._lock:
@@ -305,5 +367,7 @@ class DisplayManager:
                 "audio_source": self.state.audio_source,
                 "face_detected": self.state.face_detected,
                 "battery_percentage": self.state.battery_percentage,
+                "wifi_mode": self.state.wifi_mode,
+                "wifi_ssid": self.state.wifi_ssid,
                 "battery_charging": self.state.battery_charging
             }
