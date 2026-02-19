@@ -70,6 +70,18 @@ function SettingsPage() {
         return
       }
 
+      // Get Tailscale IP before connecting
+      const statusRes = await fetch('/api/wifi/status')
+      const statusData = await statusRes.json()
+      const tailscaleIp = statusData.tailscale_ip || '100.84.133.74'
+
+      // Show modal FIRST with instructions
+      setSuccessInfo({
+        ssid: ssid,
+        tailscale_ip: tailscaleIp
+      })
+      setShowSuccessModal(true)
+
       const payload = {
         ssid,
         password: password || '',
@@ -80,6 +92,7 @@ function SettingsPage() {
         if (!username) {
           setWifiError('Username required for enterprise WiFi')
           setConnecting(false)
+          setShowSuccessModal(false)
           return
         }
         payload.username = username
@@ -87,6 +100,7 @@ function SettingsPage() {
         payload.phase2_auth = 'mschapv2'
       }
 
+      // Now connect (hotspot will shut down after this)
       const res = await fetch('/api/wifi/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,22 +109,9 @@ function SettingsPage() {
 
       if (!res.ok) {
         const error = await res.json()
+        setShowSuccessModal(false)
         throw new Error(error.detail || 'Connection failed')
       }
-
-      // Success - wait for IP assignment
-      await new Promise(resolve => setTimeout(resolve, 3000))
-
-      // Reload status to get new IP
-      const statusRes = await fetch('/api/wifi/status')
-      const statusData = await statusRes.json()
-
-      // Show success modal with new IP
-      setSuccessInfo({
-        ssid: ssid,
-        ip: statusData.ip || 'Unknown'
-      })
-      setShowSuccessModal(true)
 
       setShowWifiSetup(false)
       setSelectedNetwork(null)
@@ -122,6 +123,7 @@ function SettingsPage() {
       setNetworks([])
     } catch (err) {
       setWifiError(err.message)
+      setShowSuccessModal(false)
     }
     setConnecting(false)
   }
@@ -203,31 +205,33 @@ function SettingsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-md w-full">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-500">
-                <CheckCircle className="w-6 h-6" />
-                WiFi Connected!
+              <CardTitle className="flex items-center gap-2 text-blue-500">
+                <Wifi className="w-6 h-6" />
+                Connecting to WiFi...
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="font-medium">Successfully connected to:</p>
+                <p className="font-medium">Connecting to:</p>
                 <p className="text-2xl font-bold mt-1">{successInfo.ssid}</p>
               </div>
 
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 space-y-2">
-                <p className="font-medium text-sm">Important - Save this information:</p>
+                <p className="font-medium text-sm">⚠️ Important - Save this address:</p>
                 <div className="bg-background p-3 rounded border">
-                  <p className="text-xs text-muted-foreground">New IP Address:</p>
-                  <p className="text-lg font-mono font-bold">{successInfo.ip}:8080</p>
+                  <p className="text-xs text-muted-foreground">Dashboard URL (via Tailscale):</p>
+                  <p className="text-lg font-mono font-bold select-all">http://{successInfo.tailscale_ip}:8080</p>
                 </div>
+                <p className="text-xs text-muted-foreground">This link works from anywhere - home, dorm, or mobile data</p>
               </div>
 
-              <div className="space-y-2 text-sm">
-                <p className="font-medium">Next steps:</p>
+              <div className="space-y-2 text-sm bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                <p className="font-medium">What happens next:</p>
                 <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                  <li>TARS will connect to <span className="font-medium text-foreground">{successInfo.ssid}</span></li>
+                  <li>This setup hotspot will shut down</li>
                   <li>Reconnect your device to <span className="font-medium text-foreground">{successInfo.ssid}</span></li>
-                  <li>Open browser and go to: <span className="font-mono font-medium text-foreground">http://{successInfo.ip}:8080</span></li>
-                  <li>Bookmark this new address for future access</li>
+                  <li>Open: <span className="font-mono font-medium text-foreground">http://{successInfo.tailscale_ip}:8080</span></li>
                 </ol>
               </div>
 
@@ -235,7 +239,7 @@ function SettingsPage() {
                 onClick={() => setShowSuccessModal(false)}
                 className="w-full"
               >
-                Got it!
+                I saved the address!
               </Button>
             </CardContent>
           </Card>
