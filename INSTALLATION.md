@@ -103,6 +103,9 @@ python tars_daemon.py
 
 # Or using start script
 ./start.sh
+
+# Start dashboard separately
+python start_dashboard.py
 ```
 
 The daemon will:
@@ -110,6 +113,24 @@ The daemon will:
 2. Start gRPC server on port 50051
 3. Wait for AI brain or SDK client to connect
 
+### 4. Access Dashboard
+
+The web dashboard runs on port 8080:
+
+```bash
+# Access in browser
+http://tars-pi.local:8080
+# or
+http://<pi-ip-address>:8080
+```
+
+Dashboard features:
+- **Status**: Real-time system metrics (CPU, memory, battery, network)
+- **Control**: Movement controls with virtual joystick
+- **Apps**: Install and manage TARS apps from App Store
+- **Settings**: WiFi configuration, system updates
+
+---
 ---
 
 ## System Requirements

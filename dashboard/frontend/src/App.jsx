@@ -1,15 +1,52 @@
+import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
-import { Activity, Gamepad2, Settings, Download } from 'lucide-react'
+import { Activity, Gamepad2, Settings, Download, Sun, Moon } from 'lucide-react'
+import { Button } from './components/ui/button'
 import Status from './pages/Status'
 import Control from './pages/Control'
 import SettingsPage from './pages/Settings'
 import AppStore from './pages/AppStore'
 
 function App() {
+  const [theme, setTheme] = useState('dark')
+
+  useEffect(() => {
+    // Load theme from localStorage
+    const savedTheme = localStorage.getItem('theme') || 'dark'
+    setTheme(savedTheme)
+    document.documentElement.classList.toggle('dark', savedTheme === 'dark')
+  }, [])
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark'
+    setTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
+    document.documentElement.classList.toggle('dark', newTheme === 'dark')
+  }
+
   return (
-    <div className="min-h-screen bg-background dark">
+    <div className="min-h-screen bg-background">
+      {/* Top Navbar */}
+      <header className="sticky top-0 z-50 bg-card border-b border-border">
+        <div className="flex items-center justify-between h-14 px-4 max-w-6xl mx-auto">
+          <h1 className="text-xl font-bold">TARS</h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
+          </Button>
+        </div>
+      </header>
+
       {/* Main Content */}
-      <main className="pb-20">
+      <main className="pb-20 pt-2">
         <Routes>
           <Route path="/" element={<Status />} />
           <Route path="/control" element={<Control />} />
@@ -25,9 +62,9 @@ function App() {
           <NavLink
             to="/"
             className={({ isActive }) =>
-              \`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors \${
+              `flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }\`
+              }`
             }
           >
             <Activity className="w-5 h-5" />
@@ -37,9 +74,9 @@ function App() {
           <NavLink
             to="/control"
             className={({ isActive }) =>
-              \`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors \${
+              `flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }\`
+              }`
             }
           >
             <Gamepad2 className="w-5 h-5" />
@@ -49,9 +86,9 @@ function App() {
           <NavLink
             to="/apps"
             className={({ isActive }) =>
-              \`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors \${
+              `flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }\`
+              }`
             }
           >
             <Download className="w-5 h-5" />
@@ -61,9 +98,9 @@ function App() {
           <NavLink
             to="/settings"
             className={({ isActive }) =>
-              \`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors \${
+              `flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }\`
+              }`
             }
           >
             <Settings className="w-5 h-5" />
