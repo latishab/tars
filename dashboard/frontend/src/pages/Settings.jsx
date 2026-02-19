@@ -22,6 +22,8 @@ function SettingsPage() {
   const [isEnterprise, setIsEnterprise] = useState(false)
   const [username, setUsername] = useState('')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [connectionReady, setConnectionReady] = useState(false)
+  const [connectionPayload, setConnectionPayload] = useState(null)
   const [successInfo, setSuccessInfo] = useState(null)
 
   useEffect(() => {
@@ -58,7 +60,8 @@ function SettingsPage() {
     setScanning(false)
   }
 
-  const connectToNetwork = async () => {
+  // Step 1: Prepare connection and show modal (DON'T connect yet)
+  const prepareConnection = async () => {
     setConnecting(true)
     setWifiError(null)
     try {
@@ -70,18 +73,6 @@ function SettingsPage() {
         return
       }
 
-      // Get Tailscale IP before connecting
-      const statusRes = await fetch('/api/wifi/status')
-      const statusData = await statusRes.json()
-      const tailscaleIp = statusData.tailscale_ip || '100.84.133.74'
-
-      // Show modal FIRST with instructions
-      setSuccessInfo({
-        ssid: ssid,
-        tailscale_ip: tailscaleIp
-      })
-      setShowSuccessModal(true)
-
       const payload = {
         ssid,
         password: password || '',
@@ -92,7 +83,6 @@ function SettingsPage() {
         if (!username) {
           setWifiError('Username required for enterprise WiFi')
           setConnecting(false)
-          setShowSuccessModal(false)
           return
         }
         payload.username = username
@@ -100,19 +90,46 @@ function SettingsPage() {
         payload.phase2_auth = 'mschapv2'
       }
 
-      // Now connect (hotspot will shut down after this)
+      // Get Tailscale IP
+      const statusRes = await fetch('/api/wifi/status')
+      const statusData = await statusRes.json()
+      const tailscaleIp = statusData.tailscale_ip || '100.84.133.74'
+
+      // Save payload for later
+      setConnectionPayload(payload)
+
+      // Show modal with URLs (DON'T connect yet)
+      setSuccessInfo({
+        ssid: ssid,
+        tailscale_ip: tailscaleIp
+      })
+      setShowSuccessModal(true)
+      setConnectionReady(true)
+      setConnecting(false)
+    } catch (err) {
+      setWifiError(err.message)
+      setConnecting(false)
+    }
+  }
+
+  // Step 2: Actually make the connection (called from modal button)
+  const actuallyConnect = async () => {
+    if (!connectionPayload || !connectionReady) return
+
+    setConnecting(true)
+    try {
       const res = await fetch('/api/wifi/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(connectionPayload)
       })
 
       if (!res.ok) {
         const error = await res.json()
-        setShowSuccessModal(false)
         throw new Error(error.detail || 'Connection failed')
       }
 
+      // Success - hotspot will shut down now
       setShowWifiSetup(false)
       setSelectedNetwork(null)
       setPassword('')
@@ -121,10 +138,20 @@ function SettingsPage() {
       setIsManualEntry(false)
       setIsEnterprise(false)
       setNetworks([])
+      setConnectionReady(false)
+      setConnectionPayload(null)
     } catch (err) {
       setWifiError(err.message)
       setShowSuccessModal(false)
+      setConnectionReady(false)
     }
+    setConnecting(false)
+  }
+
+  const cancelConnection = () => {
+    setShowSuccessModal(false)
+    setConnectionReady(false)
+    setConnectionPayload(null)
     setConnecting(false)
   }
 
@@ -200,24 +227,24 @@ function SettingsPage() {
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">Settings</h1>
 
-      {/* Success Modal */}
+      {/* Success Modal - Manual confirmation before connecting */}
       {showSuccessModal && successInfo && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="max-w-md w-full">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-blue-500">
                 <Wifi className="w-6 h-6" />
-                Connecting to WiFi...
+                Ready to Connect
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="font-medium">Connecting to:</p>
+                <p className="font-medium">Network:</p>
                 <p className="text-2xl font-bold mt-1">{successInfo.ssid}</p>
               </div>
 
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 space-y-3">
-                <p className="font-medium text-sm">⚠️ Important - Dashboard Access:</p>
+                <p className="font-medium text-sm">📋 Save these URLs before connecting:</p>
 
                 <div className="bg-background p-3 rounded border space-y-2">
                   <div>
@@ -234,21 +261,39 @@ function SettingsPage() {
               </div>
 
               <div className="space-y-2 text-sm bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                <p className="font-medium">What happens next:</p>
+                <p className="font-medium">⚠️ After clicking "Connect Now":</p>
                 <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                   <li>TARS will connect to <span className="font-medium text-foreground">{successInfo.ssid}</span></li>
-                  <li>This setup hotspot will shut down</li>
+                  <li>This setup page will disconnect (hotspot shuts down)</li>
                   <li>Reconnect your device to <span className="font-medium text-foreground">{successInfo.ssid}</span></li>
-                  <li>Open: <span className="font-mono font-medium text-foreground">http://{successInfo.tailscale_ip}:8080</span></li>
+                  <li>Open the Tailscale URL above to access TARS</li>
                 </ol>
               </div>
 
-              <Button
-                onClick={() => setShowSuccessModal(false)}
-                className="w-full"
-              >
-                I saved the address!
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={cancelConnection}
+                  variant="outline"
+                  className="flex-1"
+                  disabled={connecting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={actuallyConnect}
+                  className="flex-1"
+                  disabled={connecting}
+                >
+                  {connecting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    "Connect Now"
+                  )}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -480,7 +525,7 @@ function SettingsPage() {
                       </div>
 
                       <Button
-                        onClick={connectToNetwork}
+                        onClick={prepareConnection}
                         disabled={connecting || (isEnterprise && !username) || (!isManualEntry && !selectedNetwork)}
                         className="w-full"
                       >
