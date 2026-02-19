@@ -146,7 +146,7 @@ The RPi will:
 - **[HARDWARE_IO.md](./docs/HARDWARE_IO.md)** - Camera and audio API
 
 **Architecture & Design:**
-- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System architecture (v5)
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System architecture
 
 ---
 
