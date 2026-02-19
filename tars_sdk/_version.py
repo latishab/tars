@@ -1,7 +1,14 @@
 """Version information for TARS SDK."""
 
-__version__ = "0.3.4"
-__version_tuple__ = (0, 3, 4)
+import importlib.metadata
+
+try:
+    __version__ = importlib.metadata.version("tars-robot")
+except Exception:
+    # Fallback for development
+    __version__ = "0.3.4-dev"
+
+__version_tuple__ = tuple(int(x) for x in __version__.split("-")[0].split("."))
 __minimum_compatible_client__ = "0.1.0"
 __git_commit__ = None  # Set during build
 
