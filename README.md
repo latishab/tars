@@ -140,6 +140,7 @@ The RPi will:
 
 **User Guides:**
 - **[DAEMON.md](./docs/DAEMON.md)** - Getting started with unified daemon
+- **[DASHBOARD.md](./docs/DASHBOARD.md)** - Web dashboard guide
 
 **API Reference:**
 - **[MOVEMENTS.md](./docs/MOVEMENTS.md)** - Servo control and movement API
