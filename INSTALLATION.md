@@ -6,7 +6,7 @@ The TARS robot software is available on PyPI as **tars-robot**.
 
 ### Installation Options
 
-#### Full Installation (Everything)
+#### Default (Full Installation)
 
 Install complete package with daemon, dashboard, and SDK:
 
@@ -14,44 +14,37 @@ Install complete package with daemon, dashboard, and SDK:
 pip install tars-robot
 ```
 
-Includes:
+Includes everything:
 - gRPC SDK (client library)
 - Daemon server (WebRTC, gRPC)
 - Web dashboard (FastAPI + React)
 - Hardware control (servos, camera, display, battery)
-- All dependencies for Raspberry Pi
 
-#### Daemon + Dashboard
+#### Daemon + Dashboard (Raspberry Pi)
 
-Install daemon and dashboard without SDK development tools:
+Same as default installation:
 
 ```bash
+pip install tars-robot
+# or explicitly
 pip install tars-robot[daemon]
 ```
 
-Includes:
-- Daemon server (WebRTC, gRPC)
-- Web dashboard
-- Hardware control
-- Basic SDK for internal use
-
 Use this on Raspberry Pi for running the robot.
 
-#### SDK Only
+#### SDK Only (App Development)
 
-Install only the SDK for app development:
+For lightweight SDK-only install (app development, remote control):
 
 ```bash
-pip install tars-robot[sdk]
+# Install without dependencies, then add minimal SDK deps
+pip install --no-deps tars-robot
+pip install grpcio>=1.60.0 protobuf>=4.25.0 loguru>=0.7.0
 ```
-
-Includes:
-- gRPC client SDK
-- Minimal dependencies (grpcio, protobuf, loguru)
 
 Perfect for:
 - Developing apps that control TARS
-- Remote control scripts
+- Remote control scripts  
 - Lightweight client applications
 - Host computer controlling a Pi
 
@@ -104,8 +97,8 @@ asyncio.run(main())
 For running the robot daemon on Raspberry Pi:
 
 ```bash
-# Install daemon + dashboard
-pip install tars-robot[daemon]
+# Install everything
+pip install tars-robot
 
 # Start daemon
 python -m tars_daemon
@@ -113,7 +106,7 @@ python -m tars_daemon
 # Or clone repo for development
 git clone https://github.com/latishab/tars.git
 cd tars
-pip install -e .[daemon]
+pip install -e .
 python tars_daemon.py
 ```
 
@@ -179,13 +172,15 @@ Dashboard features:
 ### Setup
 
 ```bash
-# Install SDK only
-pip install tars-robot[sdk]
+# Minimal SDK install
+pip install --no-deps tars-robot
+pip install grpcio>=1.60.0 protobuf>=4.25.0 loguru>=0.7.0
 
 # Or install from source
 git clone https://github.com/latishab/tars.git
 cd tars
-pip install -e .[sdk]
+pip install --no-deps -e .
+pip install grpcio protobuf loguru
 ```
 
 ### Example App
