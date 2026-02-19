@@ -211,3 +211,7 @@ dashboard.ini
 tars_sdk/proto/*_pb2.py
 tars_sdk/proto/*_pb2.pyi
 tars_sdk/proto/*_pb2_grpc.py
+# Frontend build artifacts
+dashboard/frontend/node_modules/
+dashboard/frontend/package-lock.json
+*.backup*
