@@ -97,7 +97,7 @@ Host Computer                      Raspberry Pi
 3. Mic audio flows: RPi → Host (for STT)
 4. TTS audio flows: Host → RPi (for speaker output)
 
-**Python Example (using tars-omni):**
+**Python Example (using tars-conversation-app):**
 ```python
 from transport import AiortcRPiClient
 
@@ -109,7 +109,7 @@ await client.connect()
 # Use in Pipecat pipeline for STT/TTS
 ```
 
-**See tars-omni repository** for full audio pipeline implementation with:
+**See tars-conversation-app repository** for full audio pipeline implementation with:
 - VAD (Voice Activity Detection)
 - STT (Speech-to-Text via Deepgram)
 - TTS (Text-to-Speech via ElevenLabs)
@@ -191,10 +191,10 @@ print(f"Movement: {result}")
 
 ### WebRTC Audio Testing
 
-Test audio streaming using the tars-omni repository:
+Test audio streaming using the tars-conversation-app repository:
 
 ```bash
-cd /path/to/tars-omni
+cd /path/to/tars-conversation-app
 python tars_bot.py
 ```
 
@@ -289,7 +289,7 @@ except Exception as e:
 **WebRTC connection issues:**
 - Check RPi is running: `python tars_daemon.py`
 - Check port 8001 is accessible
-- Test from tars-omni with `python tars_bot.py`
+- Test from tars-conversation-app with `python tars_bot.py`
 
 ## Hardware Requirements
 

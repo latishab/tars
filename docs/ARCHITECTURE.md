@@ -11,7 +11,7 @@ The robot boots independently and waits for connections.
 │                      NETWORK (LAN / Tailscale)                          │
 │                                                                         │
 │   ┌──────────────────────────┐         ┌──────────────────────────┐    │
-│   │   RPi 5                  │         │   Computer (tars-omni)   │    │
+│   │   RPi 5                  │         │   Computer               │    │
 │   │   Standalone Robot       │         │   AI Brain               │    │
 │   │                          │         │                          │    │
 │   │   tars_daemon.py         │         │   tars_bot.py            │    │
@@ -39,7 +39,17 @@ The robot boots independently and waits for connections.
 │   │   │ • StreamBattery()│   │         │   Services:              │    │
 │   │   └──────────────────┘   │         │   - Deepgram STT         │    │
 │   │                          │         │   - DeepInfra LLM        │    │
-│   │   Hardware:              │         │   - ElevenLabs TTS       │    │
+│   │   ┌──────────────────┐   │         │   - ElevenLabs TTS       │    │
+│   │   │ Web Dashboard    │   │         │                          │    │
+│   │   │ :8080            │   │         │                          │    │
+│   │   │                  │   │         │                          │    │
+│   │   │ • Status         │   │         │                          │    │
+│   │   │ • Control        │   │         │                          │    │
+│   │   │ • Apps           │   │         │                          │    │
+│   │   │ • Settings       │   │         │                          │    │
+│   │   └──────────────────┘   │         │                          │    │
+│   │                          │         │                          │    │
+│   │   Hardware:              │         │                          │    │
 │   │   • Servos (PCA9685)     │         │                          │    │
 │   │   • Camera (Pi/USB)      │         │                          │    │
 │   │   • Display (5" 800x480) │         │                          │    │
@@ -152,6 +162,12 @@ tars_daemon.py (single process)
 │   ├── MicrophoneTrack → sends to host computer
 │   └── SpeakerOutput ← receives from host computer
 │
+├── Web Dashboard (:8080)
+│   ├── Status - system metrics, battery, connections
+│   ├── Control - movement controls with joystick
+│   ├── Apps - app marketplace and management
+│   └── Settings - WiFi, updates, configuration
+│
 ├── Hardware Drivers
 │   ├── PCA9685 (16 servos via I2C)
 │   ├── USB Soundcard (mic 16kHz + speaker 24kHz)
@@ -175,7 +191,7 @@ tars_daemon.py (single process)
     └── modules_spectrum.py (audio visualizer)
 ```
 
-### Host computer (tars-omni) - AI Brain
+### Host Computer (tars-conversation-app) - AI Brain
 
 ```
 tars_bot.py (robot mode)
@@ -198,41 +214,47 @@ tars_bot.py (robot mode)
 │   └── transport/audio_bridge.py (audio conversion)
 │
 └── Services
-    ├── services/robot.py (gRPC-based hardware control)
+    ├── services/tars_robot.py (gRPC-based hardware control)
     ├── services/memory_chromadb.py (semantic memory)
     └── services/factories/ (STT/TTS provider factories)
 ```
 
 ## Configuration
 
-### RPi (`.env`)
+### RPi (tars_daemon.py)
 ```bash
-# Server configuration
-API_PORT=8001        # HTTP (WebRTC signaling only)
-GRPC_PORT=50051      # gRPC (hardware control)
-WEBRTC_ENABLED=true
+# Start daemon with options
+python tars_daemon.py [OPTIONS]
 
+Options:
+  --port PORT         HTTP API port (default: 8001)
+  --grpc-port PORT    gRPC API port (default: 50051)
+  --no-display        Headless mode (no pygame window)
+  --no-webrtc         Disable WebRTC server
+  --face-tracking     Enable face tracking with eyes
+```
+
+Environment variables (optional):
+```bash
 # Display
 DISPLAY_ENABLED=true
 DISPLAY_WIDTH=800
 DISPLAY_HEIGHT=480
 
-# Features
-FACE_TRACKING_ENABLED=false
-
-# Audio devices (optional)
+# Audio devices
 AUDIO_INPUT_DEVICE=
 AUDIO_OUTPUT_DEVICE=
 AUDIO_SAMPLE_RATE_IN=16000
 AUDIO_SAMPLE_RATE_OUT=24000
 ```
 
-### Host computer - `tars-omni/config.ini`
+### Host Computer (tars-conversation-app)
+
+`config.ini`:
 ```ini
 [Connection]
-# Replace 100.115.193.41 with your robot's IP address
-rpi_url = http://100.115.193.41:8001    # For WebRTC signaling
-rpi_grpc = 100.115.193.41:50051         # For hardware control
+rpi_url = http://100.84.133.74:8001    # WebRTC signaling
+rpi_grpc = 100.84.133.74:50051         # Hardware control
 mode = robot
 
 [LLM]
@@ -267,14 +289,15 @@ sudo systemctl start tars
 
 **On boot, RPi will:**
 1. Start gRPC server on :50051
-2. Start HTTP server on :8001 (WebRTC signaling only)
-3. Initialize hardware (servos, camera, display)
-4. Wait for AI brain connection
-5. Display shows "Waiting for brain..."
+2. Start HTTP server on :8001 (WebRTC signaling)
+3. Start web dashboard on :8080
+4. Initialize hardware (servos, camera, display)
+5. Wait for AI brain connection
+6. Display shows "Waiting for brain..."
 
-### Host computer (connects to RPi)
+### Host Computer (connects to RPi)
 ```bash
-cd tars-omni
+cd tars-conversation-app
 pip install -e ../tars  # Install tars_sdk
 python tars_bot.py
 ```
@@ -285,7 +308,7 @@ python tars_bot.py
 3. POST SDP offer to RPi :8001/api/offer
 4. Establish P2P audio connection
 5. Start Pipecat pipeline with STT/LLM/TTS
-6. Use gRPC for all hardware control (fast!)
+6. Use gRPC for all hardware control
 
 ## Performance
 
@@ -305,10 +328,10 @@ Latency measurements on LAN:
 ```python
 from tars_sdk import TarsClient
 
-# Connect to robot (replace with your robot's IP)
-client = TarsClient("100.115.193.41:50051")
+# Connect to robot
+client = TarsClient("100.84.133.74:50051")
 
-# Health check (gRPC)
+# Health check
 health = client.health()
 print(f"Status: {health['status']}")
 print(f"Battery: {health['battery']['level']}%")
@@ -339,28 +362,26 @@ for battery in client.stream_battery():
     if battery['level'] < 20:
         break
 
-# Context manager (replace with your robot's IP)
-with TarsClient("100.115.193.41:50051") as client:
+# Context manager
+with TarsClient("100.84.133.74:50051") as client:
     client.move("wave_right")
 ```
 
-### From tars-omni (LLM Tools)
+### From tars-conversation-app (LLM Tools)
 
 ```python
 # In tars_bot.py
-from services import robot as robot_service
+from services import tars_robot
 
-# Initialize client (replace with your robot's IP)
-robot_client = robot_service.get_robot_client("100.115.193.41:50051")
+# Initialize client
+robot_client = tars_robot.get_robot_client("100.84.133.74:50051")
 
-# LLM tool functions (already integrated)
+# LLM tool functions
 async def execute_movement(movements: list[str]) -> str:
-    # Uses gRPC client.move()
     result = robot_client.move(movements[0])
     return f"Completed in {result['duration']:.2f}s"
 
 async def capture_camera_view() -> dict:
-    # Uses gRPC client.capture_camera()
     jpeg_bytes = robot_client.capture_camera()
     return {"image": base64.b64encode(jpeg_bytes).decode()}
 ```
@@ -370,11 +391,11 @@ async def capture_camera_view() -> dict:
 ### gRPC Connection Issues
 
 ```bash
-# Test gRPC health (from Mac) - replace IP with your robot's IP
-python -c "from tars_sdk import TarsClient; print(TarsClient('100.115.193.41:50051').health())"
+# Test gRPC health
+python -c "from tars_sdk import TarsClient; print(TarsClient('100.84.133.74:50051').health())"
 
-# Check if gRPC port is open - replace IP with your robot's IP
-nc -zv 100.115.193.41 50051
+# Check if gRPC port is open
+nc -zv 100.84.133.74 50051
 
 # Check daemon logs
 journalctl -u tars -f | grep gRPC
@@ -383,13 +404,27 @@ journalctl -u tars -f | grep gRPC
 ### WebRTC Connection Issues
 
 ```bash
-# Check if RPi is reachable - replace IP with your robot's IP
-curl http://100.115.193.41:8001/health
+# Check if RPi is reachable
+curl http://100.84.133.74:8001/health
 
-# Test WebRTC signaling endpoint - replace IP with your robot's IP
-curl -X POST http://100.115.193.41:8001/api/offer \
+# Test WebRTC signaling endpoint
+curl -X POST http://100.84.133.74:8001/api/offer \
   -H "Content-Type: application/json" \
   -d '{"sdp": "test", "type": "offer"}'
+```
+
+### Dashboard Not Accessible
+
+```bash
+# Check dashboard is running
+ps aux | grep start_dashboard
+
+# Check port 8080
+lsof -i:8080
+
+# Restart dashboard
+pkill -f start_dashboard
+python start_dashboard.py
 ```
 
 ### Performance Testing
@@ -398,8 +433,7 @@ curl -X POST http://100.115.193.41:8001/api/offer \
 import time
 from tars_sdk import TarsClient
 
-# Replace with your robot's IP
-client = TarsClient("100.115.193.41:50051")
+client = TarsClient("100.84.133.74:50051")
 
 # Measure latency
 start = time.time()
@@ -413,6 +447,6 @@ print(f"gRPC latency: {latency:.1f}ms")
 ## See Also
 
 - [DAEMON.md](./DAEMON.md) - Daemon setup and usage
+- [DASHBOARD.md](./DASHBOARD.md) - Web dashboard guide
 - [MOVEMENTS.md](./MOVEMENTS.md) - Available movements
 - [HARDWARE_IO.md](./HARDWARE_IO.md) - Hardware specifications
-- [TARS_ARCHITECTURE_PLAN_V7.md](../TARS_ARCHITECTURE_PLAN_V7.md) - Full architecture plan
