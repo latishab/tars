@@ -99,17 +99,37 @@ pip install grpcio protobuf loguru
 
 ### Web Dashboard
 
-Access the dashboard at  to:
+**First Boot WiFi Setup:**
+
+On first boot, TARS starts a WiFi hotspot:
+```
+SSID: TARS-Setup
+Password: tars1234
+Setup URL: http://10.42.0.1:8080/setup
+```
+
+After WiFi is configured, access the dashboard at:
+```
+# Local network (home WiFi)
+http://tars.local:8080
+
+# Tailscale (dorm/corporate networks)
+http://100.x.x.x:8080
+```
+
+📖 **[WiFi Setup Guide](./docs/WIFI_SETUP.md)** - Complete WiFi configuration instructions
+
+**Dashboard Features:**
 - Monitor robot status (battery, CPU, network)
 - Control movements via joystick
 - Install and manage apps from the App Store
 - Configure WiFi and system settings
 
-Tabs:
+**Tabs:**
 - **Status**: System metrics, battery, connections
 - **Control**: Movement controls with joystick interface
 - **Apps**: Official and community apps marketplace
-- **Settings**: WiFi, updates, system configuration
+- **Settings**: WiFi management, enterprise WiFi support, updates
 
 ### Command Line
 
@@ -142,6 +162,7 @@ The RPi will:
 **User Guides:**
 - **[DAEMON.md](./docs/DAEMON.md)** - Getting started with unified daemon
 - **[DASHBOARD.md](./docs/DASHBOARD.md)** - Web dashboard guide
+- **[WIFI_SETUP.md](./docs/WIFI_SETUP.md)** - WiFi configuration and troubleshooting
 
 **API Reference:**
 - **[MOVEMENTS.md](./docs/MOVEMENTS.md)** - Servo control and movement API
