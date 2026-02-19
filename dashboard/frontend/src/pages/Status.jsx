@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Battery, Cpu, Thermometer, Wifi, Radio, Eye, Copy, Check } from 'lucide-react'
+import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 function Status() {
@@ -51,7 +51,6 @@ function Status() {
 
   const battery = status.battery || {}
   const system = status.system || {}
-  const display = status.display || {}
   const connections = status.connections || {}
   const network = status.network || {}
 
@@ -105,7 +104,8 @@ function Status() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
+          {/* 2 columns on mobile, 3 on tablet+ */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <div>
               <div className="text-sm text-muted-foreground">CPU</div>
               <div className="text-xl font-semibold">{system.cpu_percent?.toFixed(0)}%</div>
@@ -155,8 +155,8 @@ function Status() {
             </div>
           )}
 
-          {/* Connection status */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Connection status - stack on mobile */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center gap-2">
               <Radio className={`w-4 h-4 ${connections.webrtc ? 'text-green-500' : 'text-red-500'}`} />
               <span>WebRTC</span>
@@ -170,28 +170,6 @@ function Status() {
               <span className={`text-sm ${connections.grpc ? 'text-green-500' : 'text-muted-foreground'}`}>
                 {connections.grpc ? 'Ready' : 'Error'}
               </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Display State */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Eye className="w-5 h-5" />
-            Display
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm text-muted-foreground">Emotion</div>
-              <div className="text-xl font-semibold capitalize">{display.emotion}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Eye State</div>
-              <div className="text-xl font-semibold capitalize">{display.eye_state}</div>
             </div>
           </div>
         </CardContent>

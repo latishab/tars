@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Download, Trash2, Play, Square, Star, ExternalLink } from 'lucide-react'
+import { Download, Trash2, Play, Square, CheckCircle, ExternalLink } from 'lucide-react'
 
 function AppStore() {
-  const [allApps, setAllApps] = useState([])
+  const [officialApps, setOfficialApps] = useState([])
+  const [communityApps, setCommunityApps] = useState([])
   const [loading, setLoading] = useState({})
   const [error, setError] = useState(null)
 
@@ -13,16 +14,8 @@ function AppStore() {
       const res = await fetch('/api/apps')
       const data = await res.json()
       
-      // Combine all apps into single list
-      const combined = [
-        ...data.official.map(app => ({ ...app, source: 'official' })),
-        ...data.community.map(app => ({ ...app, source: 'community' })),
-        ...data.installed
-          .filter(app => !data.official.find(o => o.id === app.id))
-          .map(app => ({ ...app, source: 'installed' }))
-      ]
-      
-      setAllApps(combined)
+      setOfficialApps(data.official || [])
+      setCommunityApps(data.community || [])
       setError(null)
     } catch (err) {
       setError('Failed to fetch apps')
@@ -124,6 +117,130 @@ function AppStore() {
     }
   }
 
+  const AppCard = ({ app }) => (
+    <div className="p-4 border border-border rounded-lg h-full flex flex-col">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-sm truncate">{app.name}</h3>
+            {app.installed && (
+              <CheckCircle className="w-3 h-3 text-green-500 flex-shrink-0" />
+            )}
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground mb-2 line-clamp-2 flex-1">
+        {app.description}
+      </p>
+
+      <div className="text-xs text-muted-foreground mb-3">
+        by {app.author}
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap mt-auto">
+        {!app.installed ? (
+          <>
+            <Button
+              onClick={() => handleInstall(app)}
+              disabled={loading[`install-${app.id}`]}
+              size="sm"
+              className="text-xs h-8"
+            >
+              <Download className="w-3 h-3 mr-1" />
+              {loading[`install-${app.id}`] ? 'Installing...' : 'Install'}
+            </Button>
+            {app.url && (
+              <Button
+                onClick={() => window.open(app.url, '_blank')}
+                size="sm"
+                variant="outline"
+                className="text-xs h-8"
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
+                View
+              </Button>
+            )}
+          </>
+        ) : (
+          <>
+            {!app.running ? (
+              <Button
+                onClick={() => handleRun(app.id)}
+                disabled={loading[`run-${app.id}`]}
+                size="sm"
+                variant="default"
+                className="text-xs h-8"
+              >
+                <Play className="w-3 h-3 mr-1" />
+                {loading[`run-${app.id}`] ? 'Starting...' : 'Run'}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => handleStop(app.id)}
+                disabled={loading[`stop-${app.id}`]}
+                size="sm"
+                variant="secondary"
+                className="text-xs h-8"
+              >
+                <Square className="w-3 h-3 mr-1" />
+                {loading[`stop-${app.id}`] ? 'Stopping...' : 'Stop'}
+              </Button>
+            )}
+            <Button
+              onClick={() => handleUninstall(app.id)}
+              disabled={loading[`uninstall-${app.id}`]}
+              size="sm"
+              variant="outline"
+              className="text-xs h-8"
+            >
+              <Trash2 className="w-3 h-3 mr-1" />
+              Uninstall
+            </Button>
+            {app.url && (
+              <Button
+                onClick={() => window.open(app.url, '_blank')}
+                size="sm"
+                variant="outline"
+                className="text-xs h-8"
+              >
+                <ExternalLink className="w-3 h-3 mr-1" />
+                View
+              </Button>
+            )}
+          </>
+        )}
+        {app.installed && app.version && (
+          <span className="text-xs text-muted-foreground ml-auto">
+            v{app.version}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+
+  const PlaceholderCard = () => (
+    <div className="p-4 border-2 border-dashed border-border rounded-lg h-full flex items-center justify-center">
+      <p className="text-xs text-muted-foreground">More coming soon</p>
+    </div>
+  )
+
+  const renderGrid = (apps) => {
+    const items = [...apps]
+    // Fill up to 4 items (2x2 grid)
+    while (items.length < 4) {
+      items.push(null)
+    }
+    
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {items.map((app, idx) => 
+          app ? <AppCard key={app.id} app={app} /> : <PlaceholderCard key={`placeholder-${idx}`} />
+        )}
+      </div>
+    )
+  }
+
   if (error) {
     return (
       <div className="p-4">
@@ -140,93 +257,31 @@ function AppStore() {
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">Apps</h1>
 
-      <div className="space-y-3">
-        {allApps.map(app => (
-          <Card key={app.id} className={app.featured ? 'border-primary' : ''}>
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="flex items-center gap-2">
-                    {app.name}
-                    {app.featured && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
-                    {app.official && !app.featured && (
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">Official</span>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="mt-1">{app.description}</CardDescription>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    by {app.author}
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 flex-wrap">
-                {!app.installed ? (
-                  <Button
-                    onClick={() => handleInstall(app)}
-                    disabled={loading[`install-${app.id}`]}
-                    size="sm"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    {loading[`install-${app.id}`] ? 'Installing...' : 'Install'}
-                  </Button>
-                ) : (
-                  <>
-                    {!app.running ? (
-                      <Button
-                        onClick={() => handleRun(app.id)}
-                        disabled={loading[`run-${app.id}`]}
-                        size="sm"
-                        variant="default"
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        {loading[`run-${app.id}`] ? 'Starting...' : 'Run'}
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => handleStop(app.id)}
-                        disabled={loading[`stop-${app.id}`]}
-                        size="sm"
-                        variant="secondary"
-                      >
-                        <Square className="w-4 h-4 mr-2" />
-                        {loading[`stop-${app.id}`] ? 'Stopping...' : 'Stop'}
-                      </Button>
-                    )}
-                    <Button
-                      onClick={() => handleUninstall(app.id)}
-                      disabled={loading[`uninstall-${app.id}`]}
-                      size="sm"
-                      variant="destructive"
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      {loading[`uninstall-${app.id}`] ? 'Removing...' : 'Uninstall'}
-                    </Button>
-                  </>
-                )}
-                {app.url && (
-                  <Button
-                    onClick={() => window.open(app.url, '_blank')}
-                    size="sm"
-                    variant="ghost"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </Button>
-                )}
-              </div>
-              {app.installed && (
-                <div className="mt-3 text-xs text-muted-foreground">
-                  Status: <span className={app.running ? 'text-green-500' : 'text-muted-foreground'}>
-                    {app.running ? 'Running' : 'Stopped'}
-                  </span>
-                  {app.version && <> | v{app.version}</>}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Official Apps */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Official Apps</CardTitle>
+          <CardDescription>
+            Verified apps maintained by the TARS team
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {renderGrid(officialApps)}
+        </CardContent>
+      </Card>
+
+      {/* Community Apps */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Community Apps</CardTitle>
+          <CardDescription>
+            Apps created by the TARS community
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {renderGrid(communityApps)}
+        </CardContent>
+      </Card>
     </div>
   )
 }
