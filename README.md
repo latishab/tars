@@ -96,6 +96,22 @@ pip install tars-robot[sdk]
 
 ## Quick Start
 
+### Web Dashboard
+
+Access the dashboard at  to:
+- Monitor robot status (battery, CPU, network)
+- Control movements via joystick
+- Install and manage apps from the App Store
+- Configure WiFi and system settings
+
+Tabs:
+- **Status**: System metrics, battery, connections
+- **Control**: Movement controls with joystick interface
+- **Apps**: Official and community apps marketplace
+- **Settings**: WiFi, updates, system configuration
+
+### Command Line
+
 Start the RPi daemon (waits for AI brain to connect):
 
 ```bash
@@ -115,8 +131,10 @@ python tars_daemon.py --grpc-port 50052
 The RPi will:
 1. Start the WebRTC server on port 8001
 2. Start the gRPC server on port 50051 (default)
-3. Wait for the host computer to connect via POST /api/offer
-4. Once connected, audio flows bidirectionally and gRPC handles hardware control
+3. Start the web dashboard on port 8080
+4. Wait for the host computer to connect via POST /api/offer
+5. Once connected, audio flows bidirectionally and gRPC handles hardware control
+
 
 ## Documentation
 
