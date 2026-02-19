@@ -51,6 +51,7 @@ except ImportError:
 # Import display manager
 try:
     from modules.module_display import DisplayManager
+    from src.modules.wifi_detector import get_wifi_status
     DISPLAY_AVAILABLE = True
 except ImportError:
     DISPLAY_AVAILABLE = False
@@ -329,6 +330,7 @@ class TARSDaemon:
                     # Start battery display update task
                     if self.display:
                         asyncio.create_task(self._update_battery_display())
+                        asyncio.create_task(self._update_wifi_display())
                 else:
                     logger.warning("✗ Battery sensor not detected")
                     self.battery = None
@@ -495,6 +497,17 @@ class TARSDaemon:
                 logger.error(f"Battery display update error: {e}")
                 await asyncio.sleep(5.0)
 
+    async def _update_wifi_display(self):
+        """Periodically update WiFi display"""
+        while self._running:
+            try:
+                if self.display:
+                    mode, ssid = get_wifi_status()
+                    self.display.set_wifi_status(mode, ssid)
+                await asyncio.sleep(5.0)  # Update every 5 seconds
+            except Exception as e:
+                logger.error(f"WiFi display update error: {e}")
+                await asyncio.sleep(10.0)
     def run(self):
         """Run the daemon (blocking)"""
         uvicorn.run(
