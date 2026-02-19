@@ -1,7 +1,7 @@
 """Version information for TARS SDK."""
 
-__version__ = "0.2.0"
-__version_tuple__ = (0, 2, 0)
+__version__ = "0.3.4"
+__version_tuple__ = (0, 3, 4)
 __minimum_compatible_client__ = "0.1.0"
 __git_commit__ = None  # Set during build
 
