@@ -170,6 +170,9 @@ class DisplayManager:
     def _run(self):
         """Main display loop - renders portrait content rotated onto landscape screen"""
         pygame.init()
+        
+        # Initialize video subsystem explicitly
+        pygame.display.init()
 
         # Physical screen is 800x480 landscape (DSI panel mounted vertically)
         display_info = pygame.display.Info()

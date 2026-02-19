@@ -18,6 +18,8 @@ WorkingDirectory=/home/mac/tars-daemon
 Environment="PATH=/home/mac/tars-daemon/venv/bin:/usr/local/bin:/usr/bin:/bin"
 Environment="PYTHONUNBUFFERED=1"
 Environment="DISPLAY=:0"
+Environment="SDL_VIDEODRIVER=x11"
+Environment="XAUTHORITY=/home/mac/.Xauthority"
 Environment="XDG_RUNTIME_DIR=/run/user/1000"
 EnvironmentFile=-/home/mac/tars-daemon/.env
 
