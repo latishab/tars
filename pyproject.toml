@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tars-robot"
 version = "0.3.2"
-description = "Python SDK for controlling TARS robot via gRPC"
+description = "TARS robot control library with daemon, dashboard, and SDK"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "CC-BY-NC-4.0"}
@@ -25,6 +25,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+# Full installation (everything: daemon + dashboard + SDK)
 dependencies = [
     "grpcio>=1.60.0",
     "grpcio-tools>=1.60.0",
@@ -43,20 +44,19 @@ dependencies = [
     "aiofiles>=23.0.0",
 ]
 
-
 [project.optional-dependencies]
-sdk = [
-    "grpcio>=1.60.0",
-    "grpcio-tools>=1.60.0",
-    "protobuf>=4.25.0",
-    "loguru>=0.7.0",
-]
+# Daemon + Dashboard (same as default, for explicit installs)
+daemon = []
+
+# SDK only: Use minimal install with --no-deps
+# pip install --no-deps tars-robot && pip install grpcio protobuf loguru
+sdk = []
 
 [project.urls]
-Homepage = "https://github.com/latishab/tars-conversation-app"
-Repository = "https://github.com/latishab/tars-conversation-app"
-Documentation = "https://github.com/latishab/tars-conversation-app#readme"
-Issues = "https://github.com/latishab/tars-conversation-app/issues"
+Homepage = "https://github.com/latishab/tars"
+Repository = "https://github.com/latishab/tars"
+Documentation = "https://github.com/latishab/tars#readme"
+Issues = "https://github.com/latishab/tars/issues"
 
 [tool.setuptools.packages.find]
 include = ["tars_sdk", "tars_sdk.*"]
