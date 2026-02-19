@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 from loguru import logger
 
 from .routes import status, movements, settings, updates, wifi, setup, apps
+from .wifi_manager import WiFiManager
 from .ws import ConnectionManager
 
 
@@ -26,6 +27,25 @@ ws_manager = ConnectionManager()
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     logger.info("Dashboard server starting...")
+
+    # WiFi boot priority:
+    # 1. Try known WiFi networks (auto-connects via NetworkManager)
+    # 2. If none found -> Start TARS-Setup hotspot
+    # 3. Tailscale connects whenever internet available
+    try:
+        wifi_mgr = WiFiManager()
+        if not await asyncio.to_thread(wifi_mgr.is_connected):
+            logger.info("No WiFi connection detected, starting setup hotspot")
+            hotspot_started = await asyncio.to_thread(wifi_mgr.start_hotspot)
+            if hotspot_started:
+                logger.info("Setup hotspot started: TARS-Setup (10.42.0.1:8080)")
+            else:
+                logger.warning("Failed to start setup hotspot")
+        else:
+            status = await asyncio.to_thread(wifi_mgr.get_status)
+            logger.info(f"Connected to WiFi: {status.get('ssid')} ({status.get('ip')})")
+    except Exception as e:
+        logger.error(f"WiFi initialization error: {e}")
 
     # Start background task for status broadcasts
     broadcast_task = asyncio.create_task(status_broadcast_loop())
