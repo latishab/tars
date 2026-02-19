@@ -7,7 +7,17 @@ import {
 } from 'lucide-react'
 
 const EMOTIONS = ['neutral', 'happy', 'sad', 'angry', 'excited', 'afraid', 'sideeye_left', 'sideeye_right', 'sleepy']
-const EMOTION_LABELS = {  'neutral': 'Neutral',  'happy': 'Happy',  'sad': 'Sad',  'angry': 'Angry',  'excited': 'Excited',  'sleepy': 'Sleepy',  'afraid': 'Afraid',  'sideeye_left': 'Side Eye Left',  'sideeye_right': 'Side Eye Right'}
+const EMOTION_LABELS = {
+  'neutral': 'Neutral',
+  'happy': 'Happy',
+  'sad': 'Sad',
+  'angry': 'Angry',
+  'excited': 'Excited',
+  'sleepy': 'Sleepy',
+  'afraid': 'Afraid',
+  'sideeye_left': 'Side Eye L',
+  'sideeye_right': 'Side Eye R'
+}
 
 const MOVEMENT_GROUPS = {
   walking: [
@@ -70,7 +80,6 @@ function Control() {
   }
 
   const captureCamera = () => {
-    // Add timestamp to force refresh
     setCameraUrl(`/api/camera?t=${Date.now()}`)
   }
 
@@ -88,9 +97,9 @@ function Control() {
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">Control</h1>
 
-      {/* 2x2 Grid: Row 1 */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Camera */}
+      {/* Camera + Emotions - Stack on mobile, 40/60 split on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-[2fr,3fr] gap-4">
+        {/* Camera - 40% on desktop */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center justify-between">
@@ -108,42 +117,41 @@ function Control() {
               <img
                 src={cameraUrl}
                 alt="Camera"
-                className="w-full h-64 object-cover rounded-lg bg-muted"
+                className="w-full aspect-square object-cover rounded-lg bg-muted"
                 onError={() => setCameraUrl(null)}
               />
             ) : (
-              <div className="w-full h-64 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground">
+              <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground">
                 Click Capture
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Emotions */}
+        {/* Emotions - 60% on desktop */}
         <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Emotion</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-2">
-            {EMOTIONS.map((e) => (
-              <Button
-                key={e}
-                variant={emotion === e ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setEmotionApi(e)}
-                className="capitalize"
-              >
-                {EMOTION_LABELS[e] || e}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Emotion</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-2">
+              {EMOTIONS.map((e) => (
+                <Button
+                  key={e}
+                  variant={emotion === e ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setEmotionApi(e)}
+                  className="h-12 text-xs"
+                >
+                  {EMOTION_LABELS[e] || e}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Row 2: Movement Controls */}
+      {/* Movement Controls - Full width */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center justify-between">
@@ -163,7 +171,7 @@ function Control() {
           {/* Walking */}
           <div>
             <div className="text-sm text-muted-foreground mb-2">Walking</div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {MOVEMENT_GROUPS.walking.map((m) => (
                 <Button
                   key={m.name}
@@ -171,7 +179,7 @@ function Control() {
                   size="sm"
                   onClick={() => executeMovement(m.name)}
                   disabled={executing !== null}
-                  className="flex flex-col h-auto py-2"
+                  className="flex flex-col h-16 sm:h-auto py-2"
                 >
                   {m.icon && <m.icon className="w-4 h-4 mb-1" />}
                   <span className="text-xs">{m.label}</span>
@@ -183,7 +191,7 @@ function Control() {
           {/* Turning */}
           <div>
             <div className="text-sm text-muted-foreground mb-2">Turning</div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {MOVEMENT_GROUPS.turning.map((m) => (
                 <Button
                   key={m.name}
@@ -191,7 +199,7 @@ function Control() {
                   size="sm"
                   onClick={() => executeMovement(m.name)}
                   disabled={executing !== null}
-                  className="flex flex-col h-auto py-2"
+                  className="flex flex-col h-16 sm:h-auto py-2"
                 >
                   {m.icon && <m.icon className="w-4 h-4 mb-1" />}
                   <span className="text-xs">{m.label}</span>
@@ -203,7 +211,7 @@ function Control() {
           {/* Expressions */}
           <div>
             <div className="text-sm text-muted-foreground mb-2">Expressions</div>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {MOVEMENT_GROUPS.expressions.map((m) => (
                 <Button
                   key={m.name}
@@ -211,7 +219,7 @@ function Control() {
                   size="sm"
                   onClick={() => executeMovement(m.name)}
                   disabled={executing !== null}
-                  className="flex flex-col h-auto py-2"
+                  className="flex flex-col h-16 sm:h-auto py-2"
                 >
                   {m.icon && <m.icon className="w-4 h-4 mb-1" />}
                   <span className="text-xs">{m.label}</span>
@@ -223,7 +231,7 @@ function Control() {
           {/* Balance */}
           <div>
             <div className="text-sm text-muted-foreground mb-2">Balance</div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {MOVEMENT_GROUPS.balance.map((m) => (
                 <Button
                   key={m.name}
@@ -231,7 +239,7 @@ function Control() {
                   size="sm"
                   onClick={() => executeMovement(m.name)}
                   disabled={executing !== null}
-                  className="flex flex-col h-auto py-2"
+                  className="flex flex-col h-16 sm:h-auto py-2"
                 >
                   <span className="text-xs">{m.label}</span>
                 </Button>

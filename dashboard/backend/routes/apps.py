@@ -19,7 +19,7 @@ OFFICIAL_APPS = [
         "name": "TARS Conversation App",
         "description": "Talk naturally with TARS using LLMs",
         "author": "latishab",
-        "url": "https://huggingface.co/spaces/latishab/tars-conversation",
+        "url": "https://huggingface.co/spaces/latishab/tars-conversation-app",
         "repository": "https://github.com/latishab/tars-conversation-app.git",
         "official": True,
         "featured": True,
