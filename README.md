@@ -64,17 +64,25 @@ RPi 5 (tars) - Standalone Robot            Host Computer (tars-conversation-app)
 
 ## 📦 Installation
 
-### Full Package (Default)
+### Full Package
 
-Install everything - SDK + daemon + all dependencies:
+Install everything (daemon, dashboard, SDK):
 
 ```bash
 pip install tars-robot
 ```
 
-### SDK Only (Lightweight)
+### Daemon + Dashboard
 
-For remote control without running the daemon:
+For running on Raspberry Pi:
+
+```bash
+pip install tars-robot[daemon]
+```
+
+### SDK Only
+
+For developing apps that control TARS:
 
 ```bash
 pip install tars-robot[sdk]
