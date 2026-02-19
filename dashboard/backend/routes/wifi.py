@@ -37,6 +37,7 @@ class WiFiStatus(BaseModel):
     mode: str  # "hotspot", "client", or "disconnected"
     ssid: Optional[str] = None
     ip: Optional[str] = None
+    tailscale_ip: Optional[str] = None
 
 
 class WiFiNetworksResponse(BaseModel):
@@ -63,10 +64,25 @@ async def get_wifi_status():
     
     Returns:
         WiFiStatus with mode ("hotspot", "client", or "disconnected"), 
-        optional SSID and IP address
+        optional SSID, IP address, and Tailscale IP
     """
     try:
         status = await asyncio.to_thread(wifi_manager.get_status)
+        
+        # Get Tailscale IP if available
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["tailscale", "ip", "-4"],
+                capture_output=True,
+                text=True,
+                timeout=2
+            )
+            if result.returncode == 0:
+                status["tailscale_ip"] = result.stdout.strip()
+        except Exception:
+            pass
+        
         return WiFiStatus(**status)
     except Exception as e:
         logger.error(f"Failed to get WiFi status: {e}")
