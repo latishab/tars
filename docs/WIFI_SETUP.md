@@ -193,6 +193,64 @@ This means:
 - Only shows hotspot if WiFi unavailable
 - No manual intervention needed for normal operation
 
+### How It Works (NetworkManager Autoconnect)
+
+**WiFi Networks - Autoconnect Enabled**
+
+All WiFi networks you connect to have `autoconnect=yes` by default:
+- HomeWiFi → autoconnect=yes
+- PhoneHotspot → autoconnect=yes
+- OfficeWiFi → autoconnect=yes
+
+NetworkManager handles priority automatically - it scans for known networks and connects to the first one found. Multiple networks with autoconnect enabled won't conflict - NetworkManager just tries them in order.
+
+**Hotspot - Autoconnect Disabled**
+
+The TARS-Setup hotspot has `autoconnect=no`:
+- Won't start randomly on boot
+- Only starts when manually triggered
+- Dashboard service starts it if no WiFi connection found
+
+**Boot Sequence**
+
+```
+TARS boots
+  ↓
+NetworkManager starts
+  ↓
+Scans for known WiFi networks
+  ├─ Found HomeWiFi → Connect → Tailscale → Done ✅
+  ├─ Found PhoneHotspot → Connect → Tailscale → Done ✅
+  └─ Found nothing
+       ↓
+     Dashboard service starts (server.py)
+       ↓
+     Checks WiFi status
+       ↓
+     No connection found
+       ↓
+     Start TARS-Setup hotspot
+       ↓
+     User connects to setup page
+       ↓
+     User configures WiFi
+       ↓
+     nmcli connects (autoconnect=yes)
+       ↓
+     Hotspot auto-deactivates → Tailscale → Done ✅
+```
+
+**Implementation**
+
+The boot logic is handled in the dashboard service (`server.py`):
+```python
+# On dashboard startup
+if not wifi_manager.is_connected():
+    wifi_manager.start_hotspot()
+```
+
+No separate systemd service needed - the dashboard handles it.
+
 ## Troubleshooting
 
 ### Cannot Access tars.local
@@ -315,6 +373,36 @@ nmcli connection show
 
 # Delete old network
 nmcli connection delete "OldNetwork"
+```
+
+### Autoconnect Management
+
+**Check autoconnect status:**
+```bash
+# Show all connections with autoconnect status
+nmcli -f NAME,AUTOCONNECT connection show
+```
+
+**Enable autoconnect for a network:**
+```bash
+sudo nmcli connection modify "NetworkName" connection.autoconnect yes
+```
+
+**Disable autoconnect for a network:**
+```bash
+sudo nmcli connection modify "NetworkName" connection.autoconnect no
+```
+
+**Best Practices:**
+- WiFi networks: Keep `autoconnect=yes` (default) ✅
+- TARS-Setup hotspot: Keep `autoconnect=no` (default) ✅
+- Networks with autoconnect enabled won't conflict - NetworkManager tries them in priority order
+- Only disable autoconnect for networks you want to connect to manually
+
+**Verify hotspot configuration:**
+```bash
+# Should show: AUTOCONNECT: no
+nmcli connection show TARS-Setup | grep autoconnect
 ```
 
 ## Security Notes
