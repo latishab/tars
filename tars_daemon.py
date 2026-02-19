@@ -51,7 +51,7 @@ except ImportError:
 # Import display manager
 try:
     from modules.module_display import DisplayManager
-    from src.modules.wifi_detector import get_wifi_status
+    from src.modules.module_wifi import get_wifi_status
     DISPLAY_AVAILABLE = True
 except ImportError:
     DISPLAY_AVAILABLE = False
