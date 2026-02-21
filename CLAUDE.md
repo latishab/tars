@@ -97,3 +97,9 @@ When updating existing documentation:
 - Explain "why" not "what" when needed
 - No ASCII art or decorative elements
 - No TODO comments (use issue tracker)
+
+## Pi Access
+
+```bash
+ssh tars-pi  # tars.local or Tailscale: tars, user: mac, repo: ~/tars-daemon
+```
