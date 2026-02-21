@@ -6,7 +6,7 @@ try:
     __version__ = importlib.metadata.version("tars-robot")
 except Exception:
     # Fallback for development
-    __version__ = "0.3.4-dev"
+    __version__ = "0.4.0-dev"
 
 __version_tuple__ = tuple(int(x) for x in __version__.split("-")[0].split("."))
 __minimum_compatible_client__ = "0.1.0"
