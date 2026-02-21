@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="TARS Dashboard",
     description="Control interface for TARS robot",
-    version="0.3.4",
+    version="0.4.0",
     lifespan=lifespan,
 )
 
