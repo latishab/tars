@@ -93,7 +93,7 @@ function SettingsPage() {
       // Get Tailscale IP
       const statusRes = await fetch('/api/wifi/status')
       const statusData = await statusRes.json()
-      const tailscaleIp = statusData.tailscale_ip || '100.84.133.74'
+      const tailscaleIp = statusData.tailscale_ip || 'unknown'
 
       // Save payload for later
       setConnectionPayload(payload)
@@ -195,15 +195,64 @@ function SettingsPage() {
   const installUpdate = async () => {
     setInstalling(true)
     try {
+      // Start the update
       const res = await fetch('/api/updates/install', { method: 'POST' })
       const data = await res.json()
+      
       if (data.requires_restart) {
-        alert('Update installed. System will restart.')
+        // Update is starting - monitor the restart process
+        await monitorUpdateRestart()
       }
     } catch (err) {
       console.error('Update install failed:', err)
       alert('Update failed. Check logs for details.')
+      setInstalling(false)
     }
+  }
+
+  const monitorUpdateRestart = async () => {
+    // Wait a bit for update to start
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    
+    // Poll for service to go down (max 30s)
+    let serviceDown = false
+    for (let i = 0; i < 30; i++) {
+      try {
+        await fetch('/api/updates/current', { signal: AbortSignal.timeout(2000) })
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      } catch {
+        serviceDown = true
+        break
+      }
+    }
+    
+    if (!serviceDown) {
+      alert('Update may still be in progress. Refresh page in a moment.')
+      setInstalling(false)
+      return
+    }
+    
+    // Service is down - wait for it to come back up (max 60s)
+    for (let i = 0; i < 60; i++) {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      try {
+        const res = await fetch('/api/updates/current', { signal: AbortSignal.timeout(2000) })
+        if (res.ok) {
+          // Service is back! Refresh version info
+          const newVersion = await res.json()
+          setVersion(newVersion)
+          setUpdate(null) // Clear update notification
+          setInstalling(false)
+          alert(`✓ Updated to v${newVersion.version}!`)
+          return
+        }
+      } catch {
+        // Still down, keep waiting
+      }
+    }
+    
+    // Timeout - ask user to refresh
+    alert('Update completed but service did not restart. Please refresh the page.')
     setInstalling(false)
   }
 
@@ -557,10 +606,19 @@ function SettingsPage() {
             System Updates
           </CardTitle>
           <CardDescription>
-            Current version: {version?.version || 'Loading...'}
-            {version?.git_commit && (
-              <span className="text-xs ml-2">({version.git_commit})</span>
-            )}
+            <div className="space-y-1">
+              <div>
+                Current version: {version?.version || 'Loading...'}
+                {version?.git_commit && (
+                  <span className="text-xs ml-2">({version.git_commit})</span>
+                )}
+              </div>
+              {version?.install_mode && (
+                <div className="text-xs">
+                  Update Source: <span className="capitalize">{version.install_mode === 'git' ? 'Git (Developer)' : 'PyPI (Stable)'}</span>
+                </div>
+              )}
+            </div>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

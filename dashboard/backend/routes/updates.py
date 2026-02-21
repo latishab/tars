@@ -4,6 +4,7 @@ import subprocess
 import json
 import urllib.request
 from typing import Optional
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
@@ -19,6 +20,7 @@ except ImportError:
 
 GITHUB_REPO = "latishab/tars"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+PYPI_URL = "https://pypi.org/pypi/tars-robot/json"
 
 
 class UpdateCheckResponse(BaseModel):
@@ -27,6 +29,7 @@ class UpdateCheckResponse(BaseModel):
     update_available: bool
     release_notes: str = ""
     release_url: str = ""
+    update_source: str = "auto"
 
 
 class UpdateInstallResponse(BaseModel):
@@ -35,18 +38,88 @@ class UpdateInstallResponse(BaseModel):
     requires_restart: bool = False
 
 
-def fetch_latest_release() -> Optional[dict]:
-    """Fetch latest release info from GitHub."""
+def get_install_mode() -> str:
+    """
+    Auto-detect install mode.
+    Returns: "git" if running from cloned repo, "pypi" if installed from PyPI
+    """
     try:
-        req = urllib.request.Request(
-            GITHUB_API_URL,
-            headers={"Accept": "application/vnd.github.v3+json"}
-        )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            return json.loads(response.read().decode())
-    except Exception as e:
-        logger.error(f"Failed to fetch GitHub release: {e}")
-        return None
+        import tars_sdk
+        package_path = Path(tars_sdk.__file__).parent
+        
+        # Check if we're in an editable install (git repo nearby)
+        for parent in package_path.parents:
+            if (parent / ".git").exists():
+                return "git"
+            # Stop at home directory
+            if parent == Path.home():
+                break
+        
+        return "pypi"
+    except:
+        return "pypi"
+
+
+def fetch_latest_version() -> tuple[Optional[str], str]:
+    """
+    Fetch latest version based on install mode.
+    Returns: (version, release_notes)
+    """
+    mode = get_install_mode()
+    
+    if mode == "pypi":
+        try:
+            req = urllib.request.Request(PYPI_URL)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                data = json.loads(response.read().decode())
+                version = data["info"]["version"]
+                return version, ""
+        except Exception as e:
+            logger.error(f"Failed to check PyPI: {e}")
+            return None, ""
+    else:
+        # Git mode - check local git tags
+        try:
+            import tars_sdk
+            repo_dir = None
+            for parent in Path(tars_sdk.__file__).parents:
+                if (parent / ".git").exists():
+                    repo_dir = parent
+                    break
+            
+            if not repo_dir:
+                logger.error("Git repo not found")
+                return None, ""
+            
+            # Get latest tag from remote
+            code, _, _ = run_git_command(["fetch", "--tags"], cwd=repo_dir)
+            
+            # Get the commit of the latest tag
+            code, latest_commit, _ = run_git_command(
+                ["rev-list", "--tags", "--max-count=1"],
+                cwd=repo_dir
+            )
+            
+            if code != 0 or not latest_commit:
+                logger.error("No tags found in repository")
+                return None, ""
+            
+            # Get the tag name for that commit
+            code, latest_tag, _ = run_git_command(
+                ["describe", "--tags", "--abbrev=0", latest_commit],
+                cwd=repo_dir
+            )
+            
+            if code == 0 and latest_tag:
+                version = latest_tag.lstrip("v")
+                return version, f"Release {latest_tag}"
+            else:
+                logger.error("No git tags found")
+                return None, ""
+                
+        except Exception as e:
+            logger.error(f"Failed to check git tags: {e}")
+            return None, ""
 
 
 def compare_versions(current: str, latest: str) -> bool:
@@ -60,14 +133,15 @@ def compare_versions(current: str, latest: str) -> bool:
         return False
 
 
-def run_git_command(args: list) -> tuple[int, str, str]:
+def run_git_command(args: list, cwd=None) -> tuple[int, str, str]:
     """Run a git command and return (returncode, stdout, stderr)."""
     try:
         result = subprocess.run(
             ["git"] + args,
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=60,
+            cwd=cwd
         )
         return result.returncode, result.stdout.strip(), result.stderr.strip()
     except subprocess.TimeoutExpired:
@@ -78,20 +152,18 @@ def run_git_command(args: list) -> tuple[int, str, str]:
 
 @router.get("/updates/check", response_model=UpdateCheckResponse)
 async def check_updates():
-    """Check for available updates."""
-    release = fetch_latest_release()
+    """Check for available updates from appropriate source."""
+    mode = get_install_mode()
+    latest_version, release_notes = fetch_latest_version()
 
-    if not release:
+    if not latest_version:
         return UpdateCheckResponse(
             current_version=__version__,
             latest_version=__version__,
             update_available=False,
             release_notes="Unable to check for updates",
+            update_source=mode,
         )
-
-    latest_version = release.get("tag_name", "").lstrip("v")
-    release_notes = release.get("body", "")[:500]  # Truncate
-    release_url = release.get("html_url", "")
 
     update_available = compare_versions(__version__, latest_version)
 
@@ -100,70 +172,145 @@ async def check_updates():
         latest_version=latest_version,
         update_available=update_available,
         release_notes=release_notes,
-        release_url=release_url,
+        update_source=mode,
     )
 
 
 @router.get("/updates/current")
 async def get_current_version():
-    """Get current version info."""
-    # Get git info
-    code, commit, _ = run_git_command(["rev-parse", "--short", "HEAD"])
-    code2, branch, _ = run_git_command(["branch", "--show-current"])
-
-    return {
+    """Get current version info including install mode."""
+    mode = get_install_mode()
+    
+    info = {
         "version": __version__,
-        "git_commit": commit if code == 0 else None,
-        "git_branch": branch if code2 == 0 else None,
+        "install_mode": mode,
     }
+    
+    if mode == "git":
+        code, commit, _ = run_git_command(["rev-parse", "--short", "HEAD"])
+        code2, branch, _ = run_git_command(["branch", "--show-current"])
+        info["git_commit"] = commit if code == 0 else None
+        info["git_branch"] = branch if code2 == 0 else None
+    
+    return info
 
 
 async def perform_update():
-    """Perform the actual update (runs in background)."""
-    logger.info("Starting system update...")
+    """Perform update based on install mode, then restart service."""
+    mode = get_install_mode()
+    logger.info(f"Starting system update (mode: {mode})...")
+    
+    if mode == "git":
+        # Developer mode: git pull + editable install
+        
+        # Find the repo directory
+        import tars_sdk
+        repo_dir = None
+        for parent in Path(tars_sdk.__file__).parents:
+            if (parent / ".git").exists():
+                repo_dir = parent
+                break
+        
+        if not repo_dir:
+            logger.error("Git repo not found")
+            return False
+        
+        # Git fetch
+        code, _, err = run_git_command(["fetch", "--all", "--tags"], cwd=repo_dir)
+        if code != 0:
+            logger.error(f"Git fetch failed: {err}")
+            return False
 
-    # Git fetch
-    code, _, err = run_git_command(["fetch", "--all", "--tags"])
-    if code != 0:
-        logger.error(f"Git fetch failed: {err}")
-        return False
+        # Get latest release tag
+        code, latest_tag, _ = run_git_command(
+            ["describe", "--tags", "--abbrev=0", "origin/main"], 
+            cwd=repo_dir
+        )
+        
+        if code == 0 and latest_tag:
+            # Checkout the release tag
+            logger.info(f"Updating to release {latest_tag}")
+            code, out, err = run_git_command(["checkout", latest_tag], cwd=repo_dir)
+            if code != 0:
+                logger.error(f"Git checkout failed: {err}")
+                return False
+            logger.info(f"Checked out {latest_tag}: {out}")
+        else:
+            # Fallback: pull main (for repos without tags)
+            logger.warning("No release tags found, pulling main")
+            code, out, err = run_git_command(["pull", "--ff-only"], cwd=repo_dir)
+            if code != 0:
+                logger.error(f"Git pull failed: {err}")
+                return False
+            logger.info(f"Git pull result: {out}")
 
-    # Git pull
-    code, out, err = run_git_command(["pull", "--ff-only"])
-    if code != 0:
-        logger.error(f"Git pull failed: {err}")
-        return False
+        # Reinstall in editable mode
+        try:
+            result = subprocess.run(
+                ["pip", "install", "-e", "."],
+                capture_output=True,
+                text=True,
+                timeout=120,
+                cwd=str(repo_dir)
+            )
+            if result.returncode != 0:
+                logger.error(f"pip install -e failed: {result.stderr}")
+                return False
+        except Exception as e:
+            logger.error(f"pip install error: {e}")
+            return False
+            
+    else:
+        # PyPI mode: pip upgrade
+        try:
+            result = subprocess.run(
+                ["pip", "install", "--upgrade", "tars-robot[daemon]"],
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            if result.returncode != 0:
+                logger.error(f"pip upgrade failed: {result.stderr}")
+                return False
+            logger.info(f"pip upgrade output: {result.stdout}")
+        except subprocess.TimeoutExpired:
+            logger.error("pip upgrade timed out")
+            return False
+        except Exception as e:
+            logger.error(f"pip upgrade error: {e}")
+            return False
 
-    logger.info(f"Git pull result: {out}")
-
-    # Install dependencies
+    logger.info("Update completed successfully, restarting service...")
+    
+    # CRITICAL: Actually restart the service so new code takes effect
     try:
         result = subprocess.run(
-            ["pip", "install", "-e", "."],
+            ["sudo", "systemctl", "restart", "tars"],
             capture_output=True,
             text=True,
-            timeout=120
+            timeout=10
         )
         if result.returncode != 0:
-            logger.error(f"pip install failed: {result.stderr}")
-            return False
+            logger.warning(f"systemctl restart returned: {result.stderr}")
     except Exception as e:
-        logger.error(f"pip install error: {e}")
-        return False
-
-    logger.info("Update completed successfully")
+        logger.warning(f"systemctl restart failed: {e}, trying SIGTERM")
+        # Fallback: kill ourselves and let systemd restart us
+        import os
+        import signal
+        os.kill(os.getpid(), signal.SIGTERM)
+    
     return True
 
 
 @router.post("/updates/install", response_model=UpdateInstallResponse)
 async def install_update(background_tasks: BackgroundTasks):
     """Install available update."""
-    # Check if update is available first
-    release = fetch_latest_release()
-    if not release:
+    mode = get_install_mode()
+    latest_version, _ = fetch_latest_version()
+    
+    if not latest_version:
         raise HTTPException(status_code=503, detail="Unable to check for updates")
 
-    latest_version = release.get("tag_name", "").lstrip("v")
     if not compare_versions(__version__, latest_version):
         return UpdateInstallResponse(
             success=True,
