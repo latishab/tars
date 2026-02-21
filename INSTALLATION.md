@@ -6,47 +6,36 @@ The TARS robot software is available on PyPI as **tars-robot**.
 
 ### Installation Options
 
-#### Default (Full Installation)
-
-Install complete package with daemon, dashboard, and SDK:
-
-```bash
-pip install tars-robot
-```
-
-Includes everything:
-- gRPC SDK (client library)
-- Daemon server (WebRTC, gRPC)
-- Web dashboard (FastAPI + React)
-- Hardware control (servos, camera, display, battery)
-
-#### Daemon + Dashboard (Raspberry Pi)
-
-Same as default installation:
-
-```bash
-pip install tars-robot
-# or explicitly
-pip install tars-robot[daemon]
-```
-
-Use this on Raspberry Pi for running the robot.
-
 #### SDK Only (App Development)
 
-For lightweight SDK-only install (app development, remote control):
+For controlling TARS from your computer (Mac/Windows/Linux):
 
 ```bash
-# Install without dependencies, then add minimal SDK deps
-pip install --no-deps tars-robot
-pip install grpcio>=1.60.0 protobuf>=4.25.0 loguru>=0.7.0
+pip install tars-robot
 ```
+
+This installs **only the lightweight SDK** (~3 dependencies: grpcio, protobuf, loguru).
 
 Perfect for:
 - Developing apps that control TARS
-- Remote control scripts  
+- Remote control scripts
 - Lightweight client applications
 - Host computer controlling a Pi
+
+#### Full Daemon (Raspberry Pi)
+
+For running the robot daemon on the Pi:
+
+```bash
+pip install tars-robot[daemon]
+```
+
+This installs **everything**:
+- gRPC SDK (client library)
+- Daemon server (WebRTC, gRPC)
+- Web dashboard (FastAPI)
+- Hardware control (servos, camera, display, battery)
+- All Pi-specific dependencies (pygame, Adafruit libraries, etc.)
 
 ---
 
@@ -97,8 +86,8 @@ asyncio.run(main())
 For running the robot daemon on Raspberry Pi:
 
 ```bash
-# Install everything
-pip install tars-robot
+# Install with daemon dependencies
+pip install tars-robot[daemon]
 
 # Start daemon
 python -m tars_daemon
@@ -106,7 +95,7 @@ python -m tars_daemon
 # Or clone repo for development
 git clone https://github.com/latishab/tars.git
 cd tars
-pip install -e .
+pip install -e .[daemon]
 python tars_daemon.py
 ```
 
@@ -123,8 +112,8 @@ cd tars
 python -m venv venv
 source venv/bin/activate
 
-# Install in editable mode
-pip install -e .
+# Install in editable mode with daemon dependencies
+pip install -e .[daemon]
 
 # Run daemon
 python tars_daemon.py
@@ -172,15 +161,13 @@ Dashboard features:
 ### Setup
 
 ```bash
-# Minimal SDK install
-pip install --no-deps tars-robot
-pip install grpcio>=1.60.0 protobuf>=4.25.0 loguru>=0.7.0
+# SDK install (lightweight)
+pip install tars-robot
 
 # Or install from source
 git clone https://github.com/latishab/tars.git
 cd tars
-pip install --no-deps -e .
-pip install grpcio protobuf loguru
+pip install -e .
 ```
 
 ### Example App
@@ -272,7 +259,7 @@ Optional configuration:
 
 ```bash
 # SDK connection settings
-export TARS_HOST="100.84.133.74"  # Robot IP
+export TARS_HOST="tars.local"  # Robot hostname (or IP)
 export TARS_PORT="50051"
 
 # Daemon settings (on Pi)
