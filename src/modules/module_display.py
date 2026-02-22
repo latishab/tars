@@ -102,7 +102,7 @@ class DisplayManager:
                 self.eyes.set_state(state)
 
     def set_emotion(self, emotion: str):
-        """Set emotion: neutral, happy, sad, angry, excited, skeptical, shy, love, fear, bored, disgust, worried, curious, sleepy, focused, playful"""
+        """Set emotion: neutral, happy, sad, angry, excited, afraid, sideeye_left, sideeye_right, sleepy
         # Backward compatibility aliases
         emotion_map = {
             "default": "neutral",
