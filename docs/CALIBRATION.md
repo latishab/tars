@@ -1,6 +1,6 @@
 # Servo Calibration
 
-## Servo Tester
+## 🔧 Servo Tester
 
 ```bash
 # PyPI install
@@ -18,7 +18,7 @@ Features:
 - Real-time offset adjustment
 - Auto-save to `src/config.ini`
 
-## Servo Channels
+## 📊 Servo Channels
 
 | Channel | Function |
 |---|---|
@@ -27,7 +27,7 @@ Features:
 | 2 | Left leg position |
 | 3 | Right leg position |
 
-## Calibration Steps
+## 📝 Calibration Steps
 
 1. Run `tars-servo-tester`
 2. Go to Servo Testing tab
@@ -35,7 +35,7 @@ Features:
 4. Go to Movement Testing tab and verify all movements
 5. Values auto-save to `src/config.ini`
 
-## Config Format
+## ⚙️ Config Format
 
 `src/config.ini` — edit manually only if you know the correct target values:
 
@@ -56,7 +56,7 @@ perfectRightHeightOffset = 0
 perfectRightLegOffset = 0
 ```
 
-## Troubleshooting
+## 🔍 Troubleshooting
 
 **Servo not moving:** Check 12V power supply and wiring to correct PCA9685 channel.
 

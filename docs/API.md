@@ -1,6 +1,6 @@
 # API Reference
 
-## Python SDK
+## 🐍 Python SDK
 
 ```bash
 pip install tars-robot
@@ -63,7 +63,7 @@ asyncio.run(main())
 
 ---
 
-## REST API
+## 🌐 REST API
 
 Base URL:  (or  via Tailscale)`http://tars.local:8000`
 
@@ -123,7 +123,7 @@ Base URL:  (or  via Tailscale)`http://tars.local:8000`
 
 ---
 
-## gRPC
+## ⚡ gRPC
 
 Port: `50051`. The SDK wraps gRPC internally. For direct access, see proto in `tars_sdk/proto/`.
 

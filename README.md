@@ -4,7 +4,7 @@
 
 Raspberry Pi 5 robot daemon. Handles servo control, WebRTC audio streaming, display, camera, and battery monitoring. Apps connect via gRPC and WebRTC.
 
-## What You Need
+## 🛠️ What You Need
 
 **Hardware:**
 - Raspberry Pi 5 (or Pi 4 4GB+)
@@ -20,7 +20,7 @@ Raspberry Pi 5 robot daemon. Handles servo control, WebRTC audio streaming, disp
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ### 1. Install on Pi
 
@@ -38,7 +38,7 @@ Browse and install apps from the dashboard's Apps tab.
 **Featured:** [tars-conversation-app](https://github.com/latishab/tars-conversation-app) — Voice AI (LLM, STT, TTS)
 ---
 
-## Installation
+## 📦 Installation
 
 | | PyPI | Git clone |
 |---|---|---|
@@ -79,7 +79,7 @@ client.close()
 
 ---
 
-## Architecture
+## 🏗️ Architecture
 
 ```
 App (any machine)                     tars-daemon (Raspberry Pi)
@@ -97,7 +97,7 @@ Apps connect via gRPC (:50051) and WebRTC (:8000). They can run on a separate co
 
 ---
 
-## Apps
+## 📱 Apps
 
 TARS supports installable apps. Browse and install from the dashboard's Apps tab.
 
@@ -108,7 +108,7 @@ TARS supports installable apps. Browse and install from the dashboard's Apps tab
 
 ---
 
-## Documentation
+## 📚 Documentation
 
 - [Installation](./docs/INSTALLATION.md)
 - [API Reference](./docs/API.md)
@@ -120,6 +120,6 @@ TARS supports installable apps. Browse and install from the dashboard's Apps tab
 
 ---
 
-## License
+## ⚖️ License
 
 See [LEGAL.md](./LEGAL.md).

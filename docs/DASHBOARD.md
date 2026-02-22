@@ -6,7 +6,7 @@ See [WiFi Setup](./WIFI_SETUP.md) for network configuration and access details.
 
 ---
 
-## Tabs
+## 📊 Tabs
 
 ### Status
 Real-time monitoring: battery level/voltage/current, CPU, memory, connection status (WiFi, WebRTC, gRPC), current emotion and eye state.
@@ -36,7 +36,7 @@ Apps install to `~/tars-apps/`. Each app requires an `app.json` manifest:
 
 ---
 
-## Development
+## 💻 Development
 
 ### Frontend
 
@@ -56,7 +56,7 @@ uvicorn server:app --reload --port 8000
 
 ---
 
-## Troubleshooting
+## 🔍 Troubleshooting
 
 **Dashboard not loading:**
 ```bash

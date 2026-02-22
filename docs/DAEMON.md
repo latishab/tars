@@ -2,7 +2,7 @@
 
 Single process managing gRPC, WebRTC, display, and hardware.
 
-## Running
+## ▶️ Running
 
 ```bash
 # PyPI install
@@ -14,7 +14,7 @@ python tars_daemon.py
 
 See [Installation](./INSTALLATION.md) for setup and systemd service.
 
-## CLI Options
+## ⚙️ CLI Options
 
 | Option | Default | Description |
 |---|---|---|
@@ -25,7 +25,7 @@ See [Installation](./INSTALLATION.md) for setup and systemd service.
 | `--face-tracking` | — | Enable face tracking |
 | `--install-service` | — | Print systemd service file and exit |
 
-## Architecture
+## 🏗️ Architecture
 
 ```
 tars_daemon.py
@@ -40,7 +40,7 @@ tars_daemon.py
     └── INA260 (battery)
 ```
 
-## Configuration
+## 🔧 Configuration
 
 Environment variables:
 
@@ -54,7 +54,7 @@ AUDIO_SAMPLE_RATE_IN=16000
 AUDIO_SAMPLE_RATE_OUT=24000
 ```
 
-## Troubleshooting
+## 🔍 Troubleshooting
 
 **Daemon won't start:**
 ```bash

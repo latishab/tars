@@ -1,6 +1,6 @@
 # WiFi Setup
 
-## Access Methods
+## 🌐 Access Methods
 
 | Method | URL | Works on |
 |---|---|---|
@@ -8,7 +8,7 @@
 | Tailscale | `http://tars:8000` | Anywhere (dorms, corporate, mobile) |
 | Direct IP | `http://<ip>:8000` | Same local network |
 
-## First Boot
+## 🚀 First Boot
 
 TARS creates a setup hotspot when no WiFi is configured:
 
@@ -24,7 +24,7 @@ Setup URL: http://tars.local:8000/setup
 4. (Optional) Enter Tailscale auth key for remote access
 5. **Save the dashboard URLs** shown before clicking Connect — the hotspot shuts down immediately
 
-## Tailscale (Remote Access)
+## 🔐 Tailscale (Remote Access)
 
 For access from anywhere — dorms, corporate networks, or mobile:
 
@@ -38,13 +38,13 @@ With MagicDNS enabled, TARS is reachable at `http://tars:8000` from any device o
 
 Without MagicDNS, use the numeric IP shown in [login.tailscale.com/admin/machines](https://login.tailscale.com/admin/machines).
 
-## Changing Networks
+## 🔄 Changing Networks
 
 Settings → Network → Change Network.
 
 **Supported types:** Personal (WPA/WPA2), Enterprise (PEAP/MSCHAPv2), Open, Hidden SSID
 
-## Troubleshooting
+## 🔍 Troubleshooting
 
 **tars.local not working:** You're on a network with client isolation (dorms, corporate). Use Tailscale.
 

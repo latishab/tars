@@ -4,7 +4,7 @@ Distributed voice assistant with RPi 5 as standalone robot hardware. MacBook or 
 
 The robot boots independently and waits for connections.
 
-## System Diagram
+## 🗺️ System Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -59,7 +59,7 @@ The robot boots independently and waits for connections.
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Communication Channels
+## 📡 Communication Channels
 
 Three channels with different purposes:
 
@@ -109,7 +109,7 @@ Endpoints:
 - `POST /api/offer` - WebRTC signaling (accepts SDP offer, returns answer)
 - `GET /health` - Convenience health check (also available via gRPC)
 
-## Conversation Flow
+## 💬 Conversation Flow
 
 ```
 User speaks → RPi USB Mic
@@ -141,7 +141,7 @@ User speaks → RPi USB Mic
                  User hears TARS
 ```
 
-## Components
+## 🧩 Components
 
 ### RPi 5 (tars) - Standalone Robot
 
@@ -227,7 +227,7 @@ tars_bot.py (robot mode)
     └── services/factories/ (STT/TTS provider factories)
 ```
 
-## Configuration
+## 🔧 Configuration
 
 ### RPi (tars_daemon.py)
 ```bash
@@ -275,7 +275,7 @@ provider = deepgram
 provider = elevenlabs
 ```
 
-## Quick Start
+## 🚀 Quick Start
 
 ### RPi (boots and waits for AI brain)
 ```bash
@@ -318,7 +318,7 @@ python tars_bot.py
 5. Start Pipecat pipeline with STT/LLM/TTS
 6. Use gRPC for all hardware control
 
-## Performance
+## ⚡ Performance
 
 Latency measurements on LAN:
 
@@ -329,7 +329,7 @@ Latency measurements on LAN:
 | Camera capture | 25-35ms |
 | Get status | 5-8ms |
 
-## API Usage Examples
+## 🐍 API Usage Examples
 
 ### Using the SDK (Python)
 
@@ -394,7 +394,7 @@ async def capture_camera_view() -> dict:
     return {"image": base64.b64encode(jpeg_bytes).decode()}
 ```
 
-## Troubleshooting
+## 🔍 Troubleshooting
 
 ### gRPC Connection Issues
 
@@ -434,7 +434,7 @@ sudo systemctl restart tars
 curl http://localhost:8000/dashboard/
 ```
 
-### Performance Testing
+### ⚡ Performance Testing
 
 ```python
 import time
@@ -451,7 +451,7 @@ print(f"gRPC latency: {latency:.1f}ms")
 # Should be 5-10ms on LAN
 ```
 
-## See Also
+## 📚 See Also
 
 - [Daemon](./DAEMON.md) - Daemon setup and usage
 - [Dashboard](./DASHBOARD.md) - Web dashboard guide

@@ -1,6 +1,6 @@
 # Installation
 
-## SDK (Control Robot Remotely)
+## 📡 SDK (Control Robot Remotely)
 
 ```bash
 pip install tars-robot
@@ -19,7 +19,7 @@ Works on any OS. Python 3.9+ required.
 
 ---
 
-## Daemon (Run on Raspberry Pi)
+## 🤖 Daemon (Run on Raspberry Pi)
 
 On your Pi (via SSH or directly):
 
@@ -42,7 +42,7 @@ tars-daemon
 
 ---
 
-## Auto-Start on Boot
+## ⚙️ Auto-Start on Boot
 
 On your Pi (via SSH or directly):
 
@@ -63,14 +63,14 @@ sudo systemctl enable --now tars
 
 ---
 
-## Requirements
+## 📋 Requirements
 
 - **SDK**: Python 3.9+, Windows / macOS / Linux
 - **Daemon**: Raspberry Pi 5 (or Pi 4 4GB+), Pi OS 64-bit, I2C enabled
 
 ---
 
-## Next Steps
+## 👉 Next Steps
 
 - [WiFi Setup](./WIFI_SETUP.md) — Connect to your network
 - [API Reference](./API.md) — SDK methods and REST endpoints

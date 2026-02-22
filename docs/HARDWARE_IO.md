@@ -6,7 +6,7 @@ gRPC and WebRTC endpoints for camera, audio, and system control on Raspberry Pi 
 - **gRPC** (port 50051): Low-latency hardware control (camera, movements, status)
 - **WebRTC** (port 8000): Real-time bidirectional audio streaming
 
-## gRPC API
+## ⚡ gRPC API
 
 ### `Health()`
 Get system health and status
@@ -48,7 +48,7 @@ print(status)
 # }
 ```
 
-## Audio Mute API
+## 🔇 Audio Mute API
 
 ### `SetMicMute(muted)`
 Mute or unmute the robot microphone.
@@ -69,7 +69,7 @@ When muted, the WebRTC audio track stops forwarding frames from the mic. Queued 
 
 ---
 
-## Camera API
+## 📷 Camera API
 
 ### `CaptureCamera(width, height, quality)`
 Capture camera frame as JPEG bytes
@@ -98,7 +98,7 @@ jpeg_bytes = client.capture_camera(width=1280, height=720, quality=90)
 
 **Latency:** 5-10ms for 640x480 capture
 
-## Audio API (WebRTC)
+## 🎙️ Audio API (WebRTC)
 
 Audio streaming uses **WebRTC** for real-time bidirectional audio with minimal latency.
 
@@ -136,7 +136,7 @@ await client.connect()
 - TTS (Text-to-Speech via ElevenLabs)
 - Audio frame processing
 
-## Hardware Setup
+## 🔧 Hardware Setup
 
 ### Camera
 
@@ -178,7 +178,7 @@ defaults.pcm.card 1
 defaults.ctl.card 1
 ```
 
-## Testing
+## 🧪 Testing
 
 ### gRPC Service Testing
 
@@ -218,7 +218,7 @@ This will:
 2. Establish bidirectional audio
 3. Test full STT → LLM → TTS pipeline
 
-## Troubleshooting
+## 🔍 Troubleshooting
 
 ### Camera Not Available
 
@@ -306,13 +306,13 @@ except Exception as e:
 - Check port 8000 is accessible
 - Test from tars-conversation-app with `python tars_bot.py`
 
-## Hardware Requirements
+## 📋 Hardware Requirements
 
 - **Camera**: Pi Camera Module v2 (preferred) or USB webcam (fallback)
 - **Audio**: USB soundcard with microphone input and speaker output
 - **Raspberry Pi 5**: 4GB+ RAM recommended
 
-## API Documentation
+## 📚 API Documentation
 
 **gRPC Proto Definition:**
 See `tars_sdk/proto/tars.proto` for complete API specification
@@ -328,7 +328,7 @@ from tars_sdk import TarsClient
 help(TarsClient)
 ```
 
-## Dependencies
+## 📦 Dependencies
 
 Required dependencies (from `requirements.txt`):
 
