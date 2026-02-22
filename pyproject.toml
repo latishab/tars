@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tars-robot"
-version = "0.5.7"
+version = "0.5.8"
 description = "TARS robot control library with daemon, dashboard, and SDK"
 readme = "README.md"
 requires-python = ">=3.9"
