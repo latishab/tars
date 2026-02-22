@@ -113,7 +113,7 @@ python tars_daemon.py
 ```
 
 The daemon will:
-1. Start WebRTC server on port 8001
+1. Start unified HTTP server on port 8000 (WebRTC + Dashboard + REST API)
 2. Start gRPC server on port 50051
 3. Wait for AI brain or SDK client to connect
 

@@ -58,7 +58,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --port, -p PORT       REST API port (default: 8001)"
+            echo "  --port, -p PORT       REST API port (default: 8000)"
             echo "  --no-display          Disable display (headless mode)"
             echo "  --no-webrtc           Disable WebRTC server (REST API only)"
             echo "  --face-tracking       Enable face tracking with eyes"

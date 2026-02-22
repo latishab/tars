@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
             logger.info("No WiFi connection detected, starting setup hotspot")
             hotspot_started = await asyncio.to_thread(wifi_mgr.start_hotspot)
             if hotspot_started:
-                logger.info("Setup hotspot started: TARS-Setup (10.42.0.1:8080)")
+                logger.info("Setup hotspot started: TARS-Setup (10.42.0.1:8000)")
             else:
                 logger.warning("Failed to start setup hotspot")
         else:

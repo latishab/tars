@@ -419,7 +419,7 @@ curl -X POST http://100.84.133.74:8000/api/offer \
 # Check dashboard is running
 ps aux | grep start_dashboard
 
-# Check port 8080
+# Check port 8000
 lsof -i:8000  # Unified HTTP server
 
 # Restart dashboard
