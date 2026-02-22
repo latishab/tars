@@ -21,6 +21,8 @@ Works on any OS. Python 3.9+ required.
 
 ## Daemon (Run on Raspberry Pi)
 
+On your Pi (via SSH or directly):
+
 ### Quick Install
 
 ```bash
@@ -41,6 +43,8 @@ tars-daemon
 ---
 
 ## Auto-Start on Boot
+
+On your Pi:
 
 ### PyPI users
 
