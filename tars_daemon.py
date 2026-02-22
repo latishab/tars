@@ -106,7 +106,7 @@ class TARSDaemon:
 
     def __init__(
         self,
-        api_port: int = 8001,
+        api_port: int = 8000,
         display_enabled: bool = True,
         face_tracking_enabled: bool = False,
         webrtc_enabled: bool = True,
@@ -130,6 +130,7 @@ class TARSDaemon:
         self.battery: Optional[BatteryModule] = None
 
         # FastAPI app
+        self.ws_manager = ConnectionManager() if DASHBOARD_AVAILABLE else None
         self.app = self._create_app()
 
         # State
@@ -162,6 +163,16 @@ class TARSDaemon:
 
         # Register routes
         self._register_routes(app)
+
+        # Mount dashboard static files
+        if DASHBOARD_AVAILABLE:
+            from pathlib import Path
+            dashboard_path = Path(__file__).parent / "dashboard" / "frontend" / "dist"
+            if dashboard_path.exists():
+                app.mount("/dashboard", StaticFiles(directory=str(dashboard_path), html=True), name="dashboard")
+                logger.info("✓ Dashboard UI mounted at /dashboard")
+            else:
+                logger.warning(f"Dashboard not built: {dashboard_path}")
 
         return app
 
@@ -287,6 +298,50 @@ class TARSDaemon:
             except Exception as e:
                 logger.error(f"Failed to set eye state: {e}")
                 raise HTTPException(500, str(e))
+
+        # === Dashboard Routes ===
+        if DASHBOARD_AVAILABLE:
+            try:
+                # Initialize shared state
+                status_routes.set_modules(
+                    battery=self.battery if hasattr(self, 'battery') else None,
+                    display=self.display if hasattr(self, 'display') else None,
+                    camera=self.camera if hasattr(self, 'camera') else None,
+                    webrtc=self.webrtc if hasattr(self, 'webrtc') else None
+                )
+
+                if hasattr(self, 'hardware_controller') and self.hardware_controller:
+                    movements_routes.set_movement_modules(
+                        movement_map=self.hardware_controller.get_movement_map(),
+                        servoctl_module=None
+                    )
+
+                # Register dashboard routers
+                app.include_router(status_routes.router, prefix="/api", tags=["Status"])
+                app.include_router(movements_routes.router, prefix="/api", tags=["Movements"])
+                app.include_router(settings_routes.router, prefix="/api", tags=["Settings"])
+                app.include_router(updates_routes.router, prefix="/api", tags=["Updates"])
+                app.include_router(wifi_routes.router, prefix="/api", tags=["WiFi"])
+                app.include_router(apps_routes.router, prefix="/api/apps", tags=["Apps"])
+                app.include_router(setup_routes.router, prefix="/api/setup", tags=["Setup"])
+                logger.info("✓ Dashboard routes registered")
+            except Exception as e:
+                logger.error(f"Dashboard route error: {e}")
+
+        # WebSocket endpoint for dashboard
+        if DASHBOARD_AVAILABLE and self.ws_manager:
+            ws_manager_ref = self.ws_manager
+
+            @app.websocket("/ws")
+            async def websocket_endpoint(websocket: WebSocket):
+                await ws_manager_ref.connect(websocket)
+                try:
+                    while True:
+                        data = await websocket.receive_text()
+                        logger.debug(f"WS rx: {data}")
+                except WebSocketDisconnect:
+                    ws_manager_ref.disconnect(websocket)
+
 
     async def _startup(self):
         """Initialize all components"""
@@ -516,6 +571,27 @@ class TARSDaemon:
             port=self.api_port,
             log_level="info"
         )
+
+# === Dashboard Integration ===
+try:
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.websockets import WebSocketDisconnect
+    from fastapi import WebSocket
+    from dashboard.backend.routes import (
+        status as status_routes,
+        movements as movements_routes,
+        settings as settings_routes,
+        updates as updates_routes,
+        wifi as wifi_routes,
+        apps as apps_routes,
+        setup as setup_routes,
+    )
+    from dashboard.backend.ws import ConnectionManager
+    DASHBOARD_AVAILABLE = True
+except ImportError as e:
+    print(f"[WARN] Dashboard not available: {e}")
+    DASHBOARD_AVAILABLE = False
+
 
 
 # === Entry Point ===

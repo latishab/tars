@@ -30,7 +30,7 @@ if [ -f ".env" ]; then
 fi
 
 # Default values
-API_PORT=${API_PORT:-8001}
+API_PORT=${API_PORT:-8000}
 DISPLAY_ENABLED=${DISPLAY_ENABLED:-true}
 WEBRTC_ENABLED=${WEBRTC_ENABLED:-true}
 FACE_TRACKING=${FACE_TRACKING:-false}
