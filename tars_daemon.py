@@ -175,8 +175,8 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
 
 ### Base URL
 
-- Local: 
-- Tailscale: 
+- Local: http://tars.local:8000
+- Tailscale: http://tars:8000
 """,
             lifespan=lifespan,
             contact={
