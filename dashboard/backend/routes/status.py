@@ -177,3 +177,42 @@ async def get_camera():
     except Exception as e:
         logger.error(f"Camera capture error: {e}")
         return {"error": str(e)}
+
+
+# Movement list (informational endpoint)
+MOVEMENTS = [
+    "step_forward",
+    "walk_forward",
+    "step_backward",
+    "walk_backward",
+    "turn_right",
+    "turn_right_slow",
+    "turn_left",
+    "turn_left_slow",
+    "pose",
+    "bow",
+    "tilt_right",
+    "tilt_left",
+    "side_side",
+    "wave_right",
+    "wave_left",
+    "neutral_legs",
+    "excited",
+    "laugh",
+    "swing_legs",
+]
+
+
+@router.get("/movements")
+async def list_movements():
+    """List all available robot movements."""
+    return {
+        "movements": MOVEMENTS,
+        "categories": {
+            "walking": ["step_forward", "walk_forward", "step_backward", "walk_backward"],
+            "turning": ["turn_right", "turn_right_slow", "turn_left", "turn_left_slow"],
+            "expressions": ["wave_right", "wave_left", "bow", "pose", "excited", "laugh"],
+            "balance": ["tilt_right", "tilt_left", "side_side", "swing_legs"],
+            "utility": ["neutral_legs"],
+        }
+    }

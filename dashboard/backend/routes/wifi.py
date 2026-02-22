@@ -57,7 +57,7 @@ class WiFiHotspotResponse(BaseModel):
     message: Optional[str] = None
 
 
-@router.get("/wifi/status", response_model=WiFiStatus)
+@router.get("/status", response_model=WiFiStatus)
 async def get_wifi_status():
     """
     Get current WiFi connection status.
@@ -92,7 +92,7 @@ async def get_wifi_status():
         )
 
 
-@router.get("/wifi/networks", response_model=WiFiNetworksResponse)
+@router.get("/networks", response_model=WiFiNetworksResponse)
 async def scan_wifi_networks(rescan: bool = True):
     """
     Scan for available WiFi networks.
@@ -126,7 +126,7 @@ async def scan_wifi_networks(rescan: bool = True):
         )
 
 
-@router.post("/wifi/connect", response_model=WiFiConnectResponse)
+@router.post("/connect", response_model=WiFiConnectResponse)
 async def connect_to_wifi(request: WiFiConnectRequest):
     """
     Connect to a WiFi network (Personal or Enterprise).
@@ -187,7 +187,7 @@ async def connect_to_wifi(request: WiFiConnectRequest):
 
 
 
-@router.post("/wifi/hotspot/start", response_model=WiFiHotspotResponse)
+@router.post("/hotspot/start", response_model=WiFiHotspotResponse)
 async def start_wifi_hotspot():
     """
     Start the TARS-Setup WiFi hotspot.
@@ -223,7 +223,7 @@ async def start_wifi_hotspot():
         )
 
 
-@router.post("/wifi/hotspot/stop", response_model=WiFiHotspotResponse)
+@router.post("/hotspot/stop", response_model=WiFiHotspotResponse)
 async def stop_wifi_hotspot():
     """
     Stop the TARS-Setup WiFi hotspot.

@@ -28,7 +28,7 @@ function SettingsPage() {
 
   useEffect(() => {
     // Get current version
-    fetch('/api/updates/current')
+    fetch('/api/system/updates/current')
       .then(res => res.json())
       .then(setVersion)
       .catch(console.error)
@@ -183,7 +183,7 @@ function SettingsPage() {
   const checkForUpdates = async () => {
     setChecking(true)
     try {
-      const res = await fetch('/api/updates/check')
+      const res = await fetch('/api/system/updates/check')
       const data = await res.json()
       setUpdate(data)
     } catch (err) {
@@ -196,7 +196,7 @@ function SettingsPage() {
     setInstalling(true)
     try {
       // Start the update
-      const res = await fetch('/api/updates/install', { method: 'POST' })
+      const res = await fetch('/api/system/updates/install', { method: 'POST' })
       const data = await res.json()
       
       if (data.requires_restart) {
@@ -218,7 +218,7 @@ function SettingsPage() {
     let serviceDown = false
     for (let i = 0; i < 30; i++) {
       try {
-        await fetch('/api/updates/current', { signal: AbortSignal.timeout(2000) })
+        await fetch('/api/system/updates/current', { signal: AbortSignal.timeout(2000) })
         await new Promise(resolve => setTimeout(resolve, 1000))
       } catch {
         serviceDown = true
@@ -236,7 +236,7 @@ function SettingsPage() {
     for (let i = 0; i < 60; i++) {
       await new Promise(resolve => setTimeout(resolve, 2000))
       try {
-        const res = await fetch('/api/updates/current', { signal: AbortSignal.timeout(2000) })
+        const res = await fetch('/api/system/updates/current', { signal: AbortSignal.timeout(2000) })
         if (res.ok) {
           // Service is back! Refresh version info
           const newVersion = await res.json()
@@ -259,7 +259,7 @@ function SettingsPage() {
   const restartService = async () => {
     if (!confirm('Restart TARS service?')) return
     try {
-      await fetch('/api/updates/restart', { method: 'POST' })
+      await fetch('/api/system/updates/restart', { method: 'POST' })
       alert('Service restarting...')
     } catch (err) {
       console.error('Restart failed:', err)
