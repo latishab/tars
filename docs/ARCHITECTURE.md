@@ -4,6 +4,8 @@ Distributed voice assistant with RPi 5 as standalone robot hardware. MacBook or 
 
 The robot boots independently and waits for connections.
 
+> Note: The AI brain (tars-conversation-app) can run on any computer, including the Pi itself. You can run everything on the Pi alone, or split the daemon and brain across separate machines.
+
 ## 🗺️ System Diagram
 
 ```
