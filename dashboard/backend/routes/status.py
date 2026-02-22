@@ -58,33 +58,23 @@ async def get_status_data() -> Dict[str, Any]:
     except (FileNotFoundError, ValueError):
         pass
 
-    # Battery status
+    # Battery status - query local battery endpoint
     battery = {
         "level": 0,
         "voltage": 0.0,
         "current": 0.0,
     }
-    if _battery_module:
-        # Use local battery module if available
-        try:
-            battery["level"] = int(_battery_module.normalized_percentage)
-            battery["voltage"] = _battery_module.voltage
-            battery["current"] = _battery_module.current
-        except Exception as e:
-            logger.debug(f"Battery read error: {e}")
-    elif _daemon_url:
-        # Query daemon for battery status (uses shared coulomb counting)
-        try:
-            import httpx
-            async with httpx.AsyncClient() as client:
-                response = await client.get(f"{_daemon_url}/api/battery", timeout=2.0)
-                if response.status_code == 200:
-                    daemon_battery = response.json()
-                    battery["level"] = daemon_battery.get("normalized_percentage", 0)
-                    battery["voltage"] = daemon_battery.get("voltage", 0.0)
-                    battery["current"] = daemon_battery.get("current", 0.0)
-        except Exception as e:
-            logger.debug(f"Daemon battery query error: {e}")
+    try:
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.get("http://localhost:8000/api/status/battery", timeout=2.0)
+            if response.status_code == 200:
+                battery_data = response.json()
+                battery["level"] = battery_data.get("normalized_percentage", 0)
+                battery["voltage"] = battery_data.get("voltage", 0.0)
+                battery["current"] = battery_data.get("current", 0.0)
+    except Exception as e:
+        logger.debug(f"Battery query error: {e}")
 
     # Display status
     emotion = "neutral"
@@ -177,42 +167,3 @@ async def get_camera():
     except Exception as e:
         logger.error(f"Camera capture error: {e}")
         return {"error": str(e)}
-
-
-# Movement list (informational endpoint)
-MOVEMENTS = [
-    "step_forward",
-    "walk_forward",
-    "step_backward",
-    "walk_backward",
-    "turn_right",
-    "turn_right_slow",
-    "turn_left",
-    "turn_left_slow",
-    "pose",
-    "bow",
-    "tilt_right",
-    "tilt_left",
-    "side_side",
-    "wave_right",
-    "wave_left",
-    "neutral_legs",
-    "excited",
-    "laugh",
-    "swing_legs",
-]
-
-
-@router.get("/movements")
-async def list_movements():
-    """List all available robot movements."""
-    return {
-        "movements": MOVEMENTS,
-        "categories": {
-            "walking": ["step_forward", "walk_forward", "step_backward", "walk_backward"],
-            "turning": ["turn_right", "turn_right_slow", "turn_left", "turn_left_slow"],
-            "expressions": ["wave_right", "wave_left", "bow", "pose", "excited", "laugh"],
-            "balance": ["tilt_right", "tilt_left", "side_side", "swing_legs"],
-            "utility": ["neutral_legs"],
-        }
-    }

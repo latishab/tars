@@ -28,12 +28,7 @@ OFFICIAL_APPS = [
 
 
 class InstallRequest(BaseModel):
-    app_id: str
     repository: str
-
-
-class AppAction(BaseModel):
-    app_id: str
 
 
 def read_app_json(app_path: Path) -> Dict[str, Any]:
@@ -121,17 +116,17 @@ async def list_installed():
     return get_installed_apps()
 
 
-@router.post("/install")
-async def install_app(req: InstallRequest):
+@router.post("/{app_id}/install")
+async def install_app(app_id: str, req: InstallRequest):
     """Install an app from git repository."""
     try:
-        app_path = APPS_DIR / req.app_id
+        app_path = APPS_DIR / app_id
         if app_path.exists():
             raise HTTPException(status_code=400, detail="App already installed")
 
         APPS_DIR.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"Installing {req.app_id} from {req.repository}")
+        logger.info(f"Installing {app_id} from {req.repository}")
         result = subprocess.run(
             ["git", "clone", req.repository, str(app_path)],
             capture_output=True,
@@ -148,7 +143,7 @@ async def install_app(req: InstallRequest):
         # Run install script if exists
         install_script = app_path / "install.sh"
         if install_script.exists():
-            logger.info(f"Running install script for {req.app_id}")
+            logger.info(f"Running install script for {app_id}")
             result = subprocess.run(
                 ["bash", str(install_script)],
                 cwd=str(app_path),
@@ -160,7 +155,7 @@ async def install_app(req: InstallRequest):
             if result.returncode != 0:
                 logger.warning(f"Install script failed: {result.stderr}")
 
-        return {"status": "success", "message": f"Installed {req.app_id}"}
+        return {"status": "success", "message": f"Installed {app_id}"}
 
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=500, detail="Installation timeout")
@@ -169,18 +164,18 @@ async def install_app(req: InstallRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/uninstall")
-async def uninstall_app(req: AppAction):
+@router.delete("/{app_id}")
+async def uninstall_app(app_id: str):
     """Uninstall an app."""
     try:
-        app_path = APPS_DIR / req.app_id
+        app_path = APPS_DIR / app_id
         if not app_path.exists():
             raise HTTPException(status_code=404, detail="App not found")
 
         # Run uninstall script if exists
         uninstall_script = app_path / "uninstall.sh"
         if uninstall_script.exists():
-            logger.info(f"Running uninstall script for {req.app_id}")
+            logger.info(f"Running uninstall script for {app_id}")
             subprocess.run(
                 ["bash", str(uninstall_script)],
                 cwd=str(app_path),
@@ -193,25 +188,25 @@ async def uninstall_app(req: AppAction):
         import shutil
         shutil.rmtree(app_path)
 
-        return {"status": "success", "message": f"Uninstalled {req.app_id}"}
+        return {"status": "success", "message": f"Uninstalled {app_id}"}
 
     except Exception as e:
         logger.error(f"Uninstall error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/run")
-async def run_app(req: AppAction):
-    """Run an installed app."""
+@router.post("/{app_id}/start")
+async def start_app(app_id: str):
+    """Start an installed app."""
     try:
-        app_path = APPS_DIR / req.app_id
+        app_path = APPS_DIR / app_id
         if not app_path.exists():
             raise HTTPException(status_code=404, detail="App not found")
 
         app_data = read_app_json(app_path)
         main_script = app_data.get("main", "main.py")
 
-        logger.info(f"Starting {req.app_id}")
+        logger.info(f"Starting {app_id}")
         subprocess.Popen(
             ["python", main_script],
             cwd=str(app_path),
@@ -220,26 +215,26 @@ async def run_app(req: AppAction):
             start_new_session=True
         )
 
-        return {"status": "success", "message": f"Started {req.app_id}"}
+        return {"status": "success", "message": f"Started {app_id}"}
 
     except Exception as e:
         logger.error(f"Run error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/stop")
-async def stop_app(req: AppAction):
+@router.post("/{app_id}/stop")
+async def stop_app(app_id: str):
     """Stop a running app."""
     try:
-        logger.info(f"Stopping {req.app_id}")
+        logger.info(f"Stopping {app_id}")
         result = subprocess.run(
-            ["pkill", "-f", req.app_id],
+            ["pkill", "-f", app_id],
             capture_output=True,
             text=True
         )
 
         if result.returncode == 0:
-            return {"status": "success", "message": f"Stopped {req.app_id}"}
+            return {"status": "success", "message": f"Stopped {app_id}"}
         else:
             return {"status": "success", "message": "App not running"}
 

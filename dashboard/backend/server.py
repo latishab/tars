@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from loguru import logger
 
-from .routes import status, movements, settings, updates, wifi, setup, apps
+from .routes import status, settings, updates, wifi, setup, apps
 from .wifi_manager import WiFiManager
 from .ws import ConnectionManager
 
@@ -71,7 +71,6 @@ app = FastAPI(
 
 # Include API routes
 app.include_router(status.router, prefix="/api", tags=["status"])
-app.include_router(movements.router, prefix="/api", tags=["movements"])
 app.include_router(settings.router, prefix="/api", tags=["settings"])
 app.include_router(updates.router, prefix="/api", tags=["updates"])
 app.include_router(wifi.router, prefix="/api", tags=["wifi"])

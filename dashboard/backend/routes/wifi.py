@@ -32,6 +32,11 @@ class WiFiConnectRequest(BaseModel):
     phase2_auth: Optional[str] = "mschapv2"
 
 
+class HotspotRequest(BaseModel):
+    """Request to toggle WiFi hotspot."""
+    enabled: bool
+
+
 class WiFiStatus(BaseModel):
     """Current WiFi connection status."""
     mode: str  # "hotspot", "client", or "disconnected"
@@ -186,70 +191,37 @@ async def connect_to_wifi(request: WiFiConnectRequest):
         )
 
 
+@router.put("/hotspot", response_model=WiFiHotspotResponse)
+async def toggle_wifi_hotspot(request: HotspotRequest):
+    """
+    Enable or disable the TARS-Setup WiFi hotspot.
 
-@router.post("/hotspot/start", response_model=WiFiHotspotResponse)
-async def start_wifi_hotspot():
-    """
-    Start the TARS-Setup WiFi hotspot.
-    
+    Args:
+        enabled: True to start hotspot, False to stop
+
     Returns:
-        Success status and message with hotspot details
-        
-    Raises:
-        HTTPException: If hotspot fails to start
+        Success status and message
     """
-    logger.info("Starting WiFi hotspot")
-    
+    logger.info(f"WiFi hotspot: {'starting' if request.enabled else 'stopping'}")
+
     try:
-        success = await asyncio.to_thread(wifi_manager.start_hotspot)
-        
-        if success:
+        if request.enabled:
+            success = await asyncio.to_thread(wifi_manager.start_hotspot)
+            if success:
+                return WiFiHotspotResponse(
+                    success=True,
+                    message=f"Hotspot started: {wifi_manager.HOTSPOT_SSID}"
+                )
+            else:
+                raise HTTPException(500, "Failed to start hotspot")
+        else:
+            success = await asyncio.to_thread(wifi_manager.stop_hotspot)
             return WiFiHotspotResponse(
                 success=True,
-                message=f"Hotspot started: {wifi_manager.HOTSPOT_SSID} (password: {wifi_manager.HOTSPOT_PASSWORD})"
-            )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to start hotspot. Check system logs."
+                message="Hotspot stopped" if success else "Hotspot already stopped"
             )
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Hotspot start error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Hotspot start error: {str(e)}"
-        )
-
-
-@router.post("/hotspot/stop", response_model=WiFiHotspotResponse)
-async def stop_wifi_hotspot():
-    """
-    Stop the TARS-Setup WiFi hotspot.
-    
-    Returns:
-        Success status
-    """
-    logger.info("Stopping WiFi hotspot")
-    
-    try:
-        success = await asyncio.to_thread(wifi_manager.stop_hotspot)
-        
-        if success:
-            return WiFiHotspotResponse(
-                success=True,
-                message="Hotspot stopped"
-            )
-        else:
-            # Stopping might fail if already stopped - that's okay
-            return WiFiHotspotResponse(
-                success=True,
-                message="Hotspot already stopped"
-            )
-    except Exception as e:
-        logger.error(f"Hotspot stop error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Hotspot stop error: {str(e)}"
-        )
+        logger.error(f"Hotspot toggle error: {e}")
+        raise HTTPException(500, f"Hotspot error: {str(e)}")

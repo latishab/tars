@@ -31,11 +31,10 @@ function AppStore() {
   const handleInstall = async (app) => {
     setLoading({ ...loading, [`install-${app.id}`]: true })
     try {
-      const res = await fetch('/api/apps/install', {
+      const res = await fetch(`/api/apps/${app.id}/install`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          app_id: app.id,
           repository: app.repository
         })
       })
@@ -57,10 +56,8 @@ function AppStore() {
 
     setLoading({ ...loading, [`uninstall-${appId}`]: true })
     try {
-      const res = await fetch('/api/apps/uninstall', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ app_id: appId })
+      const res = await fetch(`/api/apps/${appId}`, {
+        method: 'DELETE'
       })
       const data = await res.json()
       if (res.ok) {
@@ -78,10 +75,8 @@ function AppStore() {
   const handleRun = async (appId) => {
     setLoading({ ...loading, [`run-${appId}`]: true })
     try {
-      const res = await fetch('/api/apps/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ app_id: appId })
+      const res = await fetch(`/api/apps/${appId}/start`, {
+        method: 'POST'
       })
       const data = await res.json()
       if (res.ok) {
@@ -99,10 +94,8 @@ function AppStore() {
   const handleStop = async (appId) => {
     setLoading({ ...loading, [`stop-${appId}`]: true })
     try {
-      const res = await fetch('/api/apps/stop', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ app_id: appId })
+      const res = await fetch(`/api/apps/${appId}/stop`, {
+        method: 'POST'
       })
       const data = await res.json()
       if (res.ok) {

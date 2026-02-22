@@ -153,15 +153,16 @@ class TARSDaemon:
 
 This API provides complete control over the TARS robot including:
 
-- **Robot Control**: Set emotions, eye states, execute movements
-- **Status & Monitoring**: Battery, camera, system metrics, WebSocket updates
-- **App Management**: Install/run/stop community apps
-- **WiFi Management**: Configure network connections, hotspot mode
-- **System Management**: Settings, updates, initial setup
+- **/api/control**: Make the robot do things (movements, emotions, eye states, reset)
+- **/api/status**: Read robot state (battery, camera, system metrics)
+- **/api/apps**: Manage community apps (install, start, stop, uninstall)
+- **/api/wifi**: Network configuration (connect, hotspot, status)
+- **/api/system**: Settings and updates
+- **/api/webrtc**: WebRTC signaling for P2P audio
 
 ### WebRTC Audio
 
-WebRTC peer-to-peer audio connection is established via POST /api/control/offer.
+WebRTC peer-to-peer audio connection is established via POST /api/webrtc/offer.
 The robot streams microphone audio and receives speaker audio bidirectionally.
 
 ### gRPC Alternative
@@ -207,6 +208,27 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
             from pathlib import Path
             dashboard_path = Path(__file__).parent / "dashboard" / "frontend" / "dist"
             if dashboard_path.exists():
+
+                # Catch-all route for SPA - serve index.html for any dashboard path
+                @app.get("/dashboard/{full_path:path}")
+                async def serve_dashboard_spa(full_path: str):
+                    """Serve index.html for SPA routing."""
+                    from fastapi.responses import FileResponse
+                    from pathlib import Path
+                    
+                    dashboard_index = Path(__file__).parent / "dashboard" / "frontend" / "dist" / "index.html"
+                    
+                    # Check if the requested path is a static file
+                    requested_file = Path(__file__).parent / "dashboard" / "frontend" / "dist" / full_path
+                    if requested_file.exists() and requested_file.is_file():
+                        return FileResponse(str(requested_file))
+                    
+                    # Otherwise serve index.html for SPA routing
+                    if dashboard_index.exists():
+                        return FileResponse(str(dashboard_index))
+                    else:
+                        raise HTTPException(404, "Dashboard not found")
+
                 app.mount("/dashboard", StaticFiles(directory=str(dashboard_path), html=True), name="dashboard")
                 logger.info("✓ Dashboard UI mounted at /dashboard")
             else:
@@ -288,15 +310,10 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
                     webrtc=self.webrtc if hasattr(self, 'webrtc') else None
                 )
 
-                # Initialize hardware controller for movements
-                if hasattr(self, 'hardware_controller') and self.hardware_controller:
-                    movements_routes.set_movement_modules(
-                        movement_map=self.hardware_controller.get_movement_map(),
-                        servoctl_module=None
-                    )
 
                 # Register routers with new structure
                 app.include_router(control_routes.router, prefix="/api/control", tags=["Robot Control"])
+                app.include_router(webrtc_routes.router, prefix="/api/webrtc", tags=["WebRTC"])
                 app.include_router(status_routes.router, prefix="/api/status", tags=["Status & Monitoring"])
                 app.include_router(apps_routes.router, prefix="/api/apps", tags=["Apps"])
                 app.include_router(wifi_routes.router, prefix="/api/wifi", tags=["WiFi"])
@@ -557,7 +574,6 @@ try:
     from fastapi import WebSocket
     from dashboard.backend.routes import (
         status as status_routes,
-        movements as movements_routes,
         settings as settings_routes,
         updates as updates_routes,
         wifi as wifi_routes,
@@ -565,6 +581,7 @@ try:
         setup as setup_routes,
         control as control_routes,
         system as system_routes,
+        webrtc as webrtc_routes,
     )
     from dashboard.backend.ws import ConnectionManager
     DASHBOARD_AVAILABLE = True
