@@ -82,7 +82,7 @@ Two options — choose based on your use case:
 
 ```bash
 pip install tars-robot[daemon]
-./start.sh
+tars-daemon
 ```
 
 Installs all daemon dependencies (FastAPI, WebRTC, pygame, Adafruit libs). Includes `tars-daemon` and `tars-servo-tester` CLI commands.
@@ -94,7 +94,7 @@ git clone https://github.com/latishab/tars.git
 cd tars
 python -m venv venv && source venv/bin/activate
 pip install -e .[daemon]
-./start.sh
+tars-daemon
 ```
 
 Use this if you want to modify the daemon, contribute code, or run dev tools directly from source (`src/app-servotester.py`, `src/app-cms.py`).
@@ -161,17 +161,14 @@ http://tars:8000
 Start the RPi daemon (waits for AI brain to connect):
 
 ```bash
-# Start WebRTC + gRPC servers (default)
-python tars_daemon.py
-
-# Or using start script
-./start.sh
+# Start WebRTC + gRPC servers
+tars-daemon
 
 # WebRTC only (no gRPC)
-python tars_daemon.py --no-grpc
+tars-daemon --no-grpc
 
 # Specify custom gRPC port
-python tars_daemon.py --grpc-port 50052
+tars-daemon --grpc-port 50052
 ```
 
 The RPi will (unified daemon on port 8000):
