@@ -82,40 +82,91 @@ asyncio.run(main())
 
 ## Daemon Installation (Raspberry Pi)
 
-For running the robot daemon on a Raspberry Pi:
+Two methods to install the robot daemon on a Raspberry Pi. **PyPI** is simpler; **Git clone** is for development.
 
-### 1. Clone Repository
+---
 
-```bash
-git clone https://github.com/latishab/tars.git
-cd tars
-```
-
-### 2. Install Dependencies
+### Method 1: PyPI (Recommended)
 
 ```bash
 # Create virtual environment
 python -m venv venv
 source venv/bin/activate
 
-# Install daemon
-pip install -e .[daemon]
+# Install daemon + all dependencies
+pip install tars-robot[daemon]
 ```
 
-### 3. Run Daemon
+After install, run the daemon:
 
 ```bash
-# Start WebRTC + gRPC servers
-python tars_daemon.py
-
-# Or using start script
+# Download and run start script
+curl -O https://raw.githubusercontent.com/latishab/tars/main/start.sh
+chmod +x start.sh
 ./start.sh
 ```
 
+Or run directly:
+
+```bash
+python -c "from tars_daemon import main; main()"
+```
+
 The daemon will:
-1. Start unified HTTP server on port 8000 (WebRTC + Dashboard + REST API)
+1. Start unified HTTP server on port 8000 (dashboard + WebRTC signaling + REST API)
 2. Start gRPC server on port 50051
 3. Wait for AI brain or SDK client to connect
+
+**Dashboard:** Open `http://tars.local:8000` in a browser.
+
+---
+
+### Method 2: Git Clone (Development)
+
+```bash
+git clone https://github.com/latishab/tars.git
+cd tars
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate
+
+# Install in editable mode
+pip install -e .[daemon]
+```
+
+Run the daemon:
+
+```bash
+./start.sh
+
+# Or directly
+python tars_daemon.py
+```
+
+**Servo Tester** (calibration tool, run separately on Pi with display):
+
+```bash
+python src/app-servotester.py
+```
+
+---
+
+### Systemd Service (Auto-start on boot)
+
+```bash
+# Copy service file
+sudo cp tars.service /etc/systemd/system/
+
+# Enable and start
+sudo systemctl daemon-reload
+sudo systemctl enable tars
+sudo systemctl start tars
+
+# Check status
+sudo systemctl status tars
+journalctl -u tars -f
+```
 
 ---
 
