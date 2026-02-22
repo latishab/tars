@@ -84,9 +84,7 @@ pip install -r requirements.txt
 #### Using Servo Tester GUI
 
 ```bash
-cd ~/tars/src
-source ../venv/bin/activate
-python app-servotester.py
+tars-servo-tester
 ```
 
 The Servo Tester GUI provides:
@@ -97,7 +95,7 @@ The Servo Tester GUI provides:
 - **Auto-save**: Saves calibration values directly to config.ini
 
 **Calibration Steps:**
-1. Run `app-servotester.py`
+1. Run `tars-servo-tester`
 2. Select "Servo Testing" tab
 3. Test each leg servo individually (channels 0-3)
    - Servo 0: Left leg height
@@ -195,15 +193,15 @@ perfectRightHeightOffset = 0
 perfectRightLegOffset = 0
 ```
 
-**⚠️ WARNING**: Do NOT manually edit these values. Use the Servo Tester GUI (`app-servotester.py`) for calibration.
+**⚠️ WARNING**: Do NOT manually edit these values. Use the Servo Tester GUI (`tars-servo-tester`) for calibration.
 
 ## Essential Tools
 
-### 1. Servo Tester GUI (app-servotester.py)
+### 1. Servo Tester GUI (tars-servo-tester)
 Interactive servo calibration and movement testing tool - **CRITICAL for setup**
 
 ```bash
-python src/app-servotester.py
+tars-servo-tester
 ```
 
 **Features:**
@@ -238,7 +236,7 @@ python src/app-cms.py
 - New configuration options are added to template
 - Need to restore missing config sections while preserving calibration
 
-**⚠️ IMPORTANT**: This tool preserves servo values - it does NOT recalibrate servos. Use app-servotester.py for calibration.
+**⚠️ IMPORTANT**: This tool preserves servo values - it does NOT recalibrate servos. Use `tars-servo-tester` for calibration.
 
 ## Hardware Requirements
 
@@ -255,9 +253,7 @@ python src/app-cms.py
 Use the Servo Tester GUI for comprehensive testing:
 
 ```bash
-cd ~/tars/src
-source ../venv/bin/activate
-python app-servotester.py
+tars-servo-tester
 ```
 
 **Features:**
@@ -304,7 +300,7 @@ sudo i2cdetect -y 1
 
 ### Servo Not Moving
 
-1. **Use Servo Tester GUI**: `python src/app-servotester.py`
+1. **Use Servo Tester GUI**: `tars-servo-tester`
 2. Test individual servos in "Servo Testing" tab
 3. Verify power supply is connected and charged
 4. Check servo wiring to PCA9685 channels:

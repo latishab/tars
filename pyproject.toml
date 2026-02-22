@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tars-robot"
-version = "0.5.5"
+version = "0.5.6"
 description = "TARS robot control library with daemon, dashboard, and SDK"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -71,8 +71,12 @@ Repository = "https://github.com/latishab/tars"
 Documentation = "https://github.com/latishab/tars#readme"
 Issues = "https://github.com/latishab/tars/issues"
 
+[project.scripts]
+tars-daemon = "tars_tools.daemon_entry:main"
+tars-servo-tester = "tars_tools.servotester_entry:main"
+
 [tool.setuptools.packages.find]
-include = ["tars_sdk", "tars_sdk.*"]
+include = ["tars_sdk", "tars_sdk.*", "tars_tools", "tars_tools.*"]
 
 [tool.setuptools.package-data]
 tars_sdk = ["proto/*.proto", "proto/*.pyi", "py.typed"]

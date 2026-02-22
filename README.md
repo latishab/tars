@@ -85,7 +85,7 @@ pip install tars-robot[daemon]
 ./start.sh
 ```
 
-Installs all daemon dependencies (FastAPI, WebRTC, pygame, Adafruit libs). Use this if you just want to run TARS without modifying the daemon code.
+Installs all daemon dependencies (FastAPI, WebRTC, pygame, Adafruit libs). Includes `tars-daemon` and `tars-servo-tester` CLI commands.
 
 **Option B: Git clone (for development)**
 
@@ -97,14 +97,14 @@ pip install -e .[daemon]
 ./start.sh
 ```
 
-Use this if you want to modify the daemon, contribute code, or run the servo tester and config tools (`src/app-servotester.py`).
+Use this if you want to modify the daemon, contribute code, or run dev tools directly from source (`src/app-servotester.py`, `src/app-cms.py`).
 
 | | PyPI | Git clone |
 |---|---|---|
 | Install time | Fast | Moderate |
 | Dashboard updates | One-click from UI | `git pull` |
 | Modify daemon code | No | Yes |
-| Servo tester / dev tools | No | Yes |
+| Servo tester / dev tools | `tars-servo-tester` CLI | CLI + direct source access |
 
 **[Full Installation Guide](./docs/INSTALLATION.md)** — detailed setup, systemd service, troubleshooting
 

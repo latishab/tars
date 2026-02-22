@@ -106,10 +106,14 @@ chmod +x start.sh
 ./start.sh
 ```
 
-Or run directly:
+Or run directly using the installed CLI commands:
 
 ```bash
-python -c "from tars_daemon import main; main()"
+# Start the daemon
+tars-daemon
+
+# Calibrate servos (on Pi with display attached)
+tars-servo-tester
 ```
 
 The daemon will:
@@ -147,6 +151,10 @@ python tars_daemon.py
 **Servo Tester** (calibration tool, run separately on Pi with display):
 
 ```bash
+# Via installed CLI (same result)
+tars-servo-tester
+
+# Or directly from source
 python src/app-servotester.py
 ```
 
