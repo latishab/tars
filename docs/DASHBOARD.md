@@ -155,7 +155,7 @@ python tars_daemon.py
 python start_dashboard.py
 ```
 
-Default port: 8080
+Default port: 8000
 
 ## Architecture
 
@@ -191,7 +191,7 @@ npm run build   # Production build
 
 ```bash
 cd dashboard/backend
-uvicorn server:app --reload --port 8080
+uvicorn server:app --reload --port 8000
 ```
 
 ## App Store API
@@ -316,7 +316,7 @@ Apps are installed in `~/tars-apps/` and must include an `app.json` manifest:
    ps aux | grep start_dashboard
    ```
 
-2. Check port 8080 is not in use:
+2. Check port 8000 is not in use:
    ```bash
    lsof -i:8000
    ```

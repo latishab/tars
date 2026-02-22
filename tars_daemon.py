@@ -604,8 +604,8 @@ def main():
     parser.add_argument(
         "--port", "-p",
         type=int,
-        default=8001,
-        help="REST API port (default: 8001)"
+        default=8000,
+        help="REST API port (default: 8000)"
     )
     parser.add_argument(
         "--no-display",

@@ -4,7 +4,7 @@ gRPC and WebRTC endpoints for camera, audio, and system control on Raspberry Pi 
 
 **Communication Protocols:**
 - **gRPC** (port 50051): Low-latency hardware control (camera, movements, status)
-- **WebRTC** (port 8001): Real-time bidirectional audio streaming
+- **WebRTC** (port 8000): Real-time bidirectional audio streaming
 
 ## gRPC API
 
@@ -288,7 +288,7 @@ except Exception as e:
 
 **WebRTC connection issues:**
 - Check RPi is running: `python tars_daemon.py`
-- Check port 8001 is accessible
+- Check port 8000 is accessible
 - Test from tars-conversation-app with `python tars_bot.py`
 
 ## Hardware Requirements
