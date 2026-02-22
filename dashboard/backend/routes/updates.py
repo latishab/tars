@@ -197,57 +197,43 @@ async def get_current_version():
 
 async def perform_update():
     """Perform update based on install mode, then restart service."""
+    import sys
+    import os
+    import signal
+
     mode = get_install_mode()
     logger.info(f"Starting system update (mode: {mode})...")
-    
+
     if mode == "git":
-        # Developer mode: git pull + editable install
-        
-        # Find the repo directory
         import tars_sdk
         repo_dir = None
         for parent in Path(tars_sdk.__file__).parents:
             if (parent / ".git").exists():
                 repo_dir = parent
                 break
-        
+
         if not repo_dir:
             logger.error("Git repo not found")
             return False
-        
-        # Git fetch
+
+        # Stay on main branch — pull to latest tag via merge, never checkout tag
+        # (checkout tag → detached HEAD breaks future pulls)
         code, _, err = run_git_command(["fetch", "--all", "--tags"], cwd=repo_dir)
         if code != 0:
             logger.error(f"Git fetch failed: {err}")
             return False
 
-        # Get latest release tag
-        code, latest_tag, _ = run_git_command(
-            ["describe", "--tags", "--abbrev=0", "origin/main"], 
-            cwd=repo_dir
-        )
-        
-        if code == 0 and latest_tag:
-            # Checkout the release tag
-            logger.info(f"Updating to release {latest_tag}")
-            code, out, err = run_git_command(["checkout", latest_tag], cwd=repo_dir)
-            if code != 0:
-                logger.error(f"Git checkout failed: {err}")
-                return False
-            logger.info(f"Checked out {latest_tag}: {out}")
-        else:
-            # Fallback: pull main (for repos without tags)
-            logger.warning("No release tags found, pulling main")
-            code, out, err = run_git_command(["pull", "--ff-only"], cwd=repo_dir)
-            if code != 0:
-                logger.error(f"Git pull failed: {err}")
-                return False
-            logger.info(f"Git pull result: {out}")
+        code, out, err = run_git_command(["pull", "--ff-only", "origin", "main"], cwd=repo_dir)
+        if code != 0:
+            logger.error(f"Git pull failed: {err}")
+            return False
+        logger.info(f"Git pull: {out}")
 
-        # Reinstall in editable mode
+        # Use venv python explicitly so pip targets the right environment
+        pip_cmd = [sys.executable, "-m", "pip", "install", "-e", "."]
         try:
             result = subprocess.run(
-                ["pip", "install", "-e", "."],
+                pip_cmd,
                 capture_output=True,
                 text=True,
                 timeout=120,
@@ -259,12 +245,13 @@ async def perform_update():
         except Exception as e:
             logger.error(f"pip install error: {e}")
             return False
-            
+
     else:
-        # PyPI mode: pip upgrade
+        # PyPI mode: upgrade installed package
+        pip_cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "tars-robot[daemon]"]
         try:
             result = subprocess.run(
-                ["pip", "install", "--upgrade", "tars-robot[daemon]"],
+                pip_cmd,
                 capture_output=True,
                 text=True,
                 timeout=300
@@ -272,7 +259,7 @@ async def perform_update():
             if result.returncode != 0:
                 logger.error(f"pip upgrade failed: {result.stderr}")
                 return False
-            logger.info(f"pip upgrade output: {result.stdout}")
+            logger.info(f"pip upgrade: {result.stdout[-500:] if result.stdout else 'ok'}")
         except subprocess.TimeoutExpired:
             logger.error("pip upgrade timed out")
             return False
@@ -280,25 +267,27 @@ async def perform_update():
             logger.error(f"pip upgrade error: {e}")
             return False
 
-    logger.info("Update completed successfully, restarting service...")
-    
-    # CRITICAL: Actually restart the service so new code takes effect
+    logger.info("Update complete — scheduling restart")
+
+    # Non-blocking restart: spawn a subprocess that waits for this process to
+    # finish its current work (3s), then asks systemd to restart the service.
+    # This avoids the race where systemd starts a new instance before the old
+    # one has released port 8000.
     try:
-        result = subprocess.run(
-            ["sudo", "systemctl", "restart", "tars"],
-            capture_output=True,
-            text=True,
-            timeout=10
+        subprocess.Popen(
+            ["bash", "-c", "sleep 3 && sudo systemctl restart tars"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,  # detach from our process group
         )
-        if result.returncode != 0:
-            logger.warning(f"systemctl restart returned: {result.stderr}")
-    except Exception as e:
-        logger.warning(f"systemctl restart failed: {e}, trying SIGTERM")
-        # Fallback: kill ourselves and let systemd restart us
-        import os
-        import signal
+        # Give the Popen a moment to register, then SIGTERM self cleanly
+        import time
+        time.sleep(0.5)
         os.kill(os.getpid(), signal.SIGTERM)
-    
+    except Exception as e:
+        logger.warning(f"Restart scheduling failed: {e}")
+        os.kill(os.getpid(), signal.SIGTERM)
+
     return True
 
 
