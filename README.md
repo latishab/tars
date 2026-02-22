@@ -182,42 +182,40 @@ The RPi will (unified daemon on port 8000):
 
 ---
 
-## 📜 License & Copyright
+## 📜 License & Attribution
 
-This project is a fork of [TARS-AI-Community/TARS-AI](https://github.com/TARS-AI-Community/TARS-AI) with contributions from multiple authors.
+This project is licensed under [CC-BY-NC 4.0](LICENSE) for non-commercial use.
 
-**License**: Creative Commons Attribution-NonCommercial 4.0 International (CC-BY-NC 4.0)
+### Attribution Chain
 
-**Copyright Holders**:
-- **Charles-Olivier Dion (AtomikSpace)** - Original hardware modules, movements, 3D design files
-- **Latisha B** - Daemon architecture, dashboard, gRPC/WebRTC servers, SDK
+Based on the mechanical puppet designs by Christopher Nolan, Nathan Crowley, and the production team who originally brought TARS to life—miniaturized CAD by Charlie Diaz, with additional modifications by the TARS-AI Community, AtomikSpace, and Latisha B.
 
-See [COPYRIGHT.md](./COPYRIGHT.md) for detailed ownership breakdown.
+**Contributors:**
+- **Christopher Nolan / Production Team** - Original TARS character from *Interstellar*
+- **Charlie Diaz** - Original miniaturized CAD files and code ([Hackster.io](https://www.hackster.io/charlesdiaz/how-to-build-your-own-replica-of-tars-from-interstellar-224833))
+- **TARS-AI Community** - Community project ([repo](https://github.com/TARS-AI-Community/TARS-AI))
+- **Charles-Olivier Dion (AtomikSpace)** - V2 hardware, modified CAD, hardware modules
+- **Latisha B** - Daemon architecture, display system, conversation pipeline
 
-### Non-Commercial Use
-
-You may:
-- Build and modify your own TARS robot
-- Share improvements and derivatives
-- Use the project for personal, educational, and research purposes
+See [COPYRIGHT.md](COPYRIGHT.md) for detailed ownership and licensing information.
 
 ### Commercial Use
 
-Commercial use is **not permitted** under CC-BY-NC 4.0 without explicit written permission from **both copyright holders**.
+Commercial use is **not permitted** under CC-BY-NC 4.0 without explicit written permission from **all applicable copyright holders**.
 
 Commercial use includes:
-- Selling 3D printed parts, kits, or complete robots  
-- Selling or distributing STL/CAD files for money  
-- Offering paid assembly, customization, or installation services  
-- Monetized content that distributes project files or derivatives  
-- Using this project in paid products, commercial research, or corporate projects  
-- Integrating into commercial software or hardware products  
+- Selling 3D printed parts, kits, or complete robots
+- Selling or distributing CAD files for money
+- Offering paid assembly, customization, or installation services
+- Monetized content that distributes project files or derivatives
+- Using this project in paid products, commercial research, or corporate projects
 
-**AtomikSpace files** (hardware modules, movements, 3D files) are subject to a dual-license model. See [DUAL-LICENSE.md](./DUAL-LICENSE.md) and contact atomikspace.labs@gmail.com for commercial licensing.
+**For commercial use, you must obtain separate licenses from:**
+- **AtomikSpace** (hardware modules, CAD modifications): atomikspace.labs@gmail.com
+- **Latisha B** (daemon, dashboard, SDK, display): Contact via GitHub
+- **Upstream contributors** (Charlie Diaz, TARS-AI Community): As applicable
 
-**Latisha B additions** (daemon, dashboard, gRPC, WebRTC, SDK) also require separate commercial licensing. Contact via GitHub for inquiries.
-
-See [LICENSE](./LICENSE) for full CC-BY-NC 4.0 terms.
+See [DUAL-LICENSE.md](DUAL-LICENSE.md) for AtomikSpace's dual-license model.
 
 
 ---
