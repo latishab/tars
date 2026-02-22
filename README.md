@@ -6,6 +6,9 @@ Raspberry Pi 5 robot daemon. Handles servo control, WebRTC audio streaming, disp
 
 ## 🛠️ What You Need
 
+See the [TARS-AI wiki](https://github.com/TARS-AI-Community/TARS-AI/wiki) for the full bill of materials and build instructions. Come back here if you want to run this distributed architecture instead of the original monolithic setup.
+
+
 **Hardware:**
 - Raspberry Pi 5 (or Pi 4 4GB+)
 - PCA9685 servo driver + servos
