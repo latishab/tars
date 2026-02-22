@@ -215,3 +215,11 @@ tars_sdk/proto/*_pb2_grpc.py
 dashboard/frontend/node_modules/
 dashboard/frontend/package-lock.json
 *.backup*
+
+# IDE
+.vscode/
+.DS_Store
+
+# Build artifacts
+*.backup
+.lgd-*
