@@ -123,7 +123,7 @@ Host Computer                      Raspberry Pi
 from transport import AiortcRPiClient
 
 # Connect to RPi
-client = AiortcRPiClient(rpi_url="http://raspberrypi.local:8000")
+client = AiortcRPiClient(rpi_url="http://tars.local:8000")
 await client.connect()
 
 # Audio tracks are established automatically
@@ -319,7 +319,7 @@ See `tars_sdk/proto/tars.proto` for complete API specification
 
 **Python SDK:**
 ```bash
-pip install git+https://github.com/latishab/tars.git
+pip install tars-robot
 ```
 
 **SDK Documentation:**

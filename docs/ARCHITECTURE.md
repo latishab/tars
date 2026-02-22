@@ -453,7 +453,7 @@ print(f"gRPC latency: {latency:.1f}ms")
 
 ## See Also
 
-- [DAEMON.md](./DAEMON.md) - Daemon setup and usage
-- [DASHBOARD.md](./DASHBOARD.md) - Web dashboard guide
-- [MOVEMENTS.md](./MOVEMENTS.md) - Available movements
-- [HARDWARE_IO.md](./HARDWARE_IO.md) - Hardware specifications
+- [Daemon](./DAEMON.md) - Daemon setup and usage
+- [Dashboard](./DASHBOARD.md) - Web dashboard guide
+- [API Reference](./API.md) - Available movements and SDK
+- [Hardware I/O](./HARDWARE_IO.md) - Camera, audio, hardware specs

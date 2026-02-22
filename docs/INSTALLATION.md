@@ -44,7 +44,7 @@ tars-daemon
 
 ## Auto-Start on Boot
 
-On your Pi:
+On your Pi (via SSH or directly):
 
 ### PyPI users
 
