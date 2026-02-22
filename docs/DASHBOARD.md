@@ -15,7 +15,7 @@ http://tars.local:8000
 
 ### Tailscale VPN
 ```bash
-http://100.x.x.x:8000
+http://tars:8000
 ```
 - Works from anywhere (dorm, corporate, mobile data)
 - Requires Tailscale setup
@@ -123,7 +123,7 @@ On first boot, TARS starts a WiFi hotspot:
 ```
 SSID: TARS-Setup
 Password: tars1234
-Access: http://10.42.0.1:8000/setup
+Access: http://tars.local:8000/setup (or http://10.42.0.1:8000/setup)
 ```
 
 The setup wizard guides through:
@@ -330,7 +330,7 @@ Apps are installed in `~/tars-apps/` and must include an `app.json` manifest:
 
 If `tars.local` doesn't work:
 - You're likely on dorm/corporate WiFi (client isolation)
-- Use Tailscale URL instead: `http://100.x.x.x:8000`
+- Use Tailscale URL instead: `http://tars:8000`
 - See Settings → Network for your Tailscale IP
 - Refer to [WiFi Setup Guide](./WIFI_SETUP.md) for details
 

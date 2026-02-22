@@ -253,7 +253,7 @@ AUDIO_SAMPLE_RATE_OUT=24000
 `config.ini`:
 ```ini
 [Connection]
-rpi_url = http://100.84.133.74:8000    # WebRTC signaling
+rpi_url = http://tars:8000    # Tailscale MagicDNS
 rpi_grpc = 100.84.133.74:50051         # Hardware control
 mode = robot
 
@@ -405,10 +405,10 @@ journalctl -u tars -f | grep gRPC
 
 ```bash
 # Check if RPi is reachable
-curl http://100.84.133.74:8000/health
+curl http://tars:8000/health
 
 # Test WebRTC signaling endpoint
-curl -X POST http://100.84.133.74:8000/api/offer \
+curl -X POST http://tars:8000/api/offer \
   -H "Content-Type: application/json" \
   -d '{"sdp": "test", "type": "offer"}'
 ```

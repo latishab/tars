@@ -6,7 +6,7 @@ Complete guide for configuring TARS WiFi connectivity.
 
 TARS supports multiple WiFi access methods:
 - **Local Network (mDNS)**: `http://tars.local:8000` - Works on home networks
-- **Tailscale VPN**: `http://100.x.x.x:8000` - Works everywhere (dorms, corporate networks, mobile data)
+- **Tailscale VPN**: `http://tars:8000` - Works everywhere (dorms, corporate networks, mobile data)
 
 ## Initial Setup
 
@@ -17,7 +17,7 @@ On first boot or when no WiFi is configured, TARS automatically starts a setup h
 ```
 SSID: TARS-Setup
 Password: tars1234
-IP: 10.42.0.1:8000
+Setup URL: http://tars.local:8000/setup (or http://10.42.0.1:8000/setup)
 ```
 
 ### 2. Connect to Hotspot
@@ -25,7 +25,7 @@ IP: 10.42.0.1:8000
 From your phone or laptop:
 1. Connect to **TARS-Setup** WiFi network
 2. Enter password: `tars1234`
-3. Open browser to `http://10.42.0.1:8000/setup`
+3. Open browser to `http://tars.local:8000/setup (or http://10.42.0.1:8000/setup)`
 
 ### 3. Setup Wizard
 
@@ -52,7 +52,7 @@ Before connecting, you'll see a confirmation modal showing:
 📋 Save these URLs before connecting:
 
 Tailscale (works everywhere):
-http://100.84.133.74:8000
+http://tars:8000
 
 Local network (home WiFi only):
 http://tars.local:8000
@@ -111,7 +111,7 @@ http://tars.local:8000
 
 **Access URL:**
 ```
-http://100.x.x.x:8000
+http://tars:8000
 ```
 (Your specific IP shown in setup modal)
 
