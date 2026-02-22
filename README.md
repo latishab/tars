@@ -1,8 +1,8 @@
 # TARS
 
-> **Note to Visitors:** This repository contains only the robot hardware daemon. The voice AI pipeline runs on a separate host computer. If you are looking for the full conversational AI system, see [tars-conversation-app](https://github.com/latishab/tars-conversation-app).
+> **Note to Visitors:** This repository is the robot hardware daemon. For a ready-to-run app, see [tars-conversation-app](https://github.com/latishab/tars-conversation-app).
 
-Raspberry Pi 5 robot daemon. Handles servo control, WebRTC audio streaming, display, camera, and battery monitoring. Connects to an AI brain running on a host computer.
+Raspberry Pi 5 robot daemon. Handles servo control, WebRTC audio streaming, display, camera, and battery monitoring. Apps connect via gRPC and WebRTC.
 
 ## What You Need
 
@@ -30,9 +30,14 @@ tars-daemon
 
 Dashboard: `http://tars.local:8000`
 
-### 2. Connect AI Brain
+### 2. Install an App
 
-On your host computer, run [tars-conversation-app](https://github.com/latishab/tars-conversation-app). It connects to the daemon over WebRTC and gRPC.
+Browse and install apps from the dashboard's Apps tab, or install directly:
+
+```bash
+# Featured: voice AI pipeline
+pip install tars-conversation-app
+```
 
 ---
 
@@ -69,9 +74,9 @@ pip install tars-robot
 ```python
 from tars_sdk import TarsClient
 
-client = TarsClient(tars.local:50051)
-client.move(wave_right)
-client.set_emotion(happy)
+client = TarsClient("tars.local:50051")
+client.move("wave_right")
+client.set_emotion("happy")
 client.close()
 ```
 
@@ -80,17 +85,27 @@ client.close()
 ## Architecture
 
 ```
-Host Computer                         Raspberry Pi
+App (any machine)                     tars-daemon (Raspberry Pi)
 ─────────────────────────────────     ─────────────────────────────
-tars-conversation-app                 tars-daemon
-  ├── LLM (Claude)                      ├── gRPC Server (:50051)
-  ├── STT (Deepgram)                    ├── HTTP + Dashboard (:8000)
-  ├── TTS (Kokoro/Cartesia)             ├── WebRTC (aiortc)
-  └── TarsClient SDK ──────────────────→ ├── Servo Control (PCA9685)
-                        gRPC :50051      ├── Display (pygame)
-                        WebRTC :8000     ├── Camera
-                                         └── Battery (INA260)
+tars-conversation-app                   ├── gRPC Server (:50051)
+  ├── LLM (Claude)                      ├── HTTP + Dashboard (:8000)
+  ├── STT (Deepgram)                    ├── WebRTC Audio
+  ├── TTS (Kokoro)                      ├── Servo Control (PCA9685)
+  └── TarsClient SDK ─────────────────►├── Display (pygame)
+                        gRPC :50051     ├── Camera
+                        WebRTC :8000    └── Battery (INA260)
 ```
+
+Apps connect via gRPC (:50051) and WebRTC (:8000). They can run on a separate computer or on the Pi itself.
+
+---
+
+## Apps
+
+TARS supports installable apps. Browse and install from the dashboard's Apps tab.
+
+**Featured:**
+- **[tars-conversation-app](https://github.com/latishab/tars-conversation-app)** — Voice AI pipeline (LLM, STT, TTS). Talk to your robot.
 
 ---
 
@@ -103,18 +118,6 @@ tars-conversation-app                 tars-daemon
 - [Daemon](./docs/DAEMON.md)
 - [Dashboard](./docs/DASHBOARD.md)
 - [Architecture](./docs/ARCHITECTURE.md)
-
----
-
-## AI Brain
-
-The voice AI pipeline (LLM, STT, TTS) runs separately from the daemon:
-
-**[tars-conversation-app](https://github.com/latishab/tars-conversation-app)**
-
-You can run it on:
-- **Host computer** (Mac/Windows/Linux) — recommended for better performance
-- **Raspberry Pi 5** — works, but may be slower depending on STT/TTS providers
 
 ---
 

@@ -11,7 +11,7 @@ pip install tars-robot
 ```python
 from tars_sdk import TarsClient
 
-client = TarsClient(tars.local:50051)
+client = TarsClient("tars.local:50051")
 
 # Movement
 client.move("wave_right")

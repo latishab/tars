@@ -9,9 +9,9 @@ pip install tars-robot
 ```python
 from tars_sdk import TarsClient
 
-client = TarsClient(tars.local:50051)
-client.move(wave_right)
-client.set_emotion(happy)
+client = TarsClient("tars.local:50051")
+client.move("wave_right")
+client.set_emotion("happy")
 client.close()
 ```
 

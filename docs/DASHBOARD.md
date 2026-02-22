@@ -21,12 +21,12 @@ Apps install to `~/tars-apps/`. Each app requires an `app.json` manifest:
 
 ```json
 {
-  name: my-app,
-  version: 1.0.0,
-  description: Description,
-  repository: https://github.com/user/my-app.git,
-  main: main.py,
-  install_script: install.sh
+  "name": "my-app",
+  "version": "1.0.0",
+  "description": "Description",
+  "repository": "https://github.com/user/my-app.git",
+  "main": "main.py",
+  "install_script": "install.sh"
 }
 ```
 
