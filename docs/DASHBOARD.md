@@ -8,14 +8,14 @@ TARS supports multiple access methods:
 
 ### Local Network (mDNS)
 ```bash
-http://tars.local:8080
+http://tars.local:8000
 ```
 - Works on home WiFi networks
 - Does NOT work on dorm/corporate networks (client isolation)
 
 ### Tailscale VPN
 ```bash
-http://100.x.x.x:8080
+http://100.x.x.x:8000
 ```
 - Works from anywhere (dorm, corporate, mobile data)
 - Requires Tailscale setup
@@ -23,7 +23,7 @@ http://100.x.x.x:8080
 
 ### Direct IP (Local Network)
 ```bash
-http://<raspberry-pi-ip>:8080
+http://<raspberry-pi-ip>:8000
 ```
 - Fallback method if mDNS not working
 - Only works on same local network
@@ -123,7 +123,7 @@ On first boot, TARS starts a WiFi hotspot:
 ```
 SSID: TARS-Setup
 Password: tars1234
-Access: http://10.42.0.1:8080/setup
+Access: http://10.42.0.1:8000/setup
 ```
 
 The setup wizard guides through:
@@ -199,7 +199,7 @@ uvicorn server:app --reload --port 8080
 ### Install App
 
 ```bash
-curl -X POST http://localhost:8080/api/apps/install \
+curl -X POST http://localhost:8000/api/apps/install \
   -H "Content-Type: application/json" \
   -d '{
     "app_id": "tars-conversation",
@@ -210,13 +210,13 @@ curl -X POST http://localhost:8080/api/apps/install \
 ### List Apps
 
 ```bash
-curl http://localhost:8080/api/apps
+curl http://localhost:8000/api/apps
 ```
 
 ### Run App
 
 ```bash
-curl -X POST http://localhost:8080/api/apps/run \
+curl -X POST http://localhost:8000/api/apps/run \
   -H "Content-Type: application/json" \
   -d '{"app_id": "tars-conversation-app"}'
 ```
@@ -224,7 +224,7 @@ curl -X POST http://localhost:8080/api/apps/run \
 ### Stop App
 
 ```bash
-curl -X POST http://localhost:8080/api/apps/stop \
+curl -X POST http://localhost:8000/api/apps/stop \
   -H "Content-Type: application/json" \
   -d '{"app_id": "tars-conversation-app"}'
 ```
@@ -234,7 +234,7 @@ curl -X POST http://localhost:8080/api/apps/stop \
 ### Get Status
 
 ```bash
-curl http://localhost:8080/api/wifi/status
+curl http://localhost:8000/api/wifi/status
 ```
 
 Returns:
@@ -250,13 +250,13 @@ Returns:
 ### Scan Networks
 
 ```bash
-curl http://localhost:8080/api/wifi/networks
+curl http://localhost:8000/api/wifi/networks
 ```
 
 ### Connect to Network
 
 ```bash
-curl -X POST http://localhost:8080/api/wifi/connect \
+curl -X POST http://localhost:8000/api/wifi/connect \
   -H "Content-Type: application/json" \
   -d '{
     "ssid": "NetworkName",
@@ -268,7 +268,7 @@ curl -X POST http://localhost:8080/api/wifi/connect \
 ### Connect to Enterprise WiFi
 
 ```bash
-curl -X POST http://localhost:8080/api/wifi/connect \
+curl -X POST http://localhost:8000/api/wifi/connect \
   -H "Content-Type: application/json" \
   -d '{
     "ssid": "UniversityWiFi",
@@ -284,10 +284,10 @@ curl -X POST http://localhost:8080/api/wifi/connect \
 
 ```bash
 # Start hotspot
-curl -X POST http://localhost:8080/api/wifi/hotspot/start
+curl -X POST http://localhost:8000/api/wifi/hotspot/start
 
 # Stop hotspot
-curl -X POST http://localhost:8080/api/wifi/hotspot/stop
+curl -X POST http://localhost:8000/api/wifi/hotspot/stop
 ```
 
 ## App Store Integration
@@ -318,7 +318,7 @@ Apps are installed in `~/tars-apps/` and must include an `app.json` manifest:
 
 2. Check port 8080 is not in use:
    ```bash
-   lsof -i:8080
+   lsof -i:8000
    ```
 
 3. Restart dashboard:
@@ -330,7 +330,7 @@ Apps are installed in `~/tars-apps/` and must include an `app.json` manifest:
 
 If `tars.local` doesn't work:
 - You're likely on dorm/corporate WiFi (client isolation)
-- Use Tailscale URL instead: `http://100.x.x.x:8080`
+- Use Tailscale URL instead: `http://100.x.x.x:8000`
 - See Settings → Network for your Tailscale IP
 - Refer to [WiFi Setup Guide](./WIFI_SETUP.md) for details
 
@@ -338,7 +338,7 @@ If `tars.local` doesn't work:
 
 1. Check ~/tars-apps/ directory exists
 2. Verify app.json in each app directory
-3. Check API endpoint: `curl http://localhost:8080/api/apps`
+3. Check API endpoint: `curl http://localhost:8000/api/apps`
 
 ### WebSocket disconnecting
 

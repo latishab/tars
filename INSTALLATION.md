@@ -133,19 +133,17 @@ python tars_daemon.py --grpc-port 50051 --face-tracking
 ```
 
 The daemon will:
-1. Start gRPC server on port 50051
-2. Start WebRTC server on port 8001
-3. Start web dashboard on port 8080
-4. Initialize hardware (servos, camera, display)
-5. Wait for AI brain or SDK client to connect
-
+1. Start unified HTTP server on port 8000 (WebRTC + Dashboard + REST API)
+2. Start gRPC server on port 50051
+3. Initialize hardware (servos, camera, display)
+4. Wait for AI brain or SDK client to connect
 ### Access Dashboard
 
 ```bash
 # In browser
-http://tars-pi.local:8080
+http://tars-pi.local:8000
 # or
-http://<pi-ip-address>:8080
+http://<pi-ip-address>:8000
 ```
 
 Dashboard features:
@@ -311,7 +309,7 @@ journalctl -u tars -f
 ps aux | grep start_dashboard
 
 # Check port
-lsof -i:8080
+lsof -i:8000
 
 # Restart
 pkill -f start_dashboard

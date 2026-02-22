@@ -108,16 +108,16 @@ On first boot, TARS starts a WiFi hotspot:
 ```
 SSID: TARS-Setup
 Password: tars1234
-Setup URL: http://10.42.0.1:8080/setup
+Setup URL: http://10.42.0.1:8000/setup
 ```
 
 After WiFi is configured, access the dashboard at:
 ```
 # Local network (home WiFi)
-http://tars.local:8080
+http://tars.local:8000
 
 # Tailscale (dorm/corporate networks)
-http://100.x.x.x:8080
+http://100.x.x.x:8000
 ```
 
 📖 **[WiFi Setup Guide](./docs/WIFI_SETUP.md)** - Complete WiFi configuration instructions
@@ -152,12 +152,11 @@ python tars_daemon.py --no-grpc
 python tars_daemon.py --grpc-port 50052
 ```
 
-The RPi will:
-1. Start the WebRTC server on port 8001
+The RPi will (unified daemon on port 8000):
+1. Start unified HTTP server on port 8000 (WebRTC + REST API + Dashboard)
 2. Start the gRPC server on port 50051 (default)
-3. Start the web dashboard on port 8080
-4. Wait for the host computer to connect via POST /api/offer
-5. Once connected, audio flows bidirectionally and gRPC handles hardware control
+3. Wait for host computer to connect via POST /api/offer
+4. Once connected, audio flows bidirectionally and gRPC handles hardware control
 
 
 ## Documentation

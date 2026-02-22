@@ -41,7 +41,7 @@ The robot boots independently and waits for connections.
 │   │                          │         │   - DeepInfra LLM        │    │
 │   │   ┌──────────────────┐   │         │   - ElevenLabs TTS       │    │
 │   │   │ Web Dashboard    │   │         │                          │    │
-│   │   │ :8080            │   │         │                          │    │
+│   │   │ :8000            │   │         │                          │    │
 │   │   │                  │   │         │                          │    │
 │   │   │ • Status         │   │         │                          │    │
 │   │   │ • Control        │   │         │                          │    │
@@ -153,7 +153,7 @@ tars_daemon.py (single process)
 │   ├── StreamBattery() - real-time battery
 │   └── StreamMovementStatus() - movement progress
 │
-├── HTTP Server (:8001) - Minimal
+├── HTTP Server (:8000) - Minimal
 │   ├── POST /api/offer (WebRTC signaling only)
 │   └── GET /health (convenience - also in gRPC)
 │
@@ -162,7 +162,7 @@ tars_daemon.py (single process)
 │   ├── MicrophoneTrack → sends to host computer
 │   └── SpeakerOutput ← receives from host computer
 │
-├── Web Dashboard (:8080)
+├── Unified HTTP Server (:8000)
 │   ├── Status - system metrics, battery, connections
 │   ├── Control - movement controls with joystick
 │   ├── Apps - app marketplace and management
@@ -227,7 +227,7 @@ tars_bot.py (robot mode)
 python tars_daemon.py [OPTIONS]
 
 Options:
-  --port PORT         HTTP API port (default: 8001)
+  --port PORT         HTTP API port (default: 8000)
   --grpc-port PORT    gRPC API port (default: 50051)
   --no-display        Headless mode (no pygame window)
   --no-webrtc         Disable WebRTC server
@@ -253,7 +253,7 @@ AUDIO_SAMPLE_RATE_OUT=24000
 `config.ini`:
 ```ini
 [Connection]
-rpi_url = http://100.84.133.74:8001    # WebRTC signaling
+rpi_url = http://100.84.133.74:8000    # WebRTC signaling
 rpi_grpc = 100.84.133.74:50051         # Hardware control
 mode = robot
 
@@ -289,8 +289,8 @@ sudo systemctl start tars
 
 **On boot, RPi will:**
 1. Start gRPC server on :50051
-2. Start HTTP server on :8001 (WebRTC signaling)
-3. Start web dashboard on :8080
+2. Start HTTP server on :8000 (WebRTC signaling)
+3. Initialize hardware and wait for connections
 4. Initialize hardware (servos, camera, display)
 5. Wait for AI brain connection
 6. Display shows "Waiting for brain..."
@@ -305,7 +305,7 @@ python tars_bot.py
 **Host Computer will:**
 1. Connect gRPC client to RPi :50051
 2. Create WebRTC client
-3. POST SDP offer to RPi :8001/api/offer
+3. POST SDP offer to RPi :8000/api/offer
 4. Establish P2P audio connection
 5. Start Pipecat pipeline with STT/LLM/TTS
 6. Use gRPC for all hardware control
@@ -405,10 +405,10 @@ journalctl -u tars -f | grep gRPC
 
 ```bash
 # Check if RPi is reachable
-curl http://100.84.133.74:8001/health
+curl http://100.84.133.74:8000/health
 
 # Test WebRTC signaling endpoint
-curl -X POST http://100.84.133.74:8001/api/offer \
+curl -X POST http://100.84.133.74:8000/api/offer \
   -H "Content-Type: application/json" \
   -d '{"sdp": "test", "type": "offer"}'
 ```
@@ -420,7 +420,7 @@ curl -X POST http://100.84.133.74:8001/api/offer \
 ps aux | grep start_dashboard
 
 # Check port 8080
-lsof -i:8080
+lsof -i:8000  # Unified HTTP server
 
 # Restart dashboard
 pkill -f start_dashboard
