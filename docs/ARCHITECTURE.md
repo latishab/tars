@@ -84,8 +84,8 @@ rpc Health() → HealthResponse
 rpc GetStatus() → StatusResponse
 
 // Movement
-rpc Move(movement, speed) → MoveResponse
-rpc Reset() → Empty
+rpc ExecuteMovement(movement) → ExecuteMovementResponse
+rpc ResetPosition() → Empty
 
 // Display
 rpc SetEmotion(emotion) → Empty
@@ -93,6 +93,10 @@ rpc SetEyeState(state) → Empty
 
 // Camera
 rpc CaptureCamera(width, height, quality) → CaptureResponse
+
+// Audio
+rpc SetMicMute(muted) → Empty
+rpc GetMicMute() → MicMuteResponse
 
 // Streaming
 rpc StreamBattery() → stream BatteryStatus
@@ -145,24 +149,28 @@ User speaks → RPi USB Mic
 tars_daemon.py (single process)
 ├── gRPC Server (:50051)
 │   ├── Health() - comprehensive status
-│   ├── Move() - execute movements
+│   ├── ExecuteMovement() - execute movements
+│   ├── ResetPosition() - reset servo positions
 │   ├── SetEmotion() - display control
 │   ├── SetEyeState() - eye animations
 │   ├── CaptureCamera() - grab frames
 │   ├── GetStatus() - robot status
+│   ├── SetMicMute() - mute/unmute mic
+│   ├── GetMicMute() - get mute state
 │   ├── StreamBattery() - real-time battery
 │   └── StreamMovementStatus() - movement progress
 │
-├── HTTP Server (:8000) - Minimal
-│   ├── POST /api/offer (WebRTC signaling only)
-│   └── GET /health (convenience - also in gRPC)
+├── HTTP Server (:8000)
+│   ├── POST /api/offer (WebRTC signaling)
+│   ├── GET /health
+│   └── GET /dashboard/ (web UI)
 │
 ├── WebRTC Server (aiortc)
 │   ├── Waits for AI brain connections
 │   ├── MicrophoneTrack → sends to host computer
 │   └── SpeakerOutput ← receives from host computer
 │
-├── Unified HTTP Server (:8000)
+├── Web Dashboard (:8000 /dashboard/)
 │   ├── Status - system metrics, battery, connections
 │   ├── Control - movement controls with joystick
 │   ├── Apps - app marketplace and management
@@ -416,15 +424,14 @@ curl -X POST http://tars:8000/api/offer \
 ### Dashboard Not Accessible
 
 ```bash
-# Check dashboard is running
-ps aux | grep start_dashboard
+# Check port 8000 is active
+lsof -i:8000
 
-# Check port 8000
-lsof -i:8000  # Unified HTTP server
+# Restart daemon (dashboard is served by the daemon)
+sudo systemctl restart tars
 
-# Restart dashboard
-pkill -f start_dashboard
-python start_dashboard.py
+# Access dashboard
+curl http://localhost:8000/dashboard/
 ```
 
 ### Performance Testing

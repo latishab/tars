@@ -148,14 +148,11 @@ No manual intervention needed for normal operation.
 The dashboard starts automatically with the daemon:
 
 ```bash
-# Via daemon
 python tars_daemon.py
-
-# Or standalone
-python start_dashboard.py
 ```
 
-Default port: 8000
+Access at  (local) or  (Tailscale).
+Navigating to  redirects automatically.
 
 ## Architecture
 
@@ -163,7 +160,7 @@ Default port: 8000
 Dashboard
 ├── Backend (FastAPI)
 │   ├── /api/status - System metrics
-│   ├── /api/movements - Movement controls
+│   ├── /api/control - Movement controls
 │   ├── /api/apps - App management
 │   ├── /api/wifi - WiFi management
 │   ├── /api/setup - Initial setup wizard
@@ -311,19 +308,19 @@ Apps are installed in `~/tars-apps/` and must include an `app.json` manifest:
 
 ### Dashboard not accessible
 
-1. Check dashboard is running:
+1. Check daemon is running:
    ```bash
-   ps aux | grep start_dashboard
+   sudo systemctl status tars
    ```
 
-2. Check port 8000 is not in use:
+2. Check port 8000:
    ```bash
    lsof -i:8000
    ```
 
-3. Restart dashboard:
+3. Restart daemon:
    ```bash
-   sudo systemctl restart tars-dashboard
+   sudo systemctl restart tars
    ```
 
 ### Cannot access tars.local

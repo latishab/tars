@@ -25,9 +25,10 @@ tars_daemon.py (single process)
 │
 ├── gRPC Server (:50051)
 │   ├── Health, GetStatus
-│   ├── Move, Reset
+│   ├── ExecuteMovement, ResetPosition
 │   ├── SetEmotion, SetEyeState
 │   ├── CaptureCamera
+│   ├── SetMicMute, GetMicMute
 │   └── StreamBattery, StreamMovementStatus
 │
 ├── HTTP Server (:8000)
