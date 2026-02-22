@@ -1,235 +1,70 @@
-# Installation Guide
+# Installation
 
-## PyPI Package
-
-The TARS robot software is available on PyPI as **tars-robot**.
-
-### SDK Only (Client Library)
-
-For controlling a TARS robot remotely via gRPC:
+## SDK (Control robot remotely)
 
 ```bash
 pip install tars-robot
 ```
 
-This installs only the gRPC client SDK for communicating with the robot daemon.
-
-### With Daemon Dependencies
-
-For running the full robot daemon on Raspberry Pi:
-
-```bash
-pip install tars-robot[daemon]
-```
-
-This includes all dependencies needed to run the robot daemon:
-- FastAPI & Uvicorn (HTTP API server)
-- aiortc (WebRTC audio streaming)
-- OpenCV (camera processing)
-- pygame (display/roboeyes)
-- pyserial (servo control)
-- Adafruit libraries (PCA9685 servos, INA260 battery monitor)
-
-### All Dependencies
-
-To install everything:
-
-```bash
-pip install tars-robot[all]
-```
-
----
-
-## SDK Usage Example
-
 ```python
 from tars_sdk import TarsClient
 
-# Connect to robot
 client = TarsClient("tars-pi.local:50051")
-
-# Control the robot
 client.move("wave_right")
 client.set_emotion("happy")
-
-# Capture camera frame
-frame = client.capture_camera(width=640, height=480, quality=85)
-
-# Get status
-status = client.get_status()
-print(f"Battery: {status['battery']['level']}%")
-
-# Close connection
 client.close()
 ```
 
-### Async SDK
-
-```python
-from tars_sdk import AsyncTarsClient
-import asyncio
-
-async def main():
-    async with AsyncTarsClient("tars-pi.local:50051") as client:
-        await client.move("nod")
-        await client.set_emotion("excited")
-        frame = await client.capture_camera()
-
-asyncio.run(main())
-```
-
 ---
 
-## Daemon Installation (Raspberry Pi)
-
-Two methods to install the robot daemon on a Raspberry Pi. **PyPI** is simpler; **Git clone** is for development.
-
----
-
-### Method 1: PyPI (Recommended)
+## Daemon (Run on Raspberry Pi)
 
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate
-
-# Install daemon + all dependencies
 pip install tars-robot[daemon]
-```
-
-After install, run the daemon:
-
-```bash
-# Download and run start script
-curl -O https://raw.githubusercontent.com/latishab/tars/main/start.sh
-chmod +x start.sh
-./start.sh
-```
-
-Or run directly using the installed CLI commands:
-
-```bash
-# Start the daemon
 tars-daemon
-
-# Calibrate servos (on Pi with display attached)
-tars-servo-tester
 ```
 
-The daemon will:
-1. Start unified HTTP server on port 8000 (dashboard + WebRTC signaling + REST API)
-2. Start gRPC server on port 50051
-3. Wait for AI brain or SDK client to connect
+Dashboard at `http://tars.local:8000`
 
-**Dashboard:** Open `http://tars.local:8000` in a browser.
+### Auto-start on boot
 
----
+```bash
+sudo cp tars.service /etc/systemd/system/
+sudo systemctl enable --now tars
+```
 
-### Method 2: Git Clone (Development)
+### Development install
 
 ```bash
 git clone https://github.com/latishab/tars.git
-cd tars
+cd tars && pip install -e .[daemon]
+tars-daemon
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate
-
-# Install in editable mode
-pip install -e .[daemon]
-```
-
-Run the daemon:
-
-```bash
-./start.sh
-
-# Or directly
-python tars_daemon.py
-```
-
-**Servo Tester** (calibration tool, run separately on Pi with display):
-
-```bash
-# Via installed CLI (same result)
+# Servo calibration tool (Pi with display only)
 tars-servo-tester
-
-# Or directly from source
-python src/app-servotester.py
-```
-
----
-
-### Systemd Service (Auto-start on boot)
-
-```bash
-# Copy service file
-sudo cp tars.service /etc/systemd/system/
-
-# Enable and start
-sudo systemctl daemon-reload
-sudo systemctl enable tars
-sudo systemctl start tars
-
-# Check status
-sudo systemctl status tars
-journalctl -u tars -f
-```
-
----
-
-## System Requirements
-
-### For SDK (Client)
-- Python 3.9+
-- Any OS (Windows, macOS, Linux)
-
-### For Daemon (Raspberry Pi)
-- Raspberry Pi 5 (or 4 with 4GB+ RAM)
-- Raspberry Pi OS (64-bit recommended)
-- Python 3.9+
-- I2C enabled
-- Camera enabled (Pi Camera or USB webcam)
-
----
-
-## Environment Variables
-
-Optional configuration for the SDK:
-
-```bash
-# Default connection settings
-export TARS_HOST="100.84.133.74"  # Tailscale IP
-export TARS_PORT="50051"
 ```
 
 ---
 
 ## Troubleshooting
 
-### SDK Connection Issues
+### SDK connection issues
 
-If you cannot connect to the robot:
-
-1. Check robot is running: `ssh tars-pi "ps aux | grep tars_daemon"`
+1. Check daemon is running: `ssh tars-pi "sudo systemctl status tars"`
 2. Test gRPC port: `telnet tars-pi.local 50051`
-3. Check firewall settings on Pi
-4. Verify network connectivity (ping tars-pi.local)
+3. Verify network: `ping tars-pi.local`
 
-### Daemon Issues
+### Daemon issues
 
-If daemon fails to start:
-
-1. Check I2C is enabled: `sudo raspi-config` > Interface Options > I2C
+1. Check I2C is enabled: `sudo raspi-config` → Interface Options → I2C
 2. Verify camera: `libcamera-hello`
 3. Check permissions: `sudo usermod -a -G i2c,gpio,video mac`
-4. Check logs: `tail -f /tmp/tars.log`
+4. Check logs: `journalctl -u tars -f`
 
 ---
 
-## Next Steps
+## See also
 
-- [API Documentation](./MOVEMENTS.md) - Available movements and API
-- [Hardware Setup](./HARDWARE_IO.md) - Camera and audio configuration
-- [Architecture](./ARCHITECTURE.md) - System architecture overview
-
+- [Movements & API](./MOVEMENTS.md)
+- [Hardware I/O](./HARDWARE_IO.md)
+- [Architecture](./ARCHITECTURE.md)
