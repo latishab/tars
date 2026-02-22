@@ -1,11 +1,10 @@
 """Settings API routes."""
 
 import json
-import httpx
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from loguru import logger
 
@@ -13,9 +12,6 @@ router = APIRouter()
 
 # Settings file path
 SETTINGS_FILE = Path(__file__).parent.parent.parent.parent / "state" / "settings.json"
-
-# Daemon URL (running on same host)
-DAEMON_URL = "http://localhost:8000"
 
 # Default settings
 DEFAULT_SETTINGS = {
@@ -107,8 +103,8 @@ async def update_settings(update: SettingsUpdate):
 
 
 @router.post("/emotion")
-async def set_emotion(request: EmotionRequest):
-    """Set display emotion by proxying to daemon."""
+async def set_emotion(request: EmotionRequest, req: Request):
+    """Set display emotion (direct daemon access)."""
     valid_emotions = ['neutral', 'happy', 'sad', 'angry', 'excited', 'afraid', 'sideeye_left', 'sideeye_right', 'sleepy']
     if request.emotion not in valid_emotions:
         raise HTTPException(
@@ -117,28 +113,20 @@ async def set_emotion(request: EmotionRequest):
         )
 
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{DAEMON_URL}/api/emotion",
-                json={"emotion": request.emotion},
-                timeout=5.0
-            )
-            response.raise_for_status()
-            return response.json()
-    except httpx.RequestError as e:
-        logger.error(f"Failed to connect to daemon: {e}")
-        raise HTTPException(status_code=503, detail="Daemon not available")
-    except httpx.HTTPStatusError as e:
-        logger.error(f"Daemon returned error: {e}")
-        raise HTTPException(status_code=e.response.status_code, detail=str(e))
+        daemon = req.app.state.daemon
+        if daemon and daemon.display:
+            daemon.display.set_emotion(request.emotion)
+            return {"success": True, "emotion": request.emotion}
+        else:
+            raise HTTPException(status_code=503, detail="Display not available")
     except Exception as e:
         logger.error(f"Failed to set emotion: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/eye-state")
-async def set_eye_state(request: EyeStateRequest):
-    """Set eye state by proxying to daemon."""
+async def set_eye_state(request: EyeStateRequest, req: Request):
+    """Set eye state (direct daemon access)."""
     valid_states = ["idle", "listening", "thinking", "speaking"]
     if request.state not in valid_states:
         raise HTTPException(
@@ -147,20 +135,12 @@ async def set_eye_state(request: EyeStateRequest):
         )
 
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{DAEMON_URL}/api/eye-state",
-                json={"state": request.state},
-                timeout=5.0
-            )
-            response.raise_for_status()
-            return response.json()
-    except httpx.RequestError as e:
-        logger.error(f"Failed to connect to daemon: {e}")
-        raise HTTPException(status_code=503, detail="Daemon not available")
-    except httpx.HTTPStatusError as e:
-        logger.error(f"Daemon returned error: {e}")
-        raise HTTPException(status_code=e.response.status_code, detail=str(e))
+        daemon = req.app.state.daemon
+        if daemon and daemon.display:
+            daemon.display.set_eye_state(request.state)
+            return {"success": True, "state": request.state}
+        else:
+            raise HTTPException(status_code=503, detail="Display not available")
     except Exception as e:
         logger.error(f"Failed to set eye state: {e}")
         raise HTTPException(status_code=500, detail=str(e))
