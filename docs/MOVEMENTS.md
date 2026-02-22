@@ -24,7 +24,7 @@ python tars_daemon.py
 
 The service will start:
 - gRPC server on port 50051 (hardware control)
-- WebRTC server on port 8001 (audio streaming)
+- WebRTC server on port 8000 (audio streaming)
 
 ### Test Movement
 
@@ -170,12 +170,12 @@ For custom choreography, use the servo control module directly:
 **Python Example:**
 ```bash
 # Raise both legs up
-curl -X POST http://localhost:8001/move/legs \
+curl -X POST http://localhost:8000/move/legs \
   -H "Content-Type: application/json" \
   -d '{"left_height": 20, "right_height": 20, "speed": 0.6}'
 
 # Neutral position
-curl -X POST http://localhost:8001/move/legs \
+curl -X POST http://localhost:8000/move/legs \
   -H "Content-Type: application/json" \
   -d '{"left_height": 50, "right_height": 50, "left_leg": 50, "right_leg": 50, "speed": 0.8}'
 ```
@@ -184,14 +184,14 @@ curl -X POST http://localhost:8001/move/legs \
 Reset all servos to neutral position
 
 ```bash
-curl -X POST http://localhost:8001/reset
+curl -X POST http://localhost:8000/reset
 ```
 
 ### `POST /disable`
 Disable all servos (power off)
 
 ```bash
-curl -X POST http://localhost:8001/disable
+curl -X POST http://localhost:8000/disable
 ```
 
 ## Configuration
@@ -301,20 +301,20 @@ python app-servotester.py
 
 ```bash
 # List all movements
-curl http://localhost:8001/movements
+curl http://localhost:8000/movements
 
 # Execute movement
-curl -X POST http://localhost:8001/move \
+curl -X POST http://localhost:8000/move \
   -H "Content-Type: application/json" \
   -d '{"movements": ["step_forward"]}'
 
 # Test manual control
-curl -X POST http://localhost:8001/move/legs \
+curl -X POST http://localhost:8000/move/legs \
   -H "Content-Type: application/json" \
   -d '{"left_height": 50, "right_height": 50, "speed": 0.8}'
 
 # Reset to neutral
-curl -X POST http://localhost:8001/reset
+curl -X POST http://localhost:8000/reset
 ```
 
 ## Troubleshooting
@@ -344,7 +344,7 @@ sudo i2cdetect -y 1
    - Channel 2: Left leg position
    - Channel 3: Right leg position
 5. Verify calibration values in config.ini (via GUI)
-6. Test with manual commands: `curl -X POST http://localhost:8001/reset`
+6. Test with manual commands: `curl -X POST http://localhost:8000/reset`
 
 **Common issues:**
 - **Servo jittering**: Adjust calibration offsets in Servo Tester GUI
@@ -356,7 +356,7 @@ sudo i2cdetect -y 1
 
 1. Check if movement is available:
    ```bash
-   curl http://localhost:8001/movements
+   curl http://localhost:8000/movements
    ```
 2. Test movement in Servo Tester GUI first
 3. Check logs for error messages
@@ -390,8 +390,8 @@ sudo i2cdetect -y 1
 
 FastAPI automatically generates interactive documentation:
 
-- Swagger UI: `http://localhost:8001/docs`
-- ReDoc: `http://localhost:8001/redoc`
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
 
 ## Dependencies
 

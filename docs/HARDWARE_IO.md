@@ -102,7 +102,7 @@ Host Computer                      Raspberry Pi
 from transport import AiortcRPiClient
 
 # Connect to RPi
-client = AiortcRPiClient(rpi_url="http://raspberrypi.local:8001")
+client = AiortcRPiClient(rpi_url="http://raspberrypi.local:8000")
 await client.connect()
 
 # Audio tracks are established automatically

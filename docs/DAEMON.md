@@ -30,7 +30,7 @@ tars_daemon.py (single process)
 │   ├── CaptureCamera
 │   └── StreamBattery, StreamMovementStatus
 │
-├── HTTP Server (:8001)
+├── HTTP Server (:8000)
 │   ├── POST /api/offer (WebRTC signaling)
 │   └── GET /health
 │
@@ -56,7 +56,7 @@ tars_daemon.py (single process)
 ```bash
 python tars_daemon.py [OPTIONS]
 
---port PORT         HTTP API port (default: 8001)
+--port PORT         HTTP API port (default: 8000)
 --grpc-port PORT    gRPC API port (default: 50051)
 --no-display        Headless mode (no pygame window)
 --no-webrtc         Disable WebRTC server
@@ -124,10 +124,10 @@ status = client.get_status()
 
 ```bash
 # Health check
-curl http://localhost:8001/health
+curl http://localhost:8000/health
 
 # WebRTC signaling (used by aiortc)
-curl -X POST http://localhost:8001/api/offer \
+curl -X POST http://localhost:8000/api/offer \
   -H "Content-Type: application/json" \
   -d '{"sdp": "...", "type": "offer"}'
 ```
@@ -174,7 +174,7 @@ journalctl -u tars -f | grep gRPC
 
 ```bash
 # Check HTTP server
-curl http://localhost:8001/health
+curl http://localhost:8000/health
 
 # Test connectivity - replace with your robot's IP
 ping 100.115.193.41
@@ -227,7 +227,7 @@ python tars_daemon.py
 python -c "from tars_sdk import TarsClient; print(TarsClient().health())"
 
 # Test HTTP
-curl http://localhost:8001/health
+curl http://localhost:8000/health
 
 # Monitor logs
 journalctl -u tars -f

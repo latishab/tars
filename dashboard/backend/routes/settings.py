@@ -15,7 +15,7 @@ router = APIRouter()
 SETTINGS_FILE = Path(__file__).parent.parent.parent.parent / "state" / "settings.json"
 
 # Daemon URL (running on same host)
-DAEMON_URL = "http://localhost:8001"
+DAEMON_URL = "http://localhost:8000"
 
 # Default settings
 DEFAULT_SETTINGS = {
