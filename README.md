@@ -108,7 +108,7 @@ On first boot, TARS starts a WiFi hotspot:
 ```
 SSID: TARS-Setup
 Password: tars1234
-Setup URL: http://10.42.0.1:8000/setup
+Setup URL: http://tars.local:8000/setup (or http://10.42.0.1:8000/setup)
 ```
 
 After WiFi is configured, access the dashboard at:
@@ -117,7 +117,7 @@ After WiFi is configured, access the dashboard at:
 http://tars.local:8000
 
 # Tailscale (dorm/corporate networks)
-http://100.x.x.x:8000
+http://tars:8000
 ```
 
 📖 **[WiFi Setup Guide](./docs/WIFI_SETUP.md)** - Complete WiFi configuration instructions
