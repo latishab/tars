@@ -492,6 +492,10 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
 
         disable_all_servos()
         logger.info("TARS Daemon stopped")
+        # Force exit to release port immediately; non-daemon threads (gRPC pool)
+        # would otherwise keep the process alive and block service restart.
+        import os as _os
+        _os._exit(0)
 
     # === Callbacks from WebRTC data channel ===
 
