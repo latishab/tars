@@ -49,21 +49,6 @@ daemon = [
     "aiofiles>=23.0.0",
 ]
 
-# Install everything (daemon + SDK)
-all = [
-    "grpcio-tools>=1.60.0",
-    "fastapi>=0.104.0",
-    "uvicorn>=0.24.0",
-    "aiortc>=1.6.0",
-    "opencv-python>=4.8.0",
-    "numpy>=1.24.0",
-    "pygame>=2.5.0",
-    "pyserial>=3.5",
-    "adafruit-circuitpython-pca9685>=3.4.0",
-    "adafruit-circuitpython-ina260>=1.3.0",
-    "psutil>=5.9.0",
-    "aiofiles>=23.0.0",
-]
 
 [project.urls]
 Homepage = "https://github.com/latishab/tars"

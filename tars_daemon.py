@@ -630,7 +630,41 @@ def main():
         default=50051,
         help="gRPC server port (default: 50051)"
     )
+    parser.add_argument(
+        "--install-service",
+        action="store_true",
+        help="Print systemd service file and installation instructions, then exit"
+    )
     args = parser.parse_args()
+
+    if args.install_service:
+        import os
+        python_path = sys.executable
+        user = os.getenv("USER", "pi")
+        service = f"""[Unit]
+Description=TARS Robot Daemon
+After=network.target
+
+[Service]
+Type=simple
+User={user}
+ExecStart={python_path} -m tars_daemon
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target
+"""
+        path = "/etc/systemd/system/tars.service"
+        print(service)
+        print("To install, run:")
+        print(f"  sudo tee {path} > /dev/null << 'EOF'")
+        print(service.rstrip())
+        print("EOF")
+        print("  sudo systemctl daemon-reload")
+        print("  sudo systemctl enable --now tars")
+        sys.exit(0)
 
     # Configure logging
     logger.remove()
