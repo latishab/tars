@@ -311,7 +311,7 @@ tailscale ip -4
 **Check**:
 1. Pi is powered on and booted (wait 60 seconds)
 2. NetworkManager service running: `systemctl status NetworkManager`
-3. Check logs: `journalctl -u tars-dashboard -n 50`
+3. Check logs: `journalctl -u tars -n 50`
 
 **Manual start**:
 ```bash
@@ -332,7 +332,7 @@ python -c "from dashboard.backend.wifi_manager import WiFiManager; WiFiManager()
 **Check service**:
 ```bash
 ssh tars-pi
-sudo systemctl status tars-dashboard
+sudo systemctl status tars
 ```
 
 ## Advanced Configuration

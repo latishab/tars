@@ -48,6 +48,27 @@ print(status)
 # }
 ```
 
+## Audio Mute API
+
+### `SetMicMute(muted)`
+Mute or unmute the robot microphone.
+
+**Python Example:**
+```python
+# Mute mic
+client.set_mic_mute(True)
+
+# Unmute mic
+client.set_mic_mute(False)
+
+# Check current state
+is_muted = client.is_mic_muted
+```
+
+When muted, the WebRTC audio track stops forwarding frames from the mic. Queued frames are drained to prevent buffer fill. The mic hardware remains active.
+
+---
+
 ## Camera API
 
 ### `CaptureCamera(width, height, quality)`
@@ -125,12 +146,6 @@ The camera module automatically detects and uses available cameras:
 2. **USB Webcam** (fallback) - Uses OpenCV
 
 **No manual configuration required** - just connect your camera and the system will detect it.
-
-**Configuration in `src/config.ini`:**
-```ini
-[UI]
-use_camera_module = True  # Enable/disable camera in servo tester
-```
 
 **Hardware connection:**
 - **Pi Camera**: Connect to CSI port on Raspberry Pi 5

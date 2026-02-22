@@ -43,10 +43,10 @@ pip install tars-robot[all]
 ## SDK Usage Example
 
 ```python
-from tars_sdk import TARSClient
+from tars_sdk import TarsClient
 
 # Connect to robot
-client = TARSClient(host="tars-pi.local", port=50051)
+client = TarsClient("tars-pi.local:50051")
 
 # Control the robot
 client.move("wave_right")
@@ -57,7 +57,7 @@ frame = client.capture_camera(width=640, height=480, quality=85)
 
 # Get status
 status = client.get_status()
-print(f"Battery: {status.battery_percent}%")
+print(f"Battery: {status['battery']['level']}%")
 
 # Close connection
 client.close()
@@ -66,11 +66,11 @@ client.close()
 ### Async SDK
 
 ```python
-from tars_sdk import AsyncTARSClient
+from tars_sdk import AsyncTarsClient
 import asyncio
 
 async def main():
-    async with AsyncTARSClient(host="tars-pi.local") as client:
+    async with AsyncTarsClient("tars-pi.local:50051") as client:
         await client.move("nod")
         await client.set_emotion("excited")
         frame = await client.capture_camera()
@@ -170,7 +170,7 @@ If daemon fails to start:
 
 ## Next Steps
 
-- [API Documentation](./docs/MOVEMENTS.md) - Available movements and API
-- [Hardware Setup](./docs/HARDWARE_IO.md) - Camera and audio configuration
-- [Architecture](./docs/ARCHITECTURE.md) - System architecture overview
+- [API Documentation](./MOVEMENTS.md) - Available movements and API
+- [Hardware Setup](./HARDWARE_IO.md) - Camera and audio configuration
+- [Architecture](./ARCHITECTURE.md) - System architecture overview
 

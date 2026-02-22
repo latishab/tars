@@ -111,7 +111,7 @@ The Servo Tester GUI provides:
 
 ## Movement gRPC API
 
-### `Move(movement, speed)`
+### `ExecuteMovement(movement)`
 Execute a single movement
 
 **Python Example:**
@@ -163,36 +163,6 @@ print(status)
 # }
 ```
 
-### Manual Leg Control (Advanced)
-
-For custom choreography, use the servo control module directly:
-
-**Python Example:**
-```bash
-# Raise both legs up
-curl -X POST http://localhost:8000/move/legs \
-  -H "Content-Type: application/json" \
-  -d '{"left_height": 20, "right_height": 20, "speed": 0.6}'
-
-# Neutral position
-curl -X POST http://localhost:8000/move/legs \
-  -H "Content-Type: application/json" \
-  -d '{"left_height": 50, "right_height": 50, "left_leg": 50, "right_leg": 50, "speed": 0.8}'
-```
-
-### `POST /reset`
-Reset all servos to neutral position
-
-```bash
-curl -X POST http://localhost:8000/reset
-```
-
-### `POST /disable`
-Disable all servos (power off)
-
-```bash
-curl -X POST http://localhost:8000/disable
-```
 
 ## Configuration
 
@@ -299,22 +269,21 @@ python app-servotester.py
 
 ### API Testing
 
-```bash
-# List all movements
-curl http://localhost:8000/movements
+```python
+from tars_sdk import TarsClient
+
+client = TarsClient("localhost:50051")
 
 # Execute movement
-curl -X POST http://localhost:8000/move \
-  -H "Content-Type: application/json" \
-  -d '{"movements": ["step_forward"]}'
-
-# Test manual control
-curl -X POST http://localhost:8000/move/legs \
-  -H "Content-Type: application/json" \
-  -d '{"left_height": 50, "right_height": 50, "speed": 0.8}'
+result = client.move("step_forward")
+print(f"Success: {result.success}, duration: {result.duration:.2f}s")
 
 # Reset to neutral
-curl -X POST http://localhost:8000/reset
+client.reset()
+
+# Check status
+status = client.get_status()
+print(f"Moving: {status['is_moving']}")
 ```
 
 ## Troubleshooting
@@ -344,7 +313,7 @@ sudo i2cdetect -y 1
    - Channel 2: Left leg position
    - Channel 3: Right leg position
 5. Verify calibration values in config.ini (via GUI)
-6. Test with manual commands: `curl -X POST http://localhost:8000/reset`
+6. Test with SDK: `python -c "from tars_sdk import TarsClient; TarsClient().reset()"`
 
 **Common issues:**
 - **Servo jittering**: Adjust calibration offsets in Servo Tester GUI
@@ -355,8 +324,8 @@ sudo i2cdetect -y 1
 ### Movement Not Working
 
 1. Check if movement is available:
-   ```bash
-   curl http://localhost:8000/movements
+   ```python
+   from tars_sdk import TarsClient; TarsClient().get_status()
    ```
 2. Test movement in Servo Tester GUI first
 3. Check logs for error messages
@@ -379,7 +348,7 @@ sudo i2cdetect -y 1
 ## Safety Notes
 
 - **Always test movements in a safe area with clearance**
-- Keep emergency stop accessible (Bluetooth controller or `POST /disable`)
+- Keep emergency stop accessible (Bluetooth controller or `client.reset()`)
 - Monitor battery voltage to prevent over-discharge
 - Calibrate servos carefully to avoid mechanical strain
 - Start with slow speeds when testing new movements
