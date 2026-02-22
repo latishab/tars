@@ -320,26 +320,27 @@ async def install_update(background_tasks: BackgroundTasks):
 @router.post("/restart")
 async def restart_service():
     """Restart the TARS service."""
+    import asyncio
+    import os
+    import signal
+
     logger.info("Restart requested via dashboard")
 
-    try:
-        # Try systemctl first
-        result = subprocess.run(
-            ["sudo", "systemctl", "restart", "tars"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        if result.returncode == 0:
-            return {"success": True, "message": "Service restarting..."}
-
-        # Fallback: just exit and let supervisor restart
-        import os
-        import signal
+    # Schedule restart non-blocking so the HTTP response reaches the client
+    # before the process dies. The sleep gives FastAPI time to send the response.
+    async def _do_restart():
+        await asyncio.sleep(0.5)
+        try:
+            subprocess.Popen(
+                ["bash", "-c", "sleep 2 && sudo systemctl restart tars"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            await asyncio.sleep(0.5)
+        except Exception as e:
+            logger.warning(f"Restart scheduling failed: {e}")
         os.kill(os.getpid(), signal.SIGTERM)
 
-        return {"success": True, "message": "Restarting..."}
-
-    except Exception as e:
-        logger.error(f"Restart failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    asyncio.ensure_future(_do_restart())
+    return {"success": True, "message": "Service restarting..."}

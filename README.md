@@ -1,11 +1,11 @@
 # TARS
 
-> **⚠️ Note to Visitors**
+> **Note to Visitors**
 >
 > This repository is a **personal fork** for experimenting with a new distributed architecture.
 > If you're looking for the **main TARS-AI project**, please visit:
 >
-> 👉 **https://github.com/TARS-AI-Community/TARS-AI**
+> **https://github.com/TARS-AI-Community/TARS-AI**
 >
 > This fork splits TARS into a dual-machine setup:
 > - **Host Computer (macOS/Windows/Linux)**: Handles all AI processing (STT, TTS, LLM, Vision)
@@ -38,7 +38,7 @@ RPi 5 (tars) - Standalone Robot            Host Computer (tars-conversation-app)
 │ - Sends battery status       │        │ - Deepgram STT              │
 │                              │        │ - GPT LLM + Tools           │
 │ gRPC API (port 50051):       │        │ - ElevenLabs TTS            │
-│ - Move(movement, speed)      │◄───────┤ - Vision (tool calls)       │
+│ - ExecuteMovement(movement)      │◄───────┤ - Vision (tool calls)       │
 │ - CaptureCamera(w, h, q)     │  gRPC  │                             │
 │ - SetEmotion(emotion)        │        │ Tools call RPi via gRPC     │
 │ - SetEyeState(state)         │        │                             │
@@ -62,29 +62,51 @@ RPi 5 (tars) - Standalone Robot            Host Computer (tars-conversation-app)
 ---
 
 
-## 📦 Installation
+## Installation
 
-### SDK Only (App Development)
+### SDK (Mac / Windows / Linux)
 
-For controlling TARS from your computer (Mac/Windows/Linux):
+For controlling TARS from your computer:
 
 ```bash
 pip install tars-robot
 ```
 
-This installs only the lightweight SDK (~3 dependencies) needed to connect to the robot via gRPC.
+Installs the gRPC client SDK only (~3 deps). Connect to a running Pi daemon and control hardware, run LLM tools, stream camera.
 
-### Full Daemon (Raspberry Pi)
+### Daemon on Raspberry Pi
 
-For running the robot daemon on the Pi:
+Two options — choose based on your use case:
+
+**Option A: PyPI (recommended for most users)**
 
 ```bash
 pip install tars-robot[daemon]
+./start.sh
 ```
 
-This installs all dependencies including FastAPI, pygame, Adafruit libraries, etc.
+Installs all daemon dependencies (FastAPI, WebRTC, pygame, Adafruit libs). Use this if you just want to run TARS without modifying the daemon code.
 
-📖 **[Full Installation Guide](./INSTALLATION.md)** - Detailed instructions, usage examples, and troubleshooting
+**Option B: Git clone (for development)**
+
+```bash
+git clone https://github.com/latishab/tars.git
+cd tars
+python -m venv venv && source venv/bin/activate
+pip install -e .[daemon]
+./start.sh
+```
+
+Use this if you want to modify the daemon, contribute code, or run the servo tester and config tools (`src/app-servotester.py`).
+
+| | PyPI | Git clone |
+|---|---|---|
+| Install time | Fast | Moderate |
+| Dashboard updates | One-click from UI | `git pull` |
+| Modify daemon code | No | Yes |
+| Servo tester / dev tools | No | Yes |
+
+**[Full Installation Guide](./docs/INSTALLATION.md)** — detailed setup, systemd service, troubleshooting
 
 ---
 
@@ -120,7 +142,7 @@ http://tars.local:8000
 http://tars:8000
 ```
 
-📖 **[WiFi Setup Guide](./docs/WIFI_SETUP.md)** - Complete WiFi configuration instructions
+**[WiFi Setup Guide](./docs/WIFI_SETUP.md)** - Complete WiFi configuration instructions
 
 **Dashboard Features:**
 - Monitor robot status (battery, CPU, network)
@@ -175,14 +197,14 @@ The RPi will (unified daemon on port 8000):
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 - Join the community on Discord:  
-  👉 https://discord.gg/AmE2Gv9EUt
+  https://discord.gg/AmE2Gv9EUt
 
 ---
 
-## 📜 License & Attribution
+## License & Attribution
 
 This project is licensed under [CC-BY-NC 4.0](LICENSE) for non-commercial use.
 
@@ -197,7 +219,7 @@ Based on the mechanical puppet designs by Christopher Nolan, Nathan Crowley, and
 - **Charles-Olivier Dion (AtomikSpace)** - V2 hardware, modified CAD, hardware modules
 - **Latisha B** - Daemon architecture, display system, conversation pipeline
 
-See [COPYRIGHT.md](COPYRIGHT.md) for detailed ownership and licensing information.
+See [LEGAL.md](LEGAL.md) for detailed ownership and licensing information.
 
 ### Commercial Use
 
@@ -215,7 +237,7 @@ Commercial use includes:
 - **Latisha B** (daemon, dashboard, SDK, display): Contact via GitHub
 - **Upstream contributors** (Charlie Diaz, TARS-AI Community): As applicable
 
-See [DUAL-LICENSE.md](DUAL-LICENSE.md) for AtomikSpace's dual-license model.
+See [LEGAL.md](LEGAL.md) for AtomikSpace's dual-license model.
 
 
 ---
@@ -224,7 +246,7 @@ See [DUAL-LICENSE.md](DUAL-LICENSE.md) for AtomikSpace's dual-license model.
 
 Please follow the attribution guidelines when sharing or publishing derivative work:
 
-👉 [ATTRIBUTION.md](./ATTRIBUTION.md)
+See [LEGAL.md](./LEGAL.md) for attribution requirements.
 
 ---
 
