@@ -108,7 +108,9 @@ class DisplayManager:
             "default": "neutral",
             "tired": "sleepy",
             "surprised": "excited",
-            "confused": "curious"
+            "confused": "curious",
+            "side eye l": "sideeye_left",
+            "side eye r": "sideeye_right",
         }
         emotion = emotion_map.get(emotion.lower(), emotion.lower())
         

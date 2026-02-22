@@ -254,6 +254,11 @@ class RoboEyes:
         if self._mood != mood:
             self._prev_mood = self._mood
             self._mood_transition_progress = 0.0
+            if self._mood in (Mood.SIDEEYE_LEFT, Mood.SIDEEYE_RIGHT):
+                self._target_look_x = 0.0
+                self._target_look_y = 0.0
+                self._left_open_target = 1.0
+                self._right_open_target = 1.0
         self._mood = mood
         self._mood_intensity = max(0.0, min(1.0, intensity))
         self._next_blink = self._random_blink_time()
