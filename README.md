@@ -1,6 +1,6 @@
 # TARS
 
-> **Note:** This is a fork of [TARS-AI-Community/TARS-AI](https://github.com/TARS-AI-Community/TARS-AI) with a distributed architecture. The original runs everything on the Pi. This fork separates the hardware daemon from the AI pipeline, exposing gRPC and WebRTC APIs so anyone can build apps that control the robot. For voice conversation capabilities, see [tars-conversation-app](https://github.com/latishab/tars-conversation-app).
+> **Note:** This is a fork of [TARS-AI-Community/TARS-AI](https://github.com/TARS-AI-Community/TARS-AI) with a distributed architecture. The original runs everything on the Pi. This fork separates the hardware daemon from the AI pipeline, exposing gRPC and WebRTC APIs so anyone can build apps that control the robot. Looking for voice conversation? See [tars-conversation-app](https://huggingface.co/spaces/latishab/tars-conversation-app).
 
 Raspberry Pi 5 robot daemon. Handles servo control, WebRTC audio streaming, display, camera, and battery monitoring. Apps connect via gRPC and WebRTC.
 
