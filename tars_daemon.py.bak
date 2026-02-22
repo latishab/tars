@@ -146,47 +146,9 @@ class TARSDaemon:
             await self._shutdown()
 
         app = FastAPI(
-            title="TARS Robot API",
+            title="TARS Hardware Daemon",
             version="3.0.0",
-            description="""
-## TARS Robot Control & Management API
-
-This API provides complete control over the TARS robot including:
-
-- **Robot Control**: Set emotions, eye states, execute movements
-- **Status & Monitoring**: Battery, camera, system metrics, WebSocket updates
-- **App Management**: Install/run/stop community apps
-- **WiFi Management**: Configure network connections, hotspot mode
-- **System Management**: Settings, updates, initial setup
-
-### WebRTC Audio
-
-WebRTC peer-to-peer audio connection is established via POST /api/control/offer.
-The robot streams microphone audio and receives speaker audio bidirectionally.
-
-### gRPC Alternative
-
-For low-latency hardware control, use the gRPC API on port 50051.
-See the [tars-sdk documentation](https://github.com/latishab/tars) for details.
-
-### Authentication
-
-Currently no authentication. Deploy behind VPN (Tailscale recommended).
-
-### Base URL
-
-- Local: 
-- Tailscale: 
-""",
-            lifespan=lifespan,
-            contact={
-                "name": "TARS Community",
-                "url": "https://github.com/latishab/tars",
-            },
-            license_info={
-                "name": "CC BY-NC 4.0",
-                "url": "https://creativecommons.org/licenses/by-nc/4.0/",
-            },
+            lifespan=lifespan
         )
 
         app.add_middleware(
@@ -215,7 +177,28 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
         return app
 
     def _register_routes(self, app: FastAPI):
-        """Register HTTP routes for TARS daemon"""
+        """Register minimal HTTP routes (WebRTC signaling + health check only)"""
+
+        # === WebRTC Signaling ===
+        class OfferRequest(BaseModel):
+            sdp: str
+            type: str
+
+        @app.post("/api/offer")
+        async def handle_webrtc_offer(request: OfferRequest):
+            """
+            WebRTC signaling endpoint.
+            MacBook sends SDP offer, RPi responds with SDP answer.
+            """
+            if not self.webrtc:
+                raise HTTPException(503, "WebRTC server not available")
+
+            try:
+                answer = await self.webrtc.handle_offer(request.sdp, request.type)
+                return answer
+            except Exception as e:
+                logger.error(f"Failed to handle WebRTC offer: {e}")
+                raise HTTPException(500, f"WebRTC offer failed: {str(e)}")
 
         # === Health Check ===
         @app.get("/")
@@ -249,8 +232,8 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
                 "message": "All hardware control now via gRPC - use tars_sdk.TarsClient"
             }
 
-        # === Status Endpoints (inline for direct hardware access) ===
-        @app.get("/api/status/camera")
+        # === Camera Preview ===
+        @app.get("/api/camera")
         def camera_preview():
             """Return a JPEG snapshot from the camera."""
             if not self.camera or not self.camera.is_available():
@@ -261,10 +244,11 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
                 raise HTTPException(500, "Failed to capture frame")
 
             import cv2
+            # picamera2 RGB888 format - encode directly (OpenCV expects BGR, picamera2 delivers compatible order)
             _, jpeg = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
             return Response(content=jpeg.tobytes(), media_type="image/jpeg")
 
-        @app.get("/api/status/battery", tags=["Status & Monitoring"])
+        @app.get("/api/battery")
         def get_battery_status():
             """Get detailed battery status from hardware controller."""
             if not self.battery:
@@ -277,10 +261,48 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
                 logger.error(f"Failed to get battery status: {e}")
                 raise HTTPException(500, str(e))
 
+
+        # === Display Control (for dashboard) ===
+        class EmotionRequest(BaseModel):
+            emotion: str
+
+        class EyeStateRequest(BaseModel):
+            state: str
+
+        @app.post("/api/emotion")
+        async def set_emotion(request: EmotionRequest):
+            """Set display emotion (for dashboard)."""
+            if not self.hardware_controller:
+                raise HTTPException(503, "Hardware controller not available")
+
+            try:
+                result = self.hardware_controller.set_emotion(request.emotion)
+                return result
+            except ValueError as e:
+                raise HTTPException(400, str(e))
+            except Exception as e:
+                logger.error(f"Failed to set emotion: {e}")
+                raise HTTPException(500, str(e))
+
+        @app.post("/api/eye-state")
+        async def set_eye_state(request: EyeStateRequest):
+            """Set eye state (for dashboard)."""
+            if not self.hardware_controller:
+                raise HTTPException(503, "Hardware controller not available")
+
+            try:
+                result = self.hardware_controller.set_eye_state(request.state)
+                return result
+            except ValueError as e:
+                raise HTTPException(400, str(e))
+            except Exception as e:
+                logger.error(f"Failed to set eye state: {e}")
+                raise HTTPException(500, str(e))
+
         # === Dashboard Routes ===
         if DASHBOARD_AVAILABLE:
             try:
-                # Initialize shared state for status routes
+                # Initialize shared state
                 status_routes.set_modules(
                     battery=self.battery if hasattr(self, 'battery') else None,
                     display=self.display if hasattr(self, 'display') else None,
@@ -288,20 +310,20 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
                     webrtc=self.webrtc if hasattr(self, 'webrtc') else None
                 )
 
-                # Initialize hardware controller for movements
                 if hasattr(self, 'hardware_controller') and self.hardware_controller:
                     movements_routes.set_movement_modules(
                         movement_map=self.hardware_controller.get_movement_map(),
                         servoctl_module=None
                     )
 
-                # Register routers with new structure
-                app.include_router(control_routes.router, prefix="/api/control", tags=["Robot Control"])
-                app.include_router(status_routes.router, prefix="/api/status", tags=["Status & Monitoring"])
+                # Register dashboard routers
+                app.include_router(status_routes.router, prefix="/api", tags=["Status"])
+                app.include_router(movements_routes.router, prefix="/api", tags=["Movements"])
+                app.include_router(settings_routes.router, prefix="/api", tags=["Settings"])
+                app.include_router(updates_routes.router, prefix="/api", tags=["Updates"])
+                app.include_router(wifi_routes.router, prefix="/api", tags=["WiFi"])
                 app.include_router(apps_routes.router, prefix="/api/apps", tags=["Apps"])
-                app.include_router(wifi_routes.router, prefix="/api/wifi", tags=["WiFi"])
-                app.include_router(system_routes.router, prefix="/api/system", tags=["System"])
-                
+                app.include_router(setup_routes.router, prefix="/api/setup", tags=["Setup"])
                 logger.info("✓ Dashboard routes registered")
             except Exception as e:
                 logger.error(f"Dashboard route error: {e}")
@@ -563,8 +585,6 @@ try:
         wifi as wifi_routes,
         apps as apps_routes,
         setup as setup_routes,
-        control as control_routes,
-        system as system_routes,
     )
     from dashboard.backend.ws import ConnectionManager
     DASHBOARD_AVAILABLE = True

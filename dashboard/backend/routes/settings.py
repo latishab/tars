@@ -69,14 +69,6 @@ class SettingsUpdate(BaseModel):
     network: Optional[Dict[str, Any]] = None
 
 
-class EmotionRequest(BaseModel):
-    emotion: str
-
-
-class EyeStateRequest(BaseModel):
-    state: str
-
-
 @router.get("/settings")
 async def get_settings():
     """Get current settings."""
@@ -100,47 +92,3 @@ async def update_settings(update: SettingsUpdate):
     save_settings(settings)
 
     return {"success": True, "settings": settings}
-
-
-@router.post("/emotion")
-async def set_emotion(request: EmotionRequest, req: Request):
-    """Set display emotion (direct daemon access)."""
-    valid_emotions = ['neutral', 'happy', 'sad', 'angry', 'excited', 'afraid', 'sideeye_left', 'sideeye_right', 'sleepy']
-    if request.emotion not in valid_emotions:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid emotion. Valid: {', '.join(valid_emotions)}"
-        )
-
-    try:
-        daemon = req.app.state.daemon
-        if daemon and daemon.display:
-            daemon.display.set_emotion(request.emotion)
-            return {"success": True, "emotion": request.emotion}
-        else:
-            raise HTTPException(status_code=503, detail="Display not available")
-    except Exception as e:
-        logger.error(f"Failed to set emotion: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post("/eye-state")
-async def set_eye_state(request: EyeStateRequest, req: Request):
-    """Set eye state (direct daemon access)."""
-    valid_states = ["idle", "listening", "thinking", "speaking"]
-    if request.state not in valid_states:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid state. Valid: {', '.join(valid_states)}"
-        )
-
-    try:
-        daemon = req.app.state.daemon
-        if daemon and daemon.display:
-            daemon.display.set_eye_state(request.state)
-            return {"success": True, "state": request.state}
-        else:
-            raise HTTPException(status_code=503, detail="Display not available")
-    except Exception as e:
-        logger.error(f"Failed to set eye state: {e}")
-        raise HTTPException(status_code=500, detail=str(e))

@@ -55,7 +55,7 @@ function Control() {
   const executeMovement = async (movement) => {
     setExecuting(movement)
     try {
-      await fetch('/api/move', {
+      await fetch('/api/control/move', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ movement }),
@@ -68,7 +68,7 @@ function Control() {
 
   const setEmotionApi = async (newEmotion) => {
     try {
-      await fetch('/api/emotion', {
+      await fetch('/api/control/emotion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ emotion: newEmotion }),
@@ -80,13 +80,13 @@ function Control() {
   }
 
   const captureCamera = () => {
-    setCameraUrl(`/api/camera?t=${Date.now()}`)
+    setCameraUrl(`/api/status/camera?t=${Date.now()}`)
   }
 
   const resetPosition = async () => {
     setExecuting('reset')
     try {
-      await fetch('/api/reset', { method: 'POST' })
+      await fetch('/api/control/reset', { method: 'POST' })
     } catch (err) {
       console.error('Reset failed:', err)
     }

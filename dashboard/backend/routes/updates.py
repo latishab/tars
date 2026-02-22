@@ -150,7 +150,7 @@ def run_git_command(args: list, cwd=None) -> tuple[int, str, str]:
         return -1, "", str(e)
 
 
-@router.get("/updates/check", response_model=UpdateCheckResponse)
+@router.get("/check", response_model=UpdateCheckResponse)
 async def check_updates():
     """Check for available updates from appropriate source."""
     mode = get_install_mode()
@@ -176,7 +176,7 @@ async def check_updates():
     )
 
 
-@router.get("/updates/current")
+@router.get("/current")
 async def get_current_version():
     """Get current version info including install mode."""
     mode = get_install_mode()
@@ -302,7 +302,7 @@ async def perform_update():
     return True
 
 
-@router.post("/updates/install", response_model=UpdateInstallResponse)
+@router.post("/install", response_model=UpdateInstallResponse)
 async def install_update(background_tasks: BackgroundTasks):
     """Install available update."""
     mode = get_install_mode()
@@ -328,7 +328,7 @@ async def install_update(background_tasks: BackgroundTasks):
     )
 
 
-@router.post("/updates/restart")
+@router.post("/restart")
 async def restart_service():
     """Restart the TARS service."""
     logger.info("Restart requested via dashboard")

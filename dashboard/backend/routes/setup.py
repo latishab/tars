@@ -51,7 +51,7 @@ def save_config(config):
         raise
 
 
-@router.get("/setup/status")
+@router.get("/status")
 async def get_setup_status():
     """Get setup completion status."""
     config = load_config()
@@ -61,7 +61,7 @@ async def get_setup_status():
     }
 
 
-@router.post("/setup/complete")
+@router.post("/complete")
 async def complete_setup(request: SetupRequest):
     """Complete initial setup."""
     logger.info(f"Setup completion request for SSID: {request.wifi_ssid}")
