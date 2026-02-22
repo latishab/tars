@@ -40,13 +40,6 @@ Featured: [tars-conversation-app](https://github.com/latishab/tars-conversation-
 
 ## 📦 Installation
 
-| | PyPI | Git clone |
-|---|---|---|
-| Install time | Fast | Moderate |
-| Dashboard updates | One-click from UI | `git pull` |
-| Modify daemon code | No | Yes |
-| Servo tester / dev tools | `tars-servo-tester` CLI | `python src/app-servotester.py` |
-
 ### PyPI (Recommended)
 
 ```bash
