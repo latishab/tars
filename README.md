@@ -35,7 +35,8 @@ Dashboard: `http://tars.local:8000` — see [WiFi Setup](./docs/WIFI_SETUP.md) f
 
 Browse and install apps from the dashboard's Apps tab.
 
-Featured: [tars-conversation-app](https://github.com/latishab/tars-conversation-app)
+**Featured:**
+- **[tars-conversation-app](https://huggingface.co/spaces/latishab/tars-conversation-app)** — Voice AI pipeline (LLM, STT, TTS). Talk to your robot. ([source](https://github.com/latishab/tars-conversation-app))
 ---
 
 ## 📦 Installation
