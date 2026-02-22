@@ -4,6 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  base: '/dashboard/',  // Mount point in FastAPI
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -12,11 +13,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:8080',
+        target: 'ws://localhost:8000',
         ws: true,
       },
     },
