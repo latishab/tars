@@ -492,10 +492,6 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
 
         disable_all_servos()
         logger.info("TARS Daemon stopped")
-        # Force exit to release port immediately; non-daemon threads (gRPC pool)
-        # would otherwise keep the process alive and block service restart.
-        import os as _os
-        _os._exit(0)
 
     # === Callbacks from WebRTC data channel ===
 
@@ -654,11 +650,19 @@ def main():
 
     # Handle signals
     def signal_handler(sig, frame):
-        logger.info("Received shutdown signal")
+        logger.info("Received shutdown signal (SIGINT) — shutting down gracefully")
         sys.exit(0)
 
+    def sigterm_handler(sig, frame):
+        # os._exit bypasses Python cleanup so the port is released immediately.
+        # gRPC ThreadPoolExecutor uses non-daemon threads that block sys.exit,
+        # causing the process to linger on port 8000 and preventing service restart.
+        logger.info("Received SIGTERM — exiting immediately to release port")
+        import os as _os
+        _os._exit(0)
+
     signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGTERM, sigterm_handler)
 
     daemon.run()
 

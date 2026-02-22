@@ -27,8 +27,8 @@ EnvironmentFile=-/home/mac/tars-daemon/.env
 ExecStart=/home/mac/tars-daemon/start.sh
 
 # Restart policy
-Restart=always
-RestartSec=10
+Restart=on-failure
+RestartSec=2
 StartLimitBurst=5
 StartLimitIntervalSec=300
 
@@ -42,7 +42,7 @@ SyslogIdentifier=tars
 # PrivateTmp=true
 
 # Graceful shutdown
-TimeoutStopSec=30
+TimeoutStopSec=5
 KillMode=mixed
 KillSignal=SIGTERM
 
