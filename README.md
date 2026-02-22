@@ -32,7 +32,12 @@ Dashboard: `http://tars.local:8000`
 
 ### 2. Install an App
 
-Browse and install apps from the dashboard's Apps tab, or install directly:
+Browse and install apps from the dashboard's Apps tab.
+
+**Featured:**
+- **[tars-conversation-app](https://huggingface.co/spaces/latishab/tars-conversation-app)** — Voice AI (LLM, STT, TTS)
+
+Or install manually:
 
 ```bash
 # Featured: voice AI pipeline
@@ -105,7 +110,9 @@ Apps connect via gRPC (:50051) and WebRTC (:8000). They can run on a separate co
 TARS supports installable apps. Browse and install from the dashboard's Apps tab.
 
 **Featured:**
-- **[tars-conversation-app](https://github.com/latishab/tars-conversation-app)** — Voice AI pipeline (LLM, STT, TTS). Talk to your robot.
+- **[tars-conversation-app](https://huggingface.co/spaces/latishab/tars-conversation-app)** — Voice AI pipeline (LLM, STT, TTS). Talk to your robot.
+
+*More apps coming soon.*
 
 ---
 
