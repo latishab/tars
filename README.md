@@ -16,7 +16,6 @@ Raspberry Pi 5 robot daemon. Handles servo control, WebRTC audio streaming, disp
 
 **Software:**
 - Python 3.9+
-- Host computer for AI brain (Mac, Windows, or Linux)
 
 ---
 
@@ -109,9 +108,13 @@ tars-conversation-app                 tars-daemon
 
 ## AI Brain
 
-The voice AI pipeline (LLM, STT, TTS, WebRTC) runs on your host computer as a separate application:
+The voice AI pipeline (LLM, STT, TTS) runs separately from the daemon:
 
 **[tars-conversation-app](https://github.com/latishab/tars-conversation-app)**
+
+You can run it on:
+- **Host computer** (Mac/Windows/Linux) — recommended for better performance
+- **Raspberry Pi 5** — works, but may be slower depending on STT/TTS providers
 
 ---
 
