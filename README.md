@@ -28,7 +28,7 @@ pip install tars-robot[daemon]
 tars-daemon
 ```
 
-Dashboard: `http://tars.local:8000`
+Dashboard:  (or  via Tailscale)`http://tars.local:8000`
 
 ### 2. Install an App
 

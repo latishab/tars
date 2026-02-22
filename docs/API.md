@@ -65,7 +65,7 @@ asyncio.run(main())
 
 ## REST API
 
-Base URL: `http://tars.local:8000`
+Base URL:  (or  via Tailscale)`http://tars.local:8000`
 
 ### Status
 
