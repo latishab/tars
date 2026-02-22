@@ -15,24 +15,24 @@ TARS creates a setup hotspot when no WiFi is configured:
 ```
 SSID: TARS-Setup
 Password: tars1234
-Setup URL: http://10.42.0.1:8000/setup
+Setup URL: http://tars.local:8000/setup
 ```
 
 1. Connect to **TARS-Setup** WiFi
-2. Open `http://10.42.0.1:8000/setup`
+2. Open `http://tars.local:8000/setup`
 3. Select your WiFi and enter credentials
 4. (Optional) Enter Tailscale auth key for remote access
 5. **Save the dashboard URLs** shown before clicking Connect — the hotspot shuts down immediately
 
 ## Tailscale (Remote Access)
 
-For access from anywhere â dorms, corporate networks, or mobile:
+For access from anywhere — dorms, corporate networks, or mobile:
 
 1. Create account at [tailscale.com](https://tailscale.com)
-2. Generate an auth key at Admin â Settings â Keys
+2. Generate an auth key at Admin — Settings — Keys
 3. Enter the auth key in the WiFi setup wizard (or via `ssh tars-pi "sudo tailscale up --authkey=<key>"`)
 4. Install Tailscale on your devices
-5. **Enable MagicDNS** in the Tailscale admin panel (DNS tab â Enable MagicDNS)
+5. **Enable MagicDNS** in the Tailscale admin panel (DNS tab — Enable MagicDNS)
 
 With MagicDNS enabled, TARS is reachable at `http://tars:8000` from any device on your Tailscale network.
 

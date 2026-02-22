@@ -29,7 +29,7 @@ pip install tars-robot[daemon]
 tars-daemon
 ```
 
-Dashboard:  (or  via Tailscale)`http://tars.local:8000`
+Dashboard: `http://tars.local:8000` — see [WiFi Setup](./docs/WIFI_SETUP.md) for Tailscale access
 
 ### 2. Install an App
 
@@ -38,8 +38,9 @@ Browse and install apps from the dashboard's Apps tab.
 Or install manually:
 
 ```bash
-# Featured: voice AI pipeline
-pip install tars-conversation-app
+git clone https://github.com/latishab/tars-conversation-app
+cd tars-conversation-app
+pip install -e .
 ```
 
 ---
