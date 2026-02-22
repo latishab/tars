@@ -3,7 +3,11 @@
 ## Servo Tester
 
 ```bash
+# PyPI install
 tars-servo-tester
+
+# From source
+python src/app-servotester.py
 ```
 
 Interactive GUI for calibrating servos. Requires Pi with display attached.

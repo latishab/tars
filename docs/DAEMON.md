@@ -5,7 +5,11 @@ Single process managing gRPC, WebRTC, display, and hardware.
 ## Running
 
 ```bash
+# PyPI install
 tars-daemon
+
+# From source
+python tars_daemon.py
 ```
 
 See [Installation](./INSTALLATION.md) for setup and systemd service.

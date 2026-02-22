@@ -14,13 +14,13 @@ from tars_sdk import TarsClient
 client = TarsClient(tars.local:50051)
 
 # Movement
-client.move(wave_right)
-client.move(step_forward, speed=0.5)
+client.move("wave_right")
+client.move("step_forward", speed=0.5)
 client.reset()
 
 # Emotions & eyes
-client.set_emotion(happy)
-client.set_eye_state(listening)
+client.set_emotion("happy")
+client.set_eye_state("listening")
 
 # Camera
 frame = client.capture_camera(width=640, height=480, quality=85)
@@ -43,8 +43,8 @@ from tars_sdk import AsyncTarsClient
 import asyncio
 
 async def main():
-    async with AsyncTarsClient(tars.local:50051) as client:
-        await client.move(nod)
+    async with AsyncTarsClient("tars.local:50051") as client:
+        await client.move("nod")
         status = await client.get_status()
 
 asyncio.run(main())

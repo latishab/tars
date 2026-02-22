@@ -45,7 +45,7 @@ tars-daemon
 ### PyPI users
 
 ```bash
-tars-daemon --install-service | sudo tee /etc/systemd/system/tars.service
+tars-daemon --install-service | sudo tee /etc/systemd/system/tars.service > /dev/null
 sudo systemctl daemon-reload
 sudo systemctl enable --now tars
 ```
