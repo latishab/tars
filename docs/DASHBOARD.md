@@ -1,6 +1,6 @@
 # Dashboard
 
-Web interface for monitoring and controlling TARS. Access at `http://tars.local:8000` or via Tailscale.
+Web interface for monitoring and controlling TARS. Access at `http://tars.local:8000` (home network) or `http://tars:8000` (Tailscale).
 
 See [WiFi Setup](./WIFI_SETUP.md) for network configuration and access details.
 

@@ -30,15 +30,6 @@ Settings → Network → Change Network.
 
 **Supported types:** Personal (WPA/WPA2), Enterprise (PEAP/MSCHAPv2), Open, Hidden SSID
 
-## Tailscale
-
-For access from dorms, corporate networks, or anywhere with internet:
-
-1. Create account at [tailscale.com](https://tailscale.com)
-2. Generate auth key at [login.tailscale.com/admin/settings/keys](https://login.tailscale.com/admin/settings/keys)
-3. Enter auth key during WiFi setup
-4. Install Tailscale on your devices → access at `http://tars:8000`
-
 ## Troubleshooting
 
 **tars.local not working:** You're on a network with client isolation (dorms, corporate). Use Tailscale.
