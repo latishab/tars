@@ -231,6 +231,11 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
 
                 app.mount("/dashboard", StaticFiles(directory=str(dashboard_path), html=True), name="dashboard")
                 logger.info("✓ Dashboard UI mounted at /dashboard")
+
+                @app.get("/")
+                async def root_redirect():
+                    from fastapi.responses import RedirectResponse
+                    return RedirectResponse(url="/dashboard/", status_code=302)
             else:
                 logger.warning(f"Dashboard not built: {dashboard_path}")
 

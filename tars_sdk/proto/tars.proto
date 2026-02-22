@@ -30,6 +30,10 @@ service TarsService {
 
   // Bidirectional streaming (for future use)
   rpc StreamAudioLevels(stream AudioLevelRequest) returns (stream AudioLevelResponse);
+
+  // Mic mute control
+  rpc SetMicMute(MicMuteRequest) returns (Empty);
+  rpc GetMicMute(Empty) returns (MicMuteResponse);
 }
 
 // Messages
@@ -133,4 +137,12 @@ message AudioLevelRequest {
 
 message AudioLevelResponse {
   bool received = 1;
+}
+
+message MicMuteRequest {
+  bool muted = 1;
+}
+
+message MicMuteResponse {
+  bool muted = 1;
 }

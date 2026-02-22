@@ -242,6 +242,17 @@ class AsyncTarsClient:
             logger.error(f"gRPC error during stream_movement_status: {e}")
             raise
 
+
+    async def set_mic_mute(self, muted: bool) -> None:
+        await self._ensure_connected()
+        request = tars_pb2.MicMuteRequest(muted=muted)
+        await self.stub.SetMicMute(request, timeout=self.timeout)
+
+    async def get_mic_mute(self) -> bool:
+        await self._ensure_connected()
+        response = await self.stub.GetMicMute(tars_pb2.Empty(), timeout=self.timeout)
+        return response.muted
+
     async def close(self) -> None:
         """Close the gRPC channel."""
         if self.channel:

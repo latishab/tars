@@ -49,6 +49,8 @@ class MicrophoneTrack(MediaStreamTrack):
         self._timestamp = 0
         self._samples_per_frame = int(sample_rate * 0.02)  # 20ms frames
 
+        self._muted: bool = False
+
     def _audio_callback(self, indata, frames, time_info, status):
         """Callback from sounddevice when audio is captured"""
         if status:
@@ -100,6 +102,9 @@ class MicrophoneTrack(MediaStreamTrack):
 
         logger.info("Microphone stopped")
 
+    def mute(self, muted: bool) -> None:
+        self._muted = muted
+
     async def recv(self) -> AudioFrame:
         """
         Receive next audio frame for WebRTC transmission.
@@ -108,8 +113,12 @@ class MicrophoneTrack(MediaStreamTrack):
         if not self._running:
             raise Exception("Microphone not started")
 
-        # Get audio data from queue
-        audio_data = await self._queue.get()
+        # Get audio data from queue; drain while muted to prevent queue fill
+        while True:
+            audio_data = await self._queue.get()
+            if not self._muted:
+                break
+            # discard frame — mic is muted, keep draining to avoid queue fill
 
         # Convert float32 [-1, 1] to int16
         audio_int16 = (audio_data * 32767).astype(np.int16)

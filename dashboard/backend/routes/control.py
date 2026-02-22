@@ -74,7 +74,7 @@ async def execute_movement(request: MoveRequest, req: Request):
         raise HTTPException(503, "Hardware controller not available")
 
     try:
-        result = daemon.hardware_controller.move(request.movement, request.speed)
+        result = daemon.hardware_controller.execute_movement(request.movement, request.speed)
         return result
     except Exception as e:
         logger.error(f"Movement failed: {e}")
@@ -88,7 +88,7 @@ async def reset_position(req: Request):
         raise HTTPException(503, "Hardware controller not available")
 
     try:
-        result = daemon.hardware_controller.reset()
+        result = daemon.hardware_controller.reset_position()
         return result
     except Exception as e:
         logger.error(f"Reset failed: {e}")

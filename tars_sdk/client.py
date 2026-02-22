@@ -243,6 +243,16 @@ class TarsClient:
             logger.error(f"gRPC error during stream_movement_status: {e}")
             raise
 
+
+    def set_mic_mute(self, muted: bool) -> None:
+        request = tars_pb2.MicMuteRequest(muted=muted)
+        self.stub.SetMicMute(request, timeout=self.timeout)
+
+    @property
+    def is_mic_muted(self) -> bool:
+        response = self.stub.GetMicMute(tars_pb2.Empty(), timeout=self.timeout)
+        return response.muted
+
     def close(self) -> None:
         """Close the gRPC channel."""
         self.channel.close()

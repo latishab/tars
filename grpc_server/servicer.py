@@ -432,3 +432,15 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
             logger.error(f"StreamAudioLevels failed: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
+    def SetMicMute(self, request, context):
+        muted = request.muted
+        if self.webrtc and hasattr(self.webrtc, 'mic_track') and self.webrtc.mic_track:
+            self.webrtc.mic_track.mute(muted)
+        logger.info(f"gRPC SetMicMute: {muted}")
+        return tars_pb2.Empty()
+
+    def GetMicMute(self, request, context):
+        muted = False
+        if self.webrtc and hasattr(self.webrtc, 'mic_track') and self.webrtc.mic_track:
+            muted = self.webrtc.mic_track._muted
+        return tars_pb2.MicMuteResponse(muted=muted)

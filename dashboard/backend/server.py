@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from loguru import logger
 
-from .routes import status, settings, updates, wifi, setup, apps
+from .routes import status, settings, updates, wifi, setup, apps, control
 from .wifi_manager import WiFiManager
 from .ws import ConnectionManager
 
@@ -76,6 +76,7 @@ app.include_router(updates.router, prefix="/api", tags=["updates"])
 app.include_router(wifi.router, prefix="/api", tags=["wifi"])
 app.include_router(setup.router, prefix="/api", tags=["setup"])
 app.include_router(apps.router, prefix="/api/apps", tags=["apps"])
+app.include_router(control.router, prefix="/api/control", tags=["control"])
 
 
 # WebSocket endpoint for real-time updates

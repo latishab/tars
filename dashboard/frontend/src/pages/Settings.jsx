@@ -306,11 +306,11 @@ function SettingsPage() {
                 <div className="bg-background p-3 rounded border space-y-2">
                   <div>
                     <p className="text-xs text-muted-foreground">Tailscale (works everywhere):</p>
-                    <p className="text-base font-mono font-bold select-all">http://{successInfo.tailscale_ip}:8080</p>
+                    <p className="text-base font-mono font-bold select-all">http://tars:8000</p>
                   </div>
                   <div className="pt-2 border-t">
                     <p className="text-xs text-muted-foreground">Local network (home WiFi only):</p>
-                    <p className="text-base font-mono font-bold select-all">http://tars.local:8080</p>
+                    <p className="text-base font-mono font-bold select-all">http://tars.local:8000</p>
                   </div>
                 </div>
 
@@ -395,13 +395,13 @@ function SettingsPage() {
                   <div className="space-y-1 text-xs">
                     <div className="flex items-start gap-2">
                       <span className="text-muted-foreground min-w-20">Local:</span>
-                      <span className="font-mono">http://tars.local:8080</span>
+                      <span className="font-mono">http://tars.local:8000</span>
                       <span className="text-muted-foreground">(home networks)</span>
                     </div>
                     {wifiStatus.tailscale_ip && (
                       <div className="flex items-start gap-2">
                         <span className="text-muted-foreground min-w-20">Tailscale:</span>
-                        <span className="font-mono">http://{wifiStatus.tailscale_ip}:8080</span>
+                        <span className="font-mono">http://tars:8000</span>
                         <span className="text-muted-foreground">(works everywhere)</span>
                       </div>
                     )}
