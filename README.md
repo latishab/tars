@@ -10,7 +10,7 @@ Raspberry Pi 5 robot daemon. Handles servo control, WebRTC audio streaming, disp
 - Raspberry Pi 5 (or Pi 4 4GB+)
 - PCA9685 servo driver + servos
 - USB audio adapter
-- Speaker
+- Speaker (8Ω 5W)
 - Pi Camera or USB webcam
 - INA260 battery monitor (optional)
 - 12V battery pack
