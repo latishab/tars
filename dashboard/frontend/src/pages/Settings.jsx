@@ -157,7 +157,11 @@ function SettingsPage() {
 
   const startHotspot = async () => {
     try {
-      const res = await fetch('/api/wifi/hotspot/start', { method: 'POST' })
+      const res = await fetch('/api/wifi/hotspot', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: true })
+      })
       const data = await res.json()
       if (data.success) {
         await loadWifiStatus()
@@ -170,7 +174,11 @@ function SettingsPage() {
 
   const stopHotspot = async () => {
     try {
-      const res = await fetch('/api/wifi/hotspot/stop', { method: 'POST' })
+      const res = await fetch('/api/wifi/hotspot', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: false })
+      })
       const data = await res.json()
       if (data.success) {
         await loadWifiStatus()
