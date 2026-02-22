@@ -130,7 +130,7 @@ async def get_status_data() -> Dict[str, Any]:
     }
 
 
-@router.get("/status")
+@router.get("/")
 async def get_status():
     """Get current robot status."""
     return await get_status_data()
