@@ -182,29 +182,43 @@ The RPi will (unified daemon on port 8000):
 
 ---
 
-## 📜 License
+## 📜 License & Copyright
 
-This project is licensed under **Creative Commons Attribution-NonCommercial 4.0 International (CC-BY-NC 4.0)**.
+This project is a fork of [TARS-AI-Community/TARS-AI](https://github.com/TARS-AI-Community/TARS-AI) with contributions from multiple authors.
+
+**License**: Creative Commons Attribution-NonCommercial 4.0 International (CC-BY-NC 4.0)
+
+**Copyright Holders**:
+- **Charles-Olivier Dion (AtomikSpace)** - Original hardware modules, movements, 3D design files
+- **Latisha B** - Daemon architecture, dashboard, gRPC/WebRTC servers, SDK
+
+See [COPYRIGHT.md](./COPYRIGHT.md) for detailed ownership breakdown.
+
+### Non-Commercial Use
 
 You may:
 - Build and modify your own TARS robot
 - Share improvements and derivatives
 - Use the project for personal, educational, and research purposes
 
-You may **not** use this project for commercial purposes without explicit permission from the authors.
-Commercial use includes, but is not limited to:
+### Commercial Use
 
+Commercial use is **not permitted** under CC-BY-NC 4.0 without explicit written permission from **both copyright holders**.
+
+Commercial use includes:
 - Selling 3D printed parts, kits, or complete robots  
-- Selling or distributing STL / CAD files for money  
+- Selling or distributing STL/CAD files for money  
 - Offering paid assembly, customization, or installation services  
-- Monetized YouTube, Social Media, Patreon, or subscription content that distributes project files or derivatives  
+- Monetized content that distributes project files or derivatives  
 - Using this project in paid products, commercial research, or corporate projects  
-- Integrating this project into commercial software or hardware products  
-- Selling derivatives or modified versions of the hardware or software  
+- Integrating into commercial software or hardware products  
 
-If you are unsure whether your use case is commercial, assume it is and request permission from the authors.
+**AtomikSpace files** (hardware modules, movements, 3D files) are subject to a dual-license model. See [DUAL-LICENSE.md](./DUAL-LICENSE.md) and contact atomikspace.labs@gmail.com for commercial licensing.
 
-See the [LICENSE](./LICENSE) file for details.
+**Latisha B additions** (daemon, dashboard, gRPC, WebRTC, SDK) also require separate commercial licensing. Contact via GitHub for inquiries.
+
+See [LICENSE](./LICENSE) for full CC-BY-NC 4.0 terms.
+
 
 ---
 
