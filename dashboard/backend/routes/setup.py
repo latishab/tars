@@ -17,7 +17,6 @@ class SetupRequest(BaseModel):
     """Setup completion request."""
     wifi_ssid: str
     wifi_password: Optional[str] = None
-    anthropic_api_key: str
     deepgram_api_key: Optional[str] = None
     tailscale_enabled: bool = False
     tailscale_auth_key: Optional[str] = None
@@ -81,7 +80,6 @@ async def complete_setup(request: SetupRequest):
         "wifi_ssid": request.wifi_ssid,
         "wifi_password": request.wifi_password,
         "wifi_configured": True,
-        "anthropic_api_key": request.anthropic_api_key,
         "deepgram_api_key": request.deepgram_api_key,
         "tailscale_enabled": request.tailscale_enabled,
         "tailscale_auth_key": request.tailscale_auth_key,

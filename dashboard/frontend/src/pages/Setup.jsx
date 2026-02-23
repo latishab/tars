@@ -19,7 +19,6 @@ function Setup({ onComplete }) {
   const [tailscaleAuthKey, setTailscaleAuthKey] = useState('')
 
   // Step 2: API Keys
-  const [anthropicApiKey, setAnthropicApiKey] = useState('')
   const [deepgramApiKey, setDeepgramApiKey] = useState('')
 
   // Final step
@@ -56,7 +55,6 @@ function Setup({ onComplete }) {
         body: JSON.stringify({
           wifi_ssid: selectedNetwork.ssid,
           wifi_password: password || null,
-          anthropic_api_key: anthropicApiKey,
           deepgram_api_key: deepgramApiKey || null,
           tailscale_enabled: connectionMode === 'tailscale',
           tailscale_auth_key: connectionMode === 'tailscale' ? tailscaleAuthKey : null,
@@ -100,7 +98,6 @@ function Setup({ onComplete }) {
 
   const canProceedStep1 = selectedNetwork !== null
   const canProceedStep1_5 = connectionMode === 'local' || (connectionMode === 'tailscale' && tailscaleAuthKey)
-  const canProceedStep2 = anthropicApiKey.trim() !== ''
 
   // Success screen
   if (success) {
@@ -355,21 +352,6 @@ function Setup({ onComplete }) {
               <CardContent className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">
-                    Anthropic API Key <span className="text-destructive">*</span>
-                  </label>
-                  <Input
-                    type="password"
-                    placeholder="sk-ant-..."
-                    value={anthropicApiKey}
-                    onChange={(e) => setAnthropicApiKey(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Required for TARS AI functionality
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
                     Deepgram API Key <span className="text-muted-foreground">(Optional)</span>
                   </label>
                   <Input
@@ -393,7 +375,7 @@ function Setup({ onComplete }) {
               </Button>
               <Button
                 onClick={handleSubmit}
-                disabled={!canProceedStep2 || submitting}
+                disabled={submitting}
                 className="flex-1"
               >
                 {submitting ? (
