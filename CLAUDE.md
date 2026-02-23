@@ -23,3 +23,18 @@
 ```bash
 ssh tars-pi  # tars.local or Tailscale: tars, user: mac, repo: ~/tars-daemon
 ```
+
+## PyPI Release
+
+Credentials are in `~/.pypirc` on the Pi.
+
+```bash
+ssh tars-pi
+cd ~/tars-daemon
+source venv/bin/activate
+# 1. Bump version in pyproject.toml
+# 2. Commit the bump
+rm -rf dist/
+python -m build
+python -m twine upload dist/tars_robot-<version>*
+```
