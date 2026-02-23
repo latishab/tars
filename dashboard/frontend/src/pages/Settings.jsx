@@ -360,7 +360,7 @@ function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Wifi className="w-5 h-5" />
+            <Wifi className={`w-5 h-5 ${wifiStatus?.mode === "client" ? "text-blue-500" : wifiStatus?.mode === "hotspot" ? "text-orange-500" : "text-gray-500"}`} />
             Network
           </CardTitle>
         </CardHeader>

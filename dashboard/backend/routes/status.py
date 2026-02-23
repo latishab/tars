@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 from fastapi import APIRouter
 from loguru import logger
+from .wifi import wifi_manager
 
 router = APIRouter()
 
@@ -94,6 +95,13 @@ async def get_status_data() -> Dict[str, Any]:
         except Exception:
             pass
 
+    wifi_mode = "disconnected"
+    try:
+        wifi_status = await asyncio.to_thread(wifi_manager.get_status)
+        wifi_mode = wifi_status.get("mode", "disconnected")
+    except Exception:
+        pass
+
     return {
         "type": "status",
         "system": {
@@ -116,6 +124,7 @@ async def get_status_data() -> Dict[str, Any]:
         "network": {
             "connection_mode": config.get("connection_mode", "local"),
             "tailscale_ip": config.get("tailscale_ip"),
+            "wifi_mode": wifi_mode,
         },
     }
 
