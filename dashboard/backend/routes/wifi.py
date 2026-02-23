@@ -39,7 +39,7 @@ class HotspotRequest(BaseModel):
 
 class WiFiStatus(BaseModel):
     """Current WiFi connection status."""
-    mode: str  # "hotspot", "client", or "disconnected"
+    mode: str  # "hotspot", "wlan", or "disconnected"
     ssid: Optional[str] = None
     ip: Optional[str] = None
     tailscale_ip: Optional[str] = None

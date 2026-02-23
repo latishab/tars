@@ -130,7 +130,7 @@ function Status() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
-            <Wifi className={`w-5 h-5 ${network.wifi_mode === "client" ? "text-blue-500" : network.wifi_mode === "hotspot" ? "text-orange-500" : "text-gray-500"}`} />
+            <Wifi className={`w-5 h-5 ${network.wifi_mode === "wlan" ? "text-blue-500" : network.wifi_mode === "hotspot" ? "text-orange-500" : "text-gray-500"}`} />
             Network & Connections
           </CardTitle>
         </CardHeader>

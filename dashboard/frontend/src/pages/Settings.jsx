@@ -360,7 +360,7 @@ function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Wifi className={`w-5 h-5 ${wifiStatus?.mode === "client" ? "text-blue-500" : wifiStatus?.mode === "hotspot" ? "text-orange-500" : "text-gray-500"}`} />
+            <Wifi className={`w-5 h-5 ${wifiStatus?.mode === "wlan" ? "text-blue-500" : wifiStatus?.mode === "hotspot" ? "text-orange-500" : "text-gray-500"}`} />
             Network
           </CardTitle>
         </CardHeader>
@@ -370,8 +370,8 @@ function SettingsPage() {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status</span>
-                  <span className={wifiStatus.mode === 'client' ? 'text-green-500' : wifiStatus.mode === 'hotspot' ? 'text-yellow-500' : 'text-red-500'}>
-                    {wifiStatus.mode === 'client' ? 'Connected' : wifiStatus.mode === 'hotspot' ? 'Hotspot Active' : 'Disconnected'}
+                  <span className={wifiStatus.mode === 'wlan' ? 'text-green-500' : wifiStatus.mode === 'hotspot' ? 'text-yellow-500' : 'text-red-500'}>
+                    {wifiStatus.mode === 'wlan' ? 'Connected' : wifiStatus.mode === 'hotspot' ? 'Hotspot Active' : 'Disconnected'}
                   </span>
                 </div>
                 {wifiStatus.ssid && (
@@ -389,7 +389,7 @@ function SettingsPage() {
               </div>
 
               {/* Dashboard Access URLs */}
-              {wifiStatus.mode === 'client' && (
+              {wifiStatus.mode === 'wlan' && (
                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 space-y-2">
                   <p className="text-sm font-medium">Dashboard Access:</p>
                   <div className="space-y-1 text-xs">

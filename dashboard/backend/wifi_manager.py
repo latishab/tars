@@ -313,7 +313,7 @@ class WiFiManager:
         
         Returns:
             Dictionary with mode, ssid, and ip fields:
-            - mode: "hotspot", "client", or "disconnected"
+            - mode: "hotspot", "wlan", or "disconnected"
             - ssid: Current network SSID (if connected)
             - ip: Current IP address (if connected)
         """
@@ -361,7 +361,7 @@ class WiFiManager:
             ip = self._get_ip_address()
             
             return {
-                "mode": "client",
+                "mode": "wlan",
                 "ssid": connection,
                 "ip": ip
             }
@@ -504,4 +504,4 @@ class WiFiManager:
             True if connected to a client network, False otherwise
         """
         status = self.get_status()
-        return status["mode"] == "client"
+        return status["mode"] == "wlan"
