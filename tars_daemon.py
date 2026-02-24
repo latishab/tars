@@ -673,6 +673,11 @@ WantedBy=multi-user.target
         format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
         level="INFO"
     )
+    # Enable aiortc standard logging so encoder errors are visible
+    import logging
+    logging.basicConfig(level=logging.WARNING)
+    logging.getLogger("aiortc").setLevel(logging.DEBUG)
+    logging.getLogger("aioice").setLevel(logging.WARNING)
 
     daemon = TARSDaemon(
         api_port=args.port,

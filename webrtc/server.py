@@ -119,7 +119,7 @@ class WebRTCServer:
 
         # Add microphone track (RPi → MacBook)
         if self.mic_track:
-            pc.addTrack(self.relay.subscribe(self.mic_track))
+            pc.addTrack(self.mic_track)
             logger.debug(f"Added microphone track to [{conn_id}]")
 
         # Handle incoming audio track (MacBook TTS → RPi speaker)

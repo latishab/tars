@@ -42,6 +42,7 @@ class MicrophoneTrack(MediaStreamTrack):
 
         # Audio buffer
         self._queue = asyncio.Queue(maxsize=100)
+        self._loop = None
         self._stream: Optional[sd.InputStream] = None
         self._running = False
 
@@ -59,11 +60,11 @@ class MicrophoneTrack(MediaStreamTrack):
         # Copy audio data (sounddevice reuses the buffer)
         audio_data = indata.copy()
 
-        # Put in queue (non-blocking)
+        # put_nowait must be called from the asyncio thread — use call_soon_threadsafe
         try:
-            self._queue.put_nowait(audio_data)
-        except asyncio.QueueFull:
-            pass  # Drop frame if queue is full
+            self._loop.call_soon_threadsafe(self._queue.put_nowait, audio_data)
+        except Exception:
+            pass  # Drop frame if queue is full or loop is closed
 
     async def start(self):
         """Start capturing from microphone"""
@@ -75,6 +76,7 @@ class MicrophoneTrack(MediaStreamTrack):
 
         logger.info(f"Starting microphone capture: {self.sample_rate}Hz, {self.channels}ch")
 
+        self._loop = asyncio.get_event_loop()
         self._stream = sd.InputStream(
             device=self.device,
             channels=self.channels,
@@ -110,26 +112,33 @@ class MicrophoneTrack(MediaStreamTrack):
         Receive next audio frame for WebRTC transmission.
         Called by aiortc when it needs audio data.
         """
-        if not self._running:
-            raise Exception("Microphone not started")
+        logger.info("[MicTrack] recv() called!")
+        # Wait for mic to start — aiortc calls recv() before connectionstatechange fires
+        waited = 0
+        while not self._running:
+            await asyncio.sleep(0.05)
+            waited += 1
+            if waited == 1:
+                logger.debug(f"[MicTrack] recv() waiting for start...")
 
         # Get audio data from queue; drain while muted to prevent queue fill
+        _got = getattr(self, "_recv_count", 0) + 1
+        self._recv_count = _got
+        if _got <= 3 or _got % 200 == 0:
+            logger.debug(f"[MicTrack] recv() #{_got}, queue size={self._queue.qsize()}")
         while True:
             audio_data = await self._queue.get()
             if not self._muted:
                 break
             # discard frame — mic is muted, keep draining to avoid queue fill
 
-        # Convert float32 [-1, 1] to int16
-        audio_int16 = (audio_data * 32767).astype(np.int16)
+        # Convert float32 [-1, 1] to int16, flatten to 1D (s16 interleaved)
+        audio_int16 = (audio_data * 32767).astype(np.int16).flatten()
+        samples = len(audio_int16) // self.channels
 
-        # Reshape if mono
-        if audio_int16.ndim == 1:
-            audio_int16 = audio_int16.reshape(-1, 1)
-
-        # Create AudioFrame
+        # aiortc Opus encoder requires s16 (interleaved) format
         frame = AudioFrame.from_ndarray(
-            audio_int16,
+            audio_int16.reshape(1, -1),
             format="s16",
             layout="mono" if self.channels == 1 else "stereo"
         )
@@ -137,6 +146,6 @@ class MicrophoneTrack(MediaStreamTrack):
         frame.pts = self._timestamp
 
         # Increment timestamp
-        self._timestamp += audio_int16.shape[0]
+        self._timestamp += samples
 
         return frame
