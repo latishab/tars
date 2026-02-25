@@ -22,7 +22,9 @@ class SpeakerOutput:
     Plays audio through speaker.
 
     Receives audio data from WebRTC and plays it through the USB soundcard.
-    Uses a queue to buffer audio and prevent underruns.
+    Uses a write-loop thread with sd.OutputStream.write() which blocks at
+    real-time pace, preventing buffer overflow regardless of how fast TTS
+    chunks arrive.
     """
 
     def __init__(
@@ -30,77 +32,64 @@ class SpeakerOutput:
         sample_rate: int = 24000,
         channels: int = 1,
         device: Optional[str] = None,
-        buffer_size: int = 10,
     ):
         self.sample_rate = sample_rate
         self.channels = channels
         self.device = device
 
-        # Audio queue
-        self._queue = queue.Queue(maxsize=buffer_size)
-        self._stream: Optional[sd.OutputStream] = None
-        self._running = False
+        self._queue: queue.Queue = queue.Queue()
         self._thread: Optional[threading.Thread] = None
+        self._running = False
 
-    def _audio_callback(self, outdata, frames, time_info, status):
-        """Callback from sounddevice when audio is needed"""
-        if status:
-            logger.warning(f"Speaker playback status: {status}")
-
+    def _play_loop(self):
+        """Background thread: drains queue and writes to sounddevice stream."""
         try:
-            # Get audio from queue
-            data = self._queue.get_nowait()
-
-            # Ensure correct shape
-            if data.shape[0] < frames:
-                # Pad with zeros if not enough data
-                padding = np.zeros((frames - data.shape[0], self.channels), dtype=np.float32)
-                data = np.vstack([data, padding])
-            elif data.shape[0] > frames:
-                # Truncate if too much data
-                data = data[:frames]
-
-            outdata[:] = data
-
-        except queue.Empty:
-            # No audio available - output silence
-            outdata[:] = np.zeros((frames, self.channels), dtype=np.float32)
+            with sd.OutputStream(
+                samplerate=self.sample_rate,
+                channels=self.channels,
+                dtype=np.float32,
+                device=self.device,
+            ) as stream:
+                logger.info(f"Speaker stream opened: device={stream.device}, rate={self.sample_rate}Hz")
+                while self._running:
+                    try:
+                        audio_float = self._queue.get(timeout=0.05)
+                        if audio_float is None:
+                            break
+                        logger.info("stream.write: " + str(audio_float.shape))
+                        stream.write(audio_float)
+                    except queue.Empty:
+                        pass
+        except Exception as e:
+            logger.error(f"Speaker play loop error: {e}")
+        logger.info("Speaker play loop stopped")
 
     def start(self):
-        """Start speaker output"""
+        """Start speaker output."""
         if not SOUNDDEVICE_AVAILABLE:
             raise RuntimeError("sounddevice not available")
 
         if self._running:
             return
 
-        logger.info(f"Starting speaker output: {self.sample_rate}Hz, {self.channels}ch")
-
-        self._stream = sd.OutputStream(
-            device=self.device,
-            channels=self.channels,
-            samplerate=self.sample_rate,
-            dtype=np.float32,
-            callback=self._audio_callback,
-        )
-        self._stream.start()
         self._running = True
-
-        logger.info(f"Speaker started: device={self._stream.device}")
+        self._thread = threading.Thread(target=self._play_loop, daemon=True)
+        self._thread.start()
+        logger.info(f"Speaker started: {self.sample_rate}Hz, {self.channels}ch")
 
     def stop(self):
-        """Stop speaker output"""
+        """Stop speaker output."""
         if not self._running:
             return
 
         self._running = False
+        self._queue.put(None)  # unblock the loop
 
-        if self._stream:
-            self._stream.stop()
-            self._stream.close()
-            self._stream = None
+        if self._thread:
+            self._thread.join(timeout=2.0)
+            self._thread = None
 
-        # Clear queue
+        # Drain queue
         while not self._queue.empty():
             try:
                 self._queue.get_nowait()
@@ -120,25 +109,12 @@ class SpeakerOutput:
             logger.warning("Speaker not started - cannot play audio")
             return
 
-        # Convert bytes to numpy array
         audio_int16 = np.frombuffer(audio_bytes, dtype=np.int16)
-
-        # Convert to float32 [-1, 1]
         audio_float = audio_int16.astype(np.float32) / 32768.0
+        audio_float = audio_float.reshape(-1, self.channels)
 
-        # Reshape for channels
-        if self.channels == 1:
-            audio_float = audio_float.reshape(-1, 1)
-        else:
-            audio_float = audio_float.reshape(-1, self.channels)
-
-        # Add to queue (non-blocking)
-        try:
-            self._queue.put_nowait(audio_float)
-        except queue.Full:
-            logger.warning("Speaker queue full - dropping audio")
+        self._queue.put(audio_float)
 
     @property
     def is_playing(self) -> bool:
-        """Check if audio is currently playing"""
         return self._running and not self._queue.empty()

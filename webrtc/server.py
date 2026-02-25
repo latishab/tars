@@ -88,7 +88,7 @@ class WebRTCServer:
 
         # Initialize audio
         self.mic_track = MicrophoneTrack()
-        self.speaker = SpeakerOutput()
+        self.speaker = SpeakerOutput(sample_rate=48000)
 
         self._running = True
         logger.info("✓ WebRTC server ready (waiting for connections)")
@@ -207,18 +207,34 @@ class WebRTCServer:
             try:
                 frame = await track.recv()
 
-                # Convert frame to numpy array
                 audio_array = frame.to_ndarray()
+                fmt = frame.format.name
+                incoming_rate = frame.sample_rate or 48000
+                is_float = fmt.startswith("flt") or fmt.startswith("dbl")
 
-                # Handle stereo to mono conversion
-                if audio_array.ndim > 1:
-                    audio_array = audio_array.mean(axis=1)
+                channels = len(frame.layout.channels)
+                if channels > 1:
+                    if fmt.endswith("p"):
+                        audio_array = audio_array.mean(axis=0)
+                    else:
+                        audio_array = audio_array.reshape(-1, channels).mean(axis=1)
+                else:
+                    audio_array = audio_array.flatten()
 
-                # Convert to int16 and bytes for speaker
                 import numpy as np
-                audio_int16 = (audio_array * 32767).astype(np.int16)
+                if is_float:
+                    audio_int16 = (audio_array * 32767).astype(np.int16)
+                else:
+                    audio_int16 = audio_array.flatten().astype(np.int16)
+
+                # Decimate to speaker rate if needed (Opus decodes at 48kHz)
+                if self.speaker and incoming_rate != self.speaker.sample_rate:
+                    ratio = incoming_rate // self.speaker.sample_rate
+                    if ratio > 1:
+                        audio_int16 = audio_int16[::ratio]
 
                 if self.speaker:
+                    logger.info(f"Speaker.play: {len(audio_int16)} samples [{conn_id}]")
                     self.speaker.play(audio_int16.tobytes())
 
             except Exception as e:
