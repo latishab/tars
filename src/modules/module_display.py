@@ -69,6 +69,11 @@ class DisplayManager:
         # Colors
         self.bg_color = (13, 17, 23)  # #0d1117
 
+        # Camera log overlay
+        from collections import deque
+        self._log_lines: deque = deque(maxlen=3)
+        self._log_font = None  # lazy-init after pygame.init()
+
         # WiFi icons (loaded in _run to avoid pygame init issues)
         self.wifi_icons = {}
 
@@ -195,6 +200,7 @@ class DisplayManager:
         
         # Initialize video subsystem explicitly
         pygame.display.init()
+        self._log_font = pygame.font.SysFont("monospace", 18)
 
         # Physical screen is 800x480 landscape (DSI panel mounted vertically)
         display_info = pygame.display.Info()
@@ -270,6 +276,7 @@ class DisplayManager:
 
                 self._draw_wifi_indicator(portrait_surface)
                 self._draw_battery_indicator(portrait_surface)
+                self._draw_log_overlay(portrait_surface)
 
             # Rotate portrait (480x800) -> landscape (800x480) and blit to screen
             # Using rotozoom with scale=1.0 is faster than rotate()
@@ -358,6 +365,26 @@ class DisplayManager:
         # Draw icon if available
         if icon:
             screen.blit(icon, (margin, margin))
+
+    def add_camera_log(self, text):
+        self._log_lines.append(text)
+
+    def _draw_log_overlay(self, surface):
+        if not self._log_lines or not self._log_font:
+            return
+        import pygame as _pg
+        line_h = 22
+        pad = 6
+        lines = list(self._log_lines)
+        total_h = len(lines) * line_h + pad * 2
+        y_start = self.height - total_h
+        bg = _pg.Surface((self.width, total_h), _pg.SRCALPHA)
+        bg.fill((0, 0, 0, 160))
+        surface.blit(bg, (0, y_start))
+        for i, line in enumerate(lines):
+            text_surf = self._log_font.render(line[:52], True, (200, 200, 200))
+            surface.blit(text_surf, (pad, y_start + pad + i * line_h))
+
     def get_status(self) -> dict:
         """Get current display status"""
         with self._lock:

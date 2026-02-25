@@ -49,6 +49,7 @@ class WebRTCServer:
         on_audio_level: Optional[Callable[[float, str], None]] = None,
         on_connected: Optional[Callable[[], None]] = None,
         on_disconnected: Optional[Callable[[], None]] = None,
+        on_camera_log: Optional[Callable[[str], None]] = None,
     ):
         if not AIORTC_AVAILABLE:
             raise RuntimeError("aiortc not installed - cannot use WebRTC")
@@ -59,6 +60,7 @@ class WebRTCServer:
         self.on_audio_level = on_audio_level
         self.on_connected = on_connected
         self.on_disconnected = on_disconnected
+        self.on_camera_log = on_camera_log
 
         # WebRTC components
         self.peer_connections: Dict[str, RTCPeerConnection] = {}
@@ -273,6 +275,9 @@ class WebRTCServer:
                 role = data.get("role", "unknown")
                 text = data.get("text", "")
                 logger.info(f"Transcript [{role}]: {text[:50]}...")
+
+            elif msg_type == "camera_log" and self.on_camera_log:
+                self.on_camera_log(data.get("text", ""))
 
         except json.JSONDecodeError:
             logger.warning(f"Invalid JSON in data channel [{conn_id}]: {message}")

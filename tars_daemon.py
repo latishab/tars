@@ -401,6 +401,7 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
                     on_emotion=self._on_emotion,
                     on_connected=self._on_webrtc_connected,
                     on_disconnected=self._on_webrtc_disconnected,
+                    on_camera_log=self._on_camera_log,
                 )
                 await self.webrtc.start()
                 logger.info("✓ WebRTC server started (waiting for AI brain connection)")
@@ -520,6 +521,10 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
         if self.display:
             # Show waiting status on display
             self.display.set_eye_state("idle")
+
+    def _on_camera_log(self, text: str):
+        if self.display:
+            self.display.add_camera_log(text)
 
     # === Callbacks from face tracking ===
 
