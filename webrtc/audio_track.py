@@ -112,7 +112,7 @@ class MicrophoneTrack(MediaStreamTrack):
         Receive next audio frame for WebRTC transmission.
         Called by aiortc when it needs audio data.
         """
-        logger.info("[MicTrack] recv() called!")
+
         # Wait for mic to start — aiortc calls recv() before connectionstatechange fires
         waited = 0
         while not self._running:

@@ -29,6 +29,7 @@ except ImportError:
 
 from .audio_track import MicrophoneTrack
 from .audio_output import SpeakerOutput
+import numpy as np
 
 
 class WebRTCServer:
@@ -223,7 +224,6 @@ class WebRTCServer:
                 else:
                     audio_array = audio_array.flatten()
 
-                import numpy as np
                 if is_float:
                     audio_int16 = (audio_array * 32767).astype(np.int16)
                 else:
@@ -236,7 +236,7 @@ class WebRTCServer:
                         audio_int16 = audio_int16[::ratio]
 
                 if self.speaker:
-                    logger.info(f"Speaker.play: {len(audio_int16)} samples [{conn_id}]")
+                    logger.debug(f"Speaker.play: {len(audio_int16)} samples [{conn_id}]")
                     self.speaker.play(audio_int16.tobytes())
 
             except Exception as e:

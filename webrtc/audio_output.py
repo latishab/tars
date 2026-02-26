@@ -49,6 +49,7 @@ class SpeakerOutput:
                 channels=self.channels,
                 dtype=np.float32,
                 device=self.device,
+                latency="low",
             ) as stream:
                 logger.info(f"Speaker stream opened: device={stream.device}, rate={self.sample_rate}Hz")
                 while self._running:
@@ -56,7 +57,7 @@ class SpeakerOutput:
                         audio_float = self._queue.get(timeout=0.05)
                         if audio_float is None:
                             break
-                        logger.info("stream.write: " + str(audio_float.shape))
+        
                         stream.write(audio_float)
                     except queue.Empty:
                         pass

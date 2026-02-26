@@ -681,7 +681,7 @@ WantedBy=multi-user.target
     # Enable aiortc standard logging so encoder errors are visible
     import logging
     logging.basicConfig(level=logging.WARNING)
-    logging.getLogger("aiortc").setLevel(logging.DEBUG)
+    logging.getLogger("aiortc").setLevel(logging.WARNING)
     logging.getLogger("aioice").setLevel(logging.WARNING)
 
     daemon = TARSDaemon(
