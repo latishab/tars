@@ -236,7 +236,6 @@ class WebRTCServer:
                         audio_int16 = audio_int16[::ratio]
 
                 if self.speaker:
-                    logger.debug(f"Speaker.play: {len(audio_int16)} samples [{conn_id}]")
                     self.speaker.play(audio_int16.tobytes())
 
             except Exception as e:
