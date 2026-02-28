@@ -62,6 +62,7 @@ function Control() {
   const [executing, setExecuting] = useState(null)
   const [cameraUrl, setCameraUrl] = useState(null)
   const [emotion, setEmotion] = useState('neutral')
+  const [eyeState, setEyeState] = useState('idle')
   const [savedSequences, setSavedSequences] = useState({})
   const [sequencePlaying, setSequencePlaying] = useState(false)
 
@@ -111,6 +112,19 @@ function Control() {
       setEmotion(newEmotion)
     } catch (err) {
       console.error('Set emotion failed:', err)
+    }
+  }
+
+  const setEyeStateApi = async (state) => {
+    try {
+      await fetch('/api/control/eye-state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state }),
+      })
+      setEyeState(state)
+    } catch (err) {
+      console.error('Set eye state failed:', err)
     }
   }
 
@@ -177,27 +191,52 @@ function Control() {
           </CardContent>
         </Card>
 
-        {/* Emotions - 60% on desktop */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Emotion</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-2">
-              {EMOTIONS.map((e) => (
-                <Button
-                  key={e}
-                  variant={emotion === e ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setEmotionApi(e)}
-                  className="h-12 text-xs"
-                >
-                  {EMOTION_LABELS[e] || e}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Right column: Eye State + Emotions stacked */}
+        <div className="flex flex-col gap-4">
+          {/* Eye State */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Eye State</CardTitle>
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className="grid grid-cols-4 gap-2">
+                {['idle', 'listening', 'thinking', 'speaking'].map((s) => (
+                  <Button
+                    key={s}
+                    variant={eyeState === s ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEyeStateApi(s)}
+                    className="h-9 text-xs capitalize"
+                  >
+                    {s}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Emotions */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Emotion</CardTitle>
+            </CardHeader>
+            <CardContent className="pb-3">
+              <div className="grid grid-cols-2 gap-2">
+                {EMOTIONS.map((e) => (
+                  <Button
+                    key={e}
+                    variant={emotion === e ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setEmotionApi(e)}
+                    className="h-10 text-xs"
+                  >
+                    {EMOTION_LABELS[e] || e}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Movement Controls - Full width */}
