@@ -136,15 +136,6 @@ class DisplayManager:
             if self.eyes:
                 self.eyes.blink()
 
-    def play_animation(self, animation: str):
-        """Play animation: laugh, confused"""
-        with self._lock:
-            if self.eyes:
-                if animation == "laugh":
-                    self.eyes.anim_laugh()
-                elif animation == "confused":
-                    self.eyes.anim_confused()
-
     # ========== Audio ==========
 
     def set_audio_level(self, level: float, source: str):
