@@ -50,7 +50,7 @@ class HardwareController:
             raise ValueError(f"Invalid emotion. Valid: {', '.join(VALID_EMOTIONS)}")
         
         self.display.set_emotion(emotion)
-        logger.info(f"Set emotion: {emotion}")
+        logger.debug(f"Set emotion: {emotion}")
         return {"success": True, "emotion": emotion}
     
     def set_eye_state(self, state: str) -> Dict[str, Any]:
@@ -62,7 +62,7 @@ class HardwareController:
             raise ValueError(f"Invalid state. Valid: {', '.join(VALID_EYE_STATES)}")
         
         self.display.set_eye_state(state)
-        logger.info(f"Set eye state: {state}")
+        logger.debug(f"Set eye state: {state}")
         return {"success": True, "state": state}
     
     # === Status ===

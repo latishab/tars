@@ -570,9 +570,7 @@ class RoboEyes:
     
     def _draw_curved_bottom_lid(self, surface: pygame.Surface, x: int, y: int, w: int, h: int, curve_amount: float):
         """Draw curved bottom eyelid for happy/smiling expression"""
-        print(f"DEBUG: Drawing curved lid - x={x}, y={y}, w={w}, h={h}, curve={curve_amount}")
         if curve_amount < 0.01:
-            print("DEBUG: Curve amount too small, skipping")
             return
             
         cfg = self.config
@@ -682,10 +680,8 @@ class RoboEyes:
         
         # Bottom eyelid overlay
         lid_bottom = self._lid_bottom_left if is_left else self._lid_bottom_right
-        print(f"DEBUG: Bottom lid - curved_bottom={curved_bottom}, curve_amount={curve_amount}")
         if curved_bottom and curve_amount > 0.01:
             # Use curved lid for happy expression
-            print("DEBUG: Calling curved bottom lid")
             self._draw_curved_bottom_lid(surface, total_x, total_y - eye_height // 2, self.config.width, eye_height, curve_amount)
         elif lid_bottom > 1:
             # Straight bottom lid (default)

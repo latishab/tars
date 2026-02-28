@@ -226,7 +226,7 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
         """Set facial emotion."""
         emotion = request.emotion
 
-        logger.info(f"gRPC SetEmotion: {emotion}")
+        logger.debug(f"gRPC SetEmotion: {emotion}")
 
         if not self.hw:
             context.set_code(grpc.StatusCode.UNAVAILABLE)
@@ -252,7 +252,7 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
         """Set eye state."""
         state = request.state
 
-        logger.info(f"gRPC SetEyeState: {state}")
+        logger.debug(f"gRPC SetEyeState: {state}")
 
         if not self.hw:
             context.set_code(grpc.StatusCode.UNAVAILABLE)

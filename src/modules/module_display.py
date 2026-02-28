@@ -290,7 +290,7 @@ class DisplayManager:
             if now - self._last_fps_print >= 5.0:
                 fps = clock.get_fps()
                 if fps < 55:  # Only print if below target
-                    print(f"Display FPS: {fps:.1f} (target: 60)")
+                    pass  # FPS logged at debug level
                 self._last_fps_print = now
 
         pygame.quit()
