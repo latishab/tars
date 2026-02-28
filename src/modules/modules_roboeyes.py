@@ -354,9 +354,9 @@ class RoboEyes:
             self._target_look_y = 0
             base_focus = 1.25
             audio_boost = self._audio_level * 0.3 if self._audio_level > 0.1 else 0
-            self._listening_focus = base_focus + audio_boost
+            _focus_target = base_focus + audio_boost
         else:
-            self._listening_focus = 1.0
+            _focus_target = 1.0
 
         # Speaking behavior
         if self._state == EyeState.SPEAKING:
@@ -376,10 +376,13 @@ class RoboEyes:
                 self._speaking_look_away = False
                 self._speaking_look_timer = 0
             if self._audio_level > 0.1:
-                self._speaking_pulse = 0.85 + self._audio_level * 0.3
+                _pulse_target = 0.85 + self._audio_level * 0.3
             else:
-                self._speaking_pulse = 1.0
+                _pulse_target = 1.0
         
+        if self._state != EyeState.SPEAKING:
+            _pulse_target = 1.0
+
         # Thinking behavior
         if self._state == EyeState.THINKING:
             self._thinking_timer += dt
@@ -416,6 +419,8 @@ class RoboEyes:
         self._look_y = smooth_lerp(self._look_y, self._target_look_y, 8.0, dt)
         self._left_open = smooth_lerp(self._left_open, self._left_open_target, speed, dt)
         self._right_open = smooth_lerp(self._right_open, self._right_open_target, speed, dt)
+        self._listening_focus = smooth_lerp(self._listening_focus, _focus_target, 5.0, dt)
+        self._speaking_pulse = smooth_lerp(self._speaking_pulse, _pulse_target, 10.0, dt)
         self._glow_intensity = smooth_lerp(self._glow_intensity, self._glow_target, 8.0, dt)
         self._pupil_scale = smooth_lerp(self._pupil_scale, self._pupil_scale_target, 10.0, dt)
         self._squint_intensity = smooth_lerp(self._squint_intensity, self._squint_target, 6.0, dt)
