@@ -244,7 +244,6 @@ class RoboEyes:
         if self._state == EyeState.THINKING and new_state != EyeState.THINKING:
             self._squint_target = 0.0
             self._thinking_timer = 0.0
-            self._thinking_phase = 0
         self._state = new_state
     
     def set_mood(self, mood: Mood, intensity: float = 1.0):
@@ -384,16 +383,10 @@ class RoboEyes:
         # Thinking behavior
         if self._state == EyeState.THINKING:
             self._thinking_timer += dt
-            self._thinking_phase += dt * 2.0
-            # Slow glow pulse: 0.5 → 1.1
-            self._glow_target = 0.8 + math.sin(self._thinking_phase) * 0.3
-            # Slight squint for concentration
-            self._squint_target = 0.25
-            # Faster, wider eye darts upward/side-to-side
             if self._thinking_timer > 0.4 + random.random() * 0.5:
                 self._thinking_timer = 0
-                self._target_look_x = (random.random() - 0.5) * 1.6
-                self._target_look_y = -0.3 - random.random() * 0.5
+                self._target_look_x = (random.random() - 0.5) * 2.0
+                self._target_look_y = -0.5 - random.random() * 0.5
         
         # Breathing glow when idle
         if self._breathing_enabled and self._state == EyeState.IDLE:
@@ -405,7 +398,7 @@ class RoboEyes:
         else:
             self._breathing_timer = 0.0
             self._breathing_phase = 0.0
-            if self._state not in (EyeState.SPEAKING, EyeState.THINKING):
+            if self._state != EyeState.SPEAKING:
                 self._glow_target = 1.0
         
         # Update mood eyelids
