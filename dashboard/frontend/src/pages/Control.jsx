@@ -6,7 +6,7 @@ import {
   Hand, Smile, Frown, Meh, Zap, RotateCcw, Camera
 } from 'lucide-react'
 
-const EMOTIONS = ['neutral', 'happy', 'sad', 'angry', 'excited', 'afraid', 'sideeye_left', 'sideeye_right', 'sleepy']
+const EMOTIONS = ['neutral', 'happy', 'sad', 'angry', 'excited', 'afraid', 'sleepy', 'sideeye_left', 'sideeye_right', 'curious', 'skeptical', 'smug', 'surprised']
 const EMOTION_LABELS = {
   'neutral': 'Neutral',
   'happy': 'Happy',
@@ -16,7 +16,11 @@ const EMOTION_LABELS = {
   'sleepy': 'Sleepy',
   'afraid': 'Afraid',
   'sideeye_left': 'Side Eye L',
-  'sideeye_right': 'Side Eye R'
+  'sideeye_right': 'Side Eye R',
+  'curious': 'Curious',
+  'skeptical': 'Skeptical',
+  'smug': 'Smug',
+  'surprised': 'Surprised'
 }
 
 const MOVEMENT_GROUPS = {
@@ -36,8 +40,9 @@ const MOVEMENT_GROUPS = {
     { name: 'wave_right', label: 'Wave R', icon: Hand },
     { name: 'wave_left', label: 'Wave L', icon: Hand },
     { name: 'bow', label: 'Bow', icon: null },
-    { name: 'excited', label: 'Excited', icon: Zap },
+    { name: 'pose', label: 'Pose', icon: null },
     { name: 'laugh', label: 'Laugh', icon: Smile },
+    { name: 'neutral_legs', label: 'Neutral', icon: null },
   ],
   balance: [
     { name: 'tilt_left', label: 'Tilt L', icon: null },
@@ -45,12 +50,42 @@ const MOVEMENT_GROUPS = {
     { name: 'side_side', label: 'Side-Side', icon: null },
     { name: 'swing_legs', label: 'Swing', icon: null },
   ],
+  quickGestures: [
+    { name: 'tilt_quick_right', label: 'Tilt R Fast', icon: null },
+    { name: 'tilt_quick_left', label: 'Tilt L Fast', icon: null },
+    { name: 'wiggle', label: 'Wiggle', icon: null },
+    { name: 'wave_short', label: 'Wave Fast', icon: null },
+  ],
 }
 
 function Control() {
   const [executing, setExecuting] = useState(null)
   const [cameraUrl, setCameraUrl] = useState(null)
   const [emotion, setEmotion] = useState('neutral')
+  const [savedSequences, setSavedSequences] = useState({})
+  const [sequencePlaying, setSequencePlaying] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/control/saved-sequences')
+      .then(r => r.json())
+      .then(setSavedSequences)
+      .catch(() => {})
+  }, [])
+
+  const playSaved = async (name) => {
+    setSequencePlaying(true)
+    try {
+      await fetch(`/api/control/play-saved/${encodeURIComponent(name)}`, { method: 'POST' })
+    } catch (err) {
+      console.error('play-saved failed:', err)
+    }
+    setSequencePlaying(false)
+  }
+
+  const getSeqType = (entry) =>
+    entry && typeof entry === 'object' && !Array.isArray(entry) ? (entry.type || 'movement') : 'movement'
+
+  const normalize = (s) => s.toLowerCase().replace(/[_\s]/g, '')
 
   const executeMovement = async (movement) => {
     setExecuting(movement)
@@ -92,6 +127,20 @@ function Control() {
     }
     setExecuting(null)
   }
+
+  const overrideMap = Object.fromEntries(
+    Object.keys(savedSequences).map(k => [normalize(k), k])
+  )
+  // Also build a label-based lookup so saved sequences match button labels too
+  const allMovements = Object.values(MOVEMENT_GROUPS).flat()
+  const labelOverrideMap = Object.fromEntries(
+    allMovements
+      .map(m => {
+        const match = Object.keys(savedSequences).find(k => normalize(k) === normalize(m.label))
+        return match ? [m.name, match] : null
+      })
+      .filter(Boolean)
+  )
 
   return (
     <div className="p-4 space-y-4">
@@ -177,7 +226,7 @@ function Control() {
                   key={m.name}
                   variant="outline"
                   size="sm"
-                  onClick={() => executeMovement(m.name)}
+                  onClick={() => { const ov = overrideMap[normalize(m.name)] || labelOverrideMap[m.name]; ov ? playSaved(ov) : executeMovement(m.name) }}
                   disabled={executing !== null}
                   className="flex flex-col h-16 sm:h-auto py-2"
                 >
@@ -197,7 +246,7 @@ function Control() {
                   key={m.name}
                   variant="outline"
                   size="sm"
-                  onClick={() => executeMovement(m.name)}
+                  onClick={() => { const ov = overrideMap[normalize(m.name)] || labelOverrideMap[m.name]; ov ? playSaved(ov) : executeMovement(m.name) }}
                   disabled={executing !== null}
                   className="flex flex-col h-16 sm:h-auto py-2"
                 >
@@ -217,7 +266,7 @@ function Control() {
                   key={m.name}
                   variant="outline"
                   size="sm"
-                  onClick={() => executeMovement(m.name)}
+                  onClick={() => { const ov = overrideMap[normalize(m.name)] || labelOverrideMap[m.name]; ov ? playSaved(ov) : executeMovement(m.name) }}
                   disabled={executing !== null}
                   className="flex flex-col h-16 sm:h-auto py-2"
                 >
@@ -237,7 +286,7 @@ function Control() {
                   key={m.name}
                   variant="outline"
                   size="sm"
-                  onClick={() => executeMovement(m.name)}
+                  onClick={() => { const ov = overrideMap[normalize(m.name)] || labelOverrideMap[m.name]; ov ? playSaved(ov) : executeMovement(m.name) }}
                   disabled={executing !== null}
                   className="flex flex-col h-16 sm:h-auto py-2"
                 >
@@ -246,8 +295,77 @@ function Control() {
               ))}
             </div>
           </div>
+
+          {/* Quick Gestures */}
+          <div>
+            <div className="text-sm text-muted-foreground mb-2">Quick Gestures</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {MOVEMENT_GROUPS.quickGestures.map((m) => (
+                <Button
+                  key={m.name}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { const ov = overrideMap[normalize(m.name)] || labelOverrideMap[m.name]; ov ? playSaved(ov) : executeMovement(m.name) }}
+                  disabled={executing !== null}
+                  className="flex flex-col h-16 sm:h-auto py-2"
+                >
+                  <span className="text-xs">{m.label}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom Expression Sequences */}
+          {Object.entries(savedSequences).some(([, entry]) => getSeqType(entry) === 'expression') && (
+            <div>
+              <div className="text-sm text-muted-foreground mb-2">Custom Expressions</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {Object.entries(savedSequences)
+                  .filter(([, entry]) => getSeqType(entry) === 'expression')
+                  .map(([name]) => (
+                    <Button
+                      key={name}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => playSaved(name)}
+                      disabled={executing !== null || sequencePlaying}
+                      className="flex flex-col h-16 sm:h-auto py-2"
+                    >
+                      <span className="text-xs">{name}</span>
+                    </Button>
+                  ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Custom Movements */}
+      {Object.entries(savedSequences).some(([, entry]) => getSeqType(entry) === 'movement') && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Custom Movements</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(savedSequences)
+                .filter(([, entry]) => getSeqType(entry) === 'movement')
+                .map(([name]) => (
+                  <Button
+                    key={name}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => playSaved(name)}
+                    disabled={sequencePlaying}
+                    className="h-10"
+                  >
+                    {name}
+                  </Button>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

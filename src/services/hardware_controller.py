@@ -3,9 +3,13 @@ Hardware controller with shared business logic.
 Both HTTP and gRPC APIs call these internal functions.
 """
 
+import json
+from pathlib import Path
 from typing import Optional, Dict, Any
 from modules.modules_roboeyes import Mood
 from loguru import logger
+
+_CUSTOM_SEQUENCES_FILE = Path(__file__).parent.parent.parent / "custom_sequences.json"
 
 # Valid values - generated from Mood enum
 VALID_EMOTIONS = [mood.name.lower() for mood in Mood]
@@ -130,11 +134,44 @@ class HardwareController:
     def execute_movement(self, movement: str, speed: float = 1.0) -> Dict[str, Any]:
         """Execute a movement."""
         if movement not in self.movement_map:
-            raise ValueError(f"Unknown movement: {movement}")
-        
+            # Try custom sequence fallback
+            try:
+                with open(_CUSTOM_SEQUENCES_FILE) as f:
+                    sequences = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                sequences = {}
+            if movement not in sequences:
+                raise ValueError(f"Unknown movement: {movement}")
+            entry = sequences[movement]
+            steps = entry["steps"] if isinstance(entry, dict) else entry
+            import time
+            start = time.time()
+            servo = self.servo_module
+            if servo is None:
+                raise ValueError("Servo module not available for custom sequence")
+            servo._notify_movement_start()
+            try:
+                for step in steps:
+                    if step.get("movement"):
+                        self.execute_movement(step["movement"], speed)
+                    else:
+                        servo.move_legs(
+                            step.get("left_height", 50), step.get("right_height", 50),
+                            step.get("left_leg", 50), step.get("right_leg", 50),
+                            step.get("speed", 0.85),
+                        )
+                        hold = step.get("hold_time", 0)
+                        if hold > 0:
+                            import time as _t; _t.sleep(hold)
+                servo.move_legs(50, 50, 50, 50, 0.8)
+                servo.disable_all_servos()
+            finally:
+                servo._notify_movement_end()
+            return {"success": True, "duration": time.time() - start, "movement": movement}
+
         import time
         start_time = time.time()
-        
+
         movement_func = self.movement_map[movement]
         movement_func()
         

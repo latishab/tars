@@ -49,9 +49,12 @@ MOVEMENT_MAP = {
     "wave_right": module_movements.wave_right,
     "wave_left": module_movements.wave_left,
     "neutral_legs": module_movements.neutral_legs,
-    "excited": module_movements.excited,
     "laugh": module_movements.laugh,
     "swing_legs": module_movements.swing_legs,
+    "tilt_quick_right": module_movements.tilt_quick_right,
+    "tilt_quick_left": module_movements.tilt_quick_left,
+    "wiggle": module_movements.wiggle,
+    "wave_short": module_movements.wave_short,
 }
 
 
