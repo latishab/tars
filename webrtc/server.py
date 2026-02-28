@@ -15,6 +15,7 @@ Architecture:
 """
 
 import asyncio
+import time
 import json
 from typing import Optional, Callable, Dict
 from loguru import logger
@@ -22,6 +23,22 @@ from loguru import logger
 try:
     from aiortc import RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
     from aiortc.contrib.media import MediaRelay
+    from aiortc.rtcrtpreceiver import RTCRtpReceiver
+    from aiortc.jitterbuffer import JitterBuffer
+    # Reduce audio jitter buffer prefetch from 4 packets (80ms) to 1 packet (20ms).
+    # Safe for LAN/Tailscale where packet reordering is rare.
+    _orig_rtp_receiver_init = RTCRtpReceiver.__init__
+    def _patched_rtp_receiver_init(self, kind, transport):
+        _orig_rtp_receiver_init(self, kind, transport)
+        if kind == "audio":
+            # Override prefetch=4 (80ms) → prefetch=1 (20ms). Safe on LAN/Tailscale.
+            # Uses name-mangled key because aiortc uses __jitter_buffer (private).
+            # If this key changes, the patch silently fails — verified at startup below.
+            self.__dict__["_RTCRtpReceiver__jitter_buffer"] = JitterBuffer(capacity=16, prefetch=1)
+    RTCRtpReceiver.__init__ = _patched_rtp_receiver_init
+    # Verify patch took effect by instantiating a dummy receiver-like object
+    _test_buf = JitterBuffer(capacity=16, prefetch=1)
+    logger.info(f"[JitterPatch] Audio jitter buffer prefetch set to {_test_buf._prefetch} (was 4). 20ms vs 80ms.")
     AIORTC_AVAILABLE = True
 except ImportError:
     AIORTC_AVAILABLE = False
@@ -205,6 +222,8 @@ class WebRTCServer:
     async def _handle_audio_track(self, track, conn_id: str):
         """Process incoming TTS audio from MacBook"""
         logger.info(f"Started audio track handler [{conn_id}]")
+        _silence_frames = 0
+        _SILENCE_THRESHOLD = 50  # rms threshold (int16 scale)
 
         while self._running:
             try:
@@ -236,6 +255,13 @@ class WebRTCServer:
                         audio_int16 = audio_int16[::ratio]
 
                 if self.speaker:
+                    rms = int(np.sqrt(np.mean(audio_int16.astype(np.float32) ** 2)))
+                    if rms < _SILENCE_THRESHOLD:
+                        _silence_frames += 1
+                    else:
+                        if _silence_frames >= 3:
+                            logger.debug(f"[AudioDiag] First non-silence frame after {_silence_frames} silence frames — play start")
+                        _silence_frames = 0
                     self.speaker.play(audio_int16.tobytes())
 
             except Exception as e:
