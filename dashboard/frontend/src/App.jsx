@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
-import { Activity, Gamepad2, Settings, Download, Sun, Moon } from 'lucide-react'
+import { Activity, Gamepad2, Settings, Download, Sun, Moon, SlidersHorizontal } from 'lucide-react'
 import { Button } from './components/ui/button'
 import Status from './pages/Status'
 import Control from './pages/Control'
+import MovementBuilder from './pages/MovementBuilder'
 import SettingsPage from './pages/Settings'
 import AppStore from './pages/AppStore'
 
@@ -50,6 +51,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Status />} />
           <Route path="/control" element={<Control />} />
+          <Route path="/builder" element={<MovementBuilder />} />
           <Route path="/apps" element={<AppStore />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -81,6 +83,18 @@ function App() {
           >
             <Gamepad2 className="w-5 h-5" />
             <span className="text-xs">Control</span>
+          </NavLink>
+
+          <NavLink
+            to="/builder"
+            className={({ isActive }) =>
+              `flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+              }`
+            }
+          >
+            <SlidersHorizontal className="w-5 h-5" />
+            <span className="text-xs">Builder</span>
           </NavLink>
 
           <NavLink

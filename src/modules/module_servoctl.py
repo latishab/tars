@@ -414,7 +414,6 @@ from modules.module_movements import (
     turn_left,
     turn_left_slow,
     laugh,
-    excited,
     swing_legs,
     pose,
     bow,
@@ -426,7 +425,12 @@ from modules.module_movements import (
     neutral_legs,
     ventilate_on,
     ventilate_off,
-    set_swap_turn_directions
+    set_swap_turn_directions,
+    # New quick gestures
+    tilt_quick_right,
+    tilt_quick_left,
+    wiggle,
+    wave_short,
 )
 
 set_swap_turn_directions(config["CONTROLS"]["swap_turn_directions"])

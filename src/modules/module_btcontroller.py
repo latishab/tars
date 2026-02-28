@@ -144,7 +144,7 @@ def start_controls():
                         if r1_held:
                             execute_movement("tilt_left")
                         else:
-                            execute_movement("excited")
+                            execute_movement("wiggle")
 
             elif event.type == evdev.ecodes.EV_ABS:
                 current_time = time.time()

@@ -112,10 +112,18 @@ class DisplayManager:
         emotion_map = {
             "default": "neutral",
             "tired": "sleepy",
-            "surprised": "excited",
+            "surprised": "surprised",
             "confused": "curious",
             "side eye l": "sideeye_left",
             "side eye r": "sideeye_right",
+            "thinking": "curious",
+            "doubt": "skeptical",
+            "doubtful": "skeptical",
+            "suspicious": "skeptical",
+            "satisfied": "smug",
+            "proud": "smug",
+            "shocked": "surprised",
+            "startled": "surprised",
         }
         emotion = emotion_map.get(emotion.lower(), emotion.lower())
         

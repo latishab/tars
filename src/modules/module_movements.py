@@ -259,22 +259,6 @@ def laugh():
             servoctl.MOVING = False
             servoctl._notify_movement_end()
 
-def excited():
-    if not servoctl.MOVING:
-        servoctl.MOVING = True
-        servoctl._notify_movement_start()
-        try:
-            move_legs(50, 50, 50, 50, 0.9)
-            for _ in range(4):
-                move_legs(40, 60, 45, 50, 0.95) 
-                move_legs(60, 40, 50, 45, 0.95)
-            move_legs(50, 50, 50, 50, 0.9)
-            disable_all_servos()
-        finally:
-            servoctl.MOVING = False
-            servoctl._notify_movement_end()
-
-
 def swing_legs():
     if not servoctl.MOVING:
         servoctl.MOVING = True
@@ -306,12 +290,81 @@ def pose():
         try:
             move_legs(50, 50, 50, 50, 0.6)
             move_legs(30, 30, 40, 40, 0.6)
-            move_legs(80, 80, 30, 30, 0.6)
+            move_legs(90, 90, 30, 30, 0.6)
             time.sleep(3)
-            move_legs(80, 80, 30, 30, 0.8)
+            move_legs(90, 90, 30, 30, 0.8)
             move_legs(30, 30, 30, 30, 0.8)
             move_legs(30, 30, 40, 40, 0.6)
             move_legs(50, 50, 50, 50, 0.6)
+            disable_all_servos()
+        finally:
+            servoctl.MOVING = False
+            servoctl._notify_movement_end()
+
+
+
+def tilt_quick_right():
+    """Quick tilt right and hold. Curiosity, 'hmm?'."""
+    if not servoctl.MOVING:
+        servoctl.MOVING = True
+        servoctl._notify_movement_start()
+        try:
+            move_legs(50, 50, 50, 50, 0.85)
+            move_legs(35, 65, 50, 50, 0.85)   # tilt right
+            time.sleep(0.4)
+            move_legs(50, 50, 50, 50, 0.8)    # return
+            disable_all_servos()
+        finally:
+            servoctl.MOVING = False
+            servoctl._notify_movement_end()
+
+
+def tilt_quick_left():
+    """Quick tilt left and hold. Thinking, considering."""
+    if not servoctl.MOVING:
+        servoctl.MOVING = True
+        servoctl._notify_movement_start()
+        try:
+            move_legs(50, 50, 50, 50, 0.85)
+            move_legs(65, 35, 50, 50, 0.85)   # tilt left
+            time.sleep(0.4)
+            move_legs(50, 50, 50, 50, 0.8)    # return
+            disable_all_servos()
+        finally:
+            servoctl.MOVING = False
+            servoctl._notify_movement_end()
+
+
+def wiggle():
+    """Quick side-to-side wiggle. Amusement, playful."""
+    if not servoctl.MOVING:
+        servoctl.MOVING = True
+        servoctl._notify_movement_start()
+        try:
+            move_legs(50, 50, 50, 50, 0.85)
+            for _ in range(2):
+                move_legs(42, 58, 50, 50, 0.9)   # small range, can be faster
+                move_legs(58, 42, 50, 50, 0.9)
+            move_legs(50, 50, 50, 50, 0.8)
+            disable_all_servos()
+        finally:
+            servoctl.MOVING = False
+            servoctl._notify_movement_end()
+
+
+def wave_short():
+    """Quick 2-cycle wave. Short greeting."""
+    if not servoctl.MOVING:
+        servoctl.MOVING = True
+        servoctl._notify_movement_start()
+        try:
+            move_legs(50, 50, 50, 50, 0.8)
+            move_legs(50, 80, 50, 50, 0.8)    # raise right side (planted left supports)
+            move_legs(30, 80, 50, 85, 0.85)   # wave out
+            move_legs(30, 80, 50, 60, 0.85)   # wave in
+            move_legs(30, 80, 50, 85, 0.85)   # wave out
+            move_legs(30, 80, 50, 60, 0.85)   # wave in
+            move_legs(50, 50, 50, 50, 0.7)    # return (slow, rebalancing)
             disable_all_servos()
         finally:
             servoctl.MOVING = False

@@ -34,9 +34,12 @@ MOVEMENTS = {
     "wave_right": {"name": "Wave Right"},
     "wave_left": {"name": "Wave Left"},
     "neutral_legs": {"name": "Neutral Legs"},
-    "excited": {"name": "Excited"},
     "laugh": {"name": "Laugh"},
     "swing_legs": {"name": "Swing Legs"},
+    "tilt_quick_right": {"name": "Tilt Quick Right"},
+    "tilt_quick_left": {"name": "Tilt Quick Left"},
+    "wiggle": {"name": "Wiggle"},
+    "wave_short": {"name": "Wave Short"},
 }
 
 def get_all():

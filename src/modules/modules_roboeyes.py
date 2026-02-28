@@ -18,6 +18,10 @@ class Mood(Enum):
     SIDEEYE_LEFT = auto()
     SIDEEYE_RIGHT = auto()
     SLEEPY = auto()
+    CURIOUS = auto()
+    SKEPTICAL = auto()
+    SMUG = auto()
+    SURPRISED = auto()
 
 
 class EyeState(Enum):
@@ -42,12 +46,10 @@ EMOTION_TRANSITION_SPEEDS = {
     Mood.AFRAID: 7.0,
     Mood.SIDEEYE_LEFT: 4.0,
     Mood.SIDEEYE_RIGHT: 4.0,
-    
-    
-    
-    
-    
-    
+    Mood.CURIOUS: 5.0,
+    Mood.SKEPTICAL: 3.0,
+    Mood.SMUG: 3.5,
+    Mood.SURPRISED: 12.0,
 }
 
 # Blink intervals per mood (min, max in seconds)
@@ -64,27 +66,27 @@ BLINK_INTERVALS = {
     Mood.AFRAID: (2.0, 3.5),
     Mood.SIDEEYE_LEFT: (3.0, 5.0),
     Mood.SIDEEYE_RIGHT: (3.0, 5.0),
-    
-    
-    
-    
-    
+    Mood.CURIOUS: (2.5, 4.0),
+    Mood.SKEPTICAL: (4.0, 6.0),
+    Mood.SMUG: (3.5, 5.5),
+    Mood.SURPRISED: (1.0, 2.0),
 }
 
 # Glow colors per mood (R, G, B)
 GLOW_COLORS = {
-    Mood.NEUTRAL: (0, 206, 209),      # Cyan
-    Mood.HAPPY: (255, 223, 0),        # Gold
-    Mood.SAD: (100, 149, 237),        # Cornflower blue
-    Mood.ANGRY: (255, 69, 0),         # Red-orange
-    Mood.EXCITED: (255, 165, 0),      # Orange
-    
-    
-    Mood.SLEEPY: (147, 112, 219),     # Purple
-    
-    
-    
-    
+    Mood.NEUTRAL: (0, 206, 209),
+    Mood.HAPPY: (0, 206, 209),
+    Mood.SAD: (0, 206, 209),
+    Mood.ANGRY: (255, 69, 0),
+    Mood.EXCITED: (0, 206, 209),
+    Mood.AFRAID: (0, 206, 209),
+    Mood.SLEEPY: (0, 206, 209),
+    Mood.SIDEEYE_LEFT: (0, 206, 209),
+    Mood.SIDEEYE_RIGHT: (0, 206, 209),
+    Mood.CURIOUS: (0, 206, 209),
+    Mood.SKEPTICAL: (0, 206, 209),
+    Mood.SMUG: (0, 206, 209),
+    Mood.SURPRISED: (255, 255, 255),
 }
 
 
@@ -273,18 +275,6 @@ class RoboEyes:
         """Set audio level for reactive animations"""
         self._audio_level = level
         self._audio_source = source
-        
-        if source == "bot" and level > 0.1:
-            # Speaking - add subtle pulse
-            self._speaking_pulse = 1.0 + level * 0.05
-            self._glow_target = 1.0 + level * 0.5
-        elif source == "user" and level > 0.1:
-            # Listening - widen eyes slightly, focus
-            self._listening_focus = min(1.15, 1.0 + level * 0.1)
-            self._pupil_scale_target = 1.1  # Dilate when listening
-        else:
-            self._speaking_pulse = 1.0
-            self._listening_focus = 1.0
     
     def set_breathing(self, enabled: bool, amplitude: float = 0.15, speed: float = 0.8):
         """Configure breathing animation"""
@@ -353,33 +343,45 @@ class RoboEyes:
             self._saccade_timer = 0
             self._next_saccade = random.uniform(0.5, 2.0)
         
+        # Listening behavior
+        if self._state == EyeState.LISTENING:
+            self._target_look_x = 0
+            self._target_look_y = 0
+            base_focus = 1.25
+            audio_boost = self._audio_level * 0.3 if self._audio_level > 0.1 else 0
+            self._listening_focus = base_focus + audio_boost
+        else:
+            self._listening_focus = 1.0
+
         # Speaking behavior
         if self._state == EyeState.SPEAKING:
             self._speaking_look_timer += dt
-            if self._speaking_look_timer > 2.0 and not self._speaking_look_away:
-                if random.random() < 0.3:
-                    self._target_look_x = random.uniform(-0.3, 0.3)
-                    self._target_look_y = random.uniform(-0.2, 0.1)
-                    self._speaking_look_away = True
-            elif self._speaking_look_timer > 2.5 and self._speaking_look_away:
+            if not self._speaking_look_away:
                 self._target_look_x = 0
-                self._target_look_y = 0
+                self._target_look_y = 0.15
+            if self._speaking_look_timer > 1.8 and not self._speaking_look_away:
+                if random.random() < 0.4:
+                    self._target_look_x = (random.random() - 0.5) * 0.7
+                    self._target_look_y = random.random() * 0.3 - 0.1
+                    self._speaking_look_away = True
+                self._speaking_look_timer = 0
+            elif self._speaking_look_timer > 0.6 and self._speaking_look_away:
+                self._target_look_x = 0
+                self._target_look_y = 0.15
                 self._speaking_look_away = False
                 self._speaking_look_timer = 0
+            if self._audio_level > 0.1:
+                self._speaking_pulse = 0.85 + self._audio_level * 0.3
+            else:
+                self._speaking_pulse = 1.0
         
         # Thinking behavior
         if self._state == EyeState.THINKING:
             self._thinking_timer += dt
-            if self._thinking_timer > 1.5:
+            if self._thinking_timer > 1.0 + random.random() * 1.0:
                 self._thinking_timer = 0
-                self._thinking_phase = (self._thinking_phase + 1) % 2
-                
-                if self._thinking_phase == 0:
-                    self._target_look_x = -0.4
-                    self._target_look_y = -0.5
-                else:
-                    self._target_look_x = 0.4
-                    self._target_look_y = -0.5
+                self._target_look_x = (random.random() - 0.5) * 0.9
+                self._target_look_y = -0.2 - random.random() * 0.4
         
         # Breathing glow when idle
         if self._breathing_enabled and self._state == EyeState.IDLE:
@@ -503,7 +505,42 @@ class RoboEyes:
             # Narrow horizontal slits
             self._left_open_target = 0.1
             self._right_open_target = 0.1
-        
+
+        elif self._mood == Mood.CURIOUS:
+            self._left_open_target = 1.2
+            self._right_open_target = 0.85
+            target_top_r = h * 0.15 * intensity
+            self._target_look_x = -0.2
+            self._target_look_y = -0.15
+
+        elif self._mood == Mood.SKEPTICAL:
+            self._left_open_target = 0.6
+            self._right_open_target = 0.6
+            self._squint_target = 0.5 * intensity
+            target_top_l = h * 0.3 * intensity
+            target_top_r = h * 0.3 * intensity
+            self._target_look_x = 0.0
+            self._target_look_y = 0.0
+
+        elif self._mood == Mood.SMUG:
+            use_curved_bottom = True
+            target_curve_l = 0.25
+            target_curve_r = 0.25
+            self._left_open_target = 0.7
+            self._right_open_target = 0.7
+            target_top_l = h * 0.15 * intensity
+            target_top_r = h * 0.15 * intensity
+            self._target_look_y = 0.1
+
+        elif self._mood == Mood.SURPRISED:
+            self._left_open_target = 1.35
+            self._right_open_target = 1.35
+            target_top_l = 0.0
+            target_top_r = 0.0
+            target_bot_l = 0.0
+            target_bot_r = 0.0
+            self._pupil_scale_target = 1.3
+
         # Smooth transitions
         # Update curved bottom state
         self._curved_bottom_left = use_curved_bottom
@@ -583,7 +620,7 @@ class RoboEyes:
             eye_height
         )
         border_radius = min(self.config.border_radius, self.config.width // 2, eye_height // 2)
-        pygame.draw.rect(surface, self.config.eye_color, eye_rect, border_radius=border_radius)
+        pygame.draw.rect(surface, self._current_glow_color, eye_rect, border_radius=border_radius)
         
         # Pupil - removed per user request
         # pupil_size = int(self.config.width * 0.3 * self._pupil_scale)
