@@ -31,14 +31,12 @@ try:
     def _patched_rtp_receiver_init(self, kind, transport):
         _orig_rtp_receiver_init(self, kind, transport)
         if kind == "audio":
-            # Override prefetch=4 (80ms) → prefetch=1 (20ms). Safe on LAN/Tailscale.
-            # Uses name-mangled key because aiortc uses __jitter_buffer (private).
-            # If this key changes, the patch silently fails — verified at startup below.
-            self.__dict__["_RTCRtpReceiver__jitter_buffer"] = JitterBuffer(capacity=16, prefetch=1)
+            jb = JitterBuffer(capacity=16, prefetch=1)
+            self.__dict__["_RTCRtpReceiver__jitter_buffer"] = jb
+            # Log inside the patch so we know it fired for a real receiver, not just at import.
+            logger.info(f"[JitterPatch] ✓ Applied to audio receiver: prefetch={jb._prefetch} capacity={jb._capacity}")
     RTCRtpReceiver.__init__ = _patched_rtp_receiver_init
-    # Verify patch took effect by instantiating a dummy receiver-like object
-    _test_buf = JitterBuffer(capacity=16, prefetch=1)
-    logger.info(f"[JitterPatch] Audio jitter buffer prefetch set to {_test_buf._prefetch} (was 4). 20ms vs 80ms.")
+    logger.info("[JitterPatch] Monkey-patch installed — will confirm when first audio receiver is created")
     AIORTC_AVAILABLE = True
 except ImportError:
     AIORTC_AVAILABLE = False
@@ -244,7 +242,7 @@ class WebRTCServer:
                     audio_array = audio_array.flatten()
 
                 if is_float:
-                    audio_int16 = (audio_array * 32767).astype(np.int16)
+                    audio_int16 = (audio_array * 32768).astype(np.int16)
                 else:
                     audio_int16 = audio_array.flatten().astype(np.int16)
 
@@ -260,7 +258,7 @@ class WebRTCServer:
                         _silence_frames += 1
                     else:
                         if _silence_frames >= 3:
-                            logger.debug(f"[AudioDiag] First non-silence frame after {_silence_frames} silence frames — play start")
+                            logger.info(f"[AudioDiag] First non-silence frame after {_silence_frames} silence frames — play start")
                         _silence_frames = 0
                     self.speaker.play(audio_int16.tobytes())
 

@@ -133,7 +133,7 @@ class MicrophoneTrack(MediaStreamTrack):
             # discard frame — mic is muted, keep draining to avoid queue fill
 
         # Convert float32 [-1, 1] to int16, flatten to 1D (s16 interleaved)
-        audio_int16 = (audio_data * 32767).astype(np.int16).flatten()
+        audio_int16 = (audio_data * 32768).astype(np.int16).flatten()
         samples = len(audio_int16) // self.channels
 
         # aiortc Opus encoder requires s16 (interleaved) format

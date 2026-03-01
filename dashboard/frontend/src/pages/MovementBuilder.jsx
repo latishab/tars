@@ -65,21 +65,14 @@ function SectionLabel({ children }) {
   return <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-1">{children}</div>
 }
 
-const MOVEMENTS = [
-  'step_forward', 'walk_forward', 'step_backward', 'walk_backward',
-  'turn_right', 'turn_right_slow', 'turn_left', 'turn_left_slow',
-  'pose', 'bow', 'tilt_right', 'tilt_left', 'side_side',
-  'wave_right', 'wave_left', 'neutral_legs', 'excited', 'laugh', 'swing_legs',
-  'tilt_quick_right', 'tilt_quick_left', 'wiggle', 'wave_short',
-]
-
 function MovementBuilder() {
   const [steps, setSteps] = useState([DEFAULT_STEP()])
   const [sequenceName, setSequenceName] = useState('')
   const [savedSequences, setSavedSequences] = useState({})
   const [sequencePlaying, setSequencePlaying] = useState(false)
   const [feedback, setFeedback] = useState('')
-  const [selectedMovement, setSelectedMovement] = useState(MOVEMENTS[0])
+  const [movements, setMovements] = useState([])
+  const [selectedMovement, setSelectedMovement] = useState('')
   const [importing, setImporting] = useState(false)
   const [livePreview, setLivePreview] = useState(false)
   const [confirmOverwrite, setConfirmOverwrite] = useState(false)
@@ -88,10 +81,18 @@ function MovementBuilder() {
   const dragIndex = useRef(null)
   const dragFromHandle = useRef(false)
 
-  useEffect(() => { loadSavedSequences() }, [])
+  useEffect(() => { loadSavedSequences(); loadMovements() }, [])
 
   const loadSavedSequences = () => {
     fetch('/api/control/saved-sequences').then(r => r.json()).then(setSavedSequences).catch(() => {})
+  }
+
+  const loadMovements = () => {
+    fetch('/api/control/movements').then(r => r.json()).then(data => {
+      const list = data.movements || []
+      setMovements(list)
+      if (list.length > 0) setSelectedMovement(list[0])
+    }).catch(() => {})
   }
 
   const addPositionStep = () => setSteps(s => [...s, DEFAULT_STEP()])
@@ -279,7 +280,7 @@ function MovementBuilder() {
                 onChange={e => setSelectedMovement(e.target.value)}
                 className="flex-1 h-9 rounded-md border border-input bg-background px-2 text-sm"
               >
-                {MOVEMENTS.map(m => <option key={m} value={m}>{m}</option>)}
+                {movements.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
               <Button size="sm" variant="outline" onClick={addMovementStep} title="Append as named step">
                 <Zap className="w-4 h-4" />

@@ -435,11 +435,7 @@ from modules.module_movements import (
 
 set_swap_turn_directions(config["CONTROLS"]["swap_turn_directions"])
 
-from modules.module_movement_registry import (
-    MOVEMENTS,
-    get_all,
-    get_names
-)
+
 
 if __name__ == "__main__":
     initialize_servos()

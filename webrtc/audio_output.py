@@ -5,6 +5,7 @@ Plays TTS audio received from host computer through USB soundcard
 
 import queue
 import threading
+import time
 import numpy as np
 from typing import Optional
 from loguru import logger
@@ -19,13 +20,15 @@ except ImportError:
 
 class SpeakerOutput:
     """
-    Plays audio through speaker.
+    Plays audio through speaker via a callback-based OutputStream.
 
-    Receives audio data from WebRTC and plays it through the USB soundcard.
-    Uses a write-loop thread with sd.OutputStream.write() which blocks at
-    real-time pace, preventing buffer overflow regardless of how fast TTS
-    chunks arrive.
+    The callback runs on the hardware clock every blocksize samples.
+    It reads from a queue; if empty, outputs silence. This means enqueuing
+    silence frames (from WebRTC keepalive) never creates a backlog — the
+    callback drains at real-time regardless of how fast play() is called.
     """
+
+    BLOCK_SIZE = 960  # 20ms at 48kHz, matches WebRTC frame size
 
     def __init__(
         self,
@@ -37,75 +40,104 @@ class SpeakerOutput:
         self.channels = channels
         self.device = device
 
-        self._queue: queue.Queue = queue.Queue()
+        self._queue: queue.Queue = queue.Queue(maxsize=1000)  # ~20s at 20ms/frame
+        self._stream: Optional[sd.OutputStream] = None
         self._thread: Optional[threading.Thread] = None
         self._running = False
 
-    def _play_loop(self):
-        """Background thread: drains queue and writes to sounddevice stream."""
+        # Diagnostics
+        self._prev_was_silence = True
+        self._silence_cb_count = 0
+
+    def _audio_callback(self, outdata, frames, time_info, status):
+        """Called by sounddevice on the hardware clock every `frames` samples."""
+        if status:
+            logger.warning(f"[AudioDiag] OutputStream status: {status}")
+
+        try:
+            data = self._queue.get_nowait()
+            if self._prev_was_silence:
+                logger.info(
+                    f"[AudioDiag] callback: first non-silence, "
+                    f"queue_depth={self._queue.qsize()}, "
+                    f"silence_blocks_skipped={self._silence_cb_count}"
+                )
+                self._prev_was_silence = False
+                self._silence_cb_count = 0
+
+            # Pad or trim to exact frame size
+            if len(data) < frames:
+                data = np.pad(data, ((0, frames - len(data)), (0, 0)))
+            elif len(data) > frames:
+                data = data[:frames]
+            outdata[:] = data
+
+        except queue.Empty:
+            outdata.fill(0)  # hardware clock ticks — output silence, no backlog
+            self._prev_was_silence = True
+            self._silence_cb_count += 1
+
+    def _run_stream(self):
+        """Background thread that keeps the OutputStream open."""
         try:
             with sd.OutputStream(
                 samplerate=self.sample_rate,
                 channels=self.channels,
                 dtype=np.float32,
                 device=self.device,
+                blocksize=self.BLOCK_SIZE,
                 latency="low",
+                callback=self._audio_callback,
             ) as stream:
-                logger.info(f"Speaker stream opened: device={stream.device}, rate={self.sample_rate}Hz")
+                logger.info(
+                    f"[AudioDiag] Speaker stream opened (callback): "
+                    f"device={stream.device}, rate={self.sample_rate}Hz, "
+                    f"latency={stream.latency*1000:.1f}ms, blocksize={self.BLOCK_SIZE}"
+                )
                 while self._running:
-                    try:
-                        audio_float = self._queue.get(timeout=0.05)
-                        if audio_float is None:
-                            break
-        
-                        stream.write(audio_float)
-                    except queue.Empty:
-                        pass
+                    time.sleep(0.05)
         except Exception as e:
-            logger.error(f"Speaker play loop error: {e}")
-        logger.info("Speaker play loop stopped")
+            logger.error(f"Speaker stream error: {e}")
+        logger.info("Speaker stream stopped")
 
     def start(self):
-        """Start speaker output."""
         if not SOUNDDEVICE_AVAILABLE:
             raise RuntimeError("sounddevice not available")
-
         if self._running:
             return
-
         self._running = True
-        self._thread = threading.Thread(target=self._play_loop, daemon=True)
+        self._thread = threading.Thread(target=self._run_stream, daemon=True)
         self._thread.start()
-        logger.info(f"Speaker started: {self.sample_rate}Hz, {self.channels}ch")
+        logger.info(f"Speaker started: {self.sample_rate}Hz, {self.channels}ch (callback mode)")
 
     def stop(self):
-        """Stop speaker output."""
         if not self._running:
             return
-
         self._running = False
-        self._queue.put(None)  # unblock the loop
-
         if self._thread:
             self._thread.join(timeout=2.0)
             self._thread = None
-
-        # Drain queue
         while not self._queue.empty():
             try:
                 self._queue.get_nowait()
             except queue.Empty:
                 break
-
         logger.info("Speaker stopped")
 
-    def play(self, audio_bytes: bytes):
-        """
-        Queue audio for playback.
+    def flush(self):
+        """Discard queued audio (e.g. on interruption)."""
+        drained = 0
+        while not self._queue.empty():
+            try:
+                self._queue.get_nowait()
+                drained += 1
+            except queue.Empty:
+                break
+        if drained:
+            logger.info(f"[AudioDiag] Speaker queue flushed: {drained} frames discarded")
 
-        Args:
-            audio_bytes: PCM audio data (int16 format)
-        """
+    def play(self, audio_bytes: bytes):
+        """Queue audio for playback. Non-blocking: drops frames if queue is full."""
         if not self._running:
             logger.warning("Speaker not started - cannot play audio")
             return
@@ -114,7 +146,10 @@ class SpeakerOutput:
         audio_float = audio_int16.astype(np.float32) / 32768.0
         audio_float = audio_float.reshape(-1, self.channels)
 
-        self._queue.put(audio_float)
+        try:
+            self._queue.put_nowait(audio_float)
+        except queue.Full:
+            logger.warning("[AudioDiag] Speaker queue full — dropping frame")
 
     @property
     def is_playing(self) -> bool:

@@ -51,10 +51,10 @@ const MOVEMENT_GROUPS = {
     { name: 'swing_legs', label: 'Swing', icon: null },
   ],
   quickGestures: [
-    { name: 'tilt_quick_right', label: 'Tilt R Fast', icon: null },
-    { name: 'tilt_quick_left', label: 'Tilt L Fast', icon: null },
-    { name: 'wiggle', label: 'Wiggle', icon: null },
-    { name: 'wave_short', label: 'Wave Fast', icon: null },
+    { name: 'Tilt R Fast', label: 'Tilt R Fast', icon: null },
+    { name: 'Tilt L Fast', label: 'Tilt L Fast', icon: null },
+    { name: 'Wiggle', label: 'Wiggle', icon: null },
+    { name: 'Wave Fast', label: 'Wave Fast', icon: null },
   ],
 }
 
@@ -360,13 +360,34 @@ function Control() {
         </CardContent>
       </Card>
 
-      {/* Custom Sequences (non-quick expressions + movements, excluding button overrides) */}
-      {Object.entries(savedSequences).some(([name, entry]) => !(entry.quick && getSeqType(entry) === 'expression') && !isButtonOverride(name)) && (
+      {/* Custom Sequences (all saved sequences, excluding button overrides) */}
+      {Object.entries(savedSequences).some(([name, entry]) => !isButtonOverride(name)) && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Custom Sequences</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'expression' && entry.quick && !isButtonOverride(name)) && (
+              <div>
+                <div className="text-sm text-muted-foreground mb-2">Quick Expressions</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {Object.entries(savedSequences)
+                    .filter(([name, entry]) => getSeqType(entry) === 'expression' && entry.quick && !isButtonOverride(name))
+                    .map(([name]) => (
+                      <Button
+                        key={name}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => playSaved(name)}
+                        disabled={executing !== null || sequencePlaying}
+                        className="flex flex-col h-16 sm:h-auto py-2"
+                      >
+                        <span className="text-xs">{name}</span>
+                      </Button>
+                    ))}
+                </div>
+              </div>
+            )}
             {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'expression' && !entry.quick && !isButtonOverride(name)) && (
               <div>
                 <div className="text-sm text-muted-foreground mb-2">Expressions</div>

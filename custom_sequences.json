@@ -234,7 +234,7 @@
         "hold_time": 0.0
       }
     ],
-    "quick": false
+    "quick": true
   },
   "Pose": {
     "type": "expression",
@@ -302,6 +302,57 @@
         "right_leg": 50,
         "speed": 0.6,
         "hold_time": 0.0
+      }
+    ]
+  },
+  "Laugh Fast": {
+    "type": "expression",
+    "quick": true,
+    "steps": [
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 1.0,
+        "hold_time": 0.1
+      },
+      {
+        "movement": null,
+        "left_height": 1,
+        "right_height": 1,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 1.0,
+        "hold_time": 0.1
+      },
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 1.0,
+        "hold_time": 0.1
+      },
+      {
+        "movement": null,
+        "left_height": 1,
+        "right_height": 1,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 1.0,
+        "hold_time": 0.1
+      },
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 1.0,
+        "hold_time": 0.2
       }
     ]
   }

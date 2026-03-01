@@ -28,7 +28,6 @@ from grpc_server.version_service import (
 # Import existing modules
 from src.modules import module_movements
 from src.modules import module_servoctl
-from src.modules import module_movement_registry
 
 
 # Movement mapping

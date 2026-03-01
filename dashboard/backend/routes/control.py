@@ -12,14 +12,8 @@ router = APIRouter()
 
 SEQUENCES_FILE = Path(__file__).parent.parent.parent.parent / "custom_sequences.json"
 
-MOVEMENTS = [
-    "step_forward", "walk_forward", "step_backward", "walk_backward",
-    "turn_right", "turn_right_slow", "turn_left", "turn_left_slow",
-    "pose", "bow", "tilt_right", "tilt_left", "side_side",
-    "wave_right", "wave_left", "neutral_legs", "excited", "laugh", "swing_legs",
-    "nod", "shake", "tilt_quick_right", "tilt_quick_left", "lean_back", "lean_in",
-    "wiggle", "perk_up", "slump", "bow_quick", "wave_short",
-]
+from modules.module_movement_registry import MOVEMENTS as _MOVEMENT_REGISTRY
+MOVEMENTS = sorted(_MOVEMENT_REGISTRY.keys())
 
 class EmotionRequest(BaseModel):
     emotion: str
@@ -267,40 +261,69 @@ async def get_movement_steps(name: str):
 
     body = fn_match.group(1)
 
-    steps = []
-    lines = body.splitlines()
-    for i, line in enumerate(lines):
-        ml = re.search(r"move_legs\(([^)]+)\)", line)
-        if not ml:
-            continue
-        args = [a.strip() for a in ml.group(1).split(",")]
-        if len(args) < 5:
-            continue
-        def parse_val(v, default=50):
-            try:
-                return int(round(float(v)))
-            except (ValueError, TypeError):
-                return default
-        lh = parse_val(args[0])
-        rh = parse_val(args[1])
-        ll = parse_val(args[2])
-        rl = parse_val(args[3])
-        spd = round(float(args[4]), 2) if re.match(r"[\d.]+", args[4]) else 0.85
-        hold = 0.0
-        # check next non-empty line for time.sleep
-        for j in range(i + 1, min(i + 3, len(lines))):
-            sl = re.search(r"time\.sleep\(([^)]+)\)", lines[j])
-            if sl:
-                try:
-                    hold = float(sl.group(1))
-                except ValueError:
-                    pass
-                break
-        steps.append({
-            "left_height": lh, "right_height": rh,
-            "left_leg": ll, "right_leg": rl,
-            "speed": spd, "hold_time": hold
-        })
+    def parse_val(v, default=50):
+        try:
+            return int(round(float(v)))
+        except (ValueError, TypeError):
+            return default
+
+    def extract_steps(lines):
+        """Extract move_legs steps from a list of lines, expanding range loops."""
+        result = []
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            # Detect `for _ in range(N):` loops
+            loop_m = re.search(r"for\s+\w+\s+in\s+range\((\d+)\)\s*:", line)
+            if loop_m:
+                repeat = int(loop_m.group(1))
+                loop_indent = len(line) - len(line.lstrip())
+                # Collect loop body (lines indented deeper than the for line)
+                body_lines = []
+                i += 1
+                while i < len(lines):
+                    bl = lines[i]
+                    if bl.strip() == "":
+                        i += 1
+                        continue
+                    bl_indent = len(bl) - len(bl.lstrip())
+                    if bl_indent > loop_indent:
+                        body_lines.append(bl)
+                        i += 1
+                    else:
+                        break
+                for _ in range(repeat):
+                    result.extend(extract_steps(body_lines))
+                continue
+            # Extract move_legs call
+            ml = re.search(r"move_legs\(([^)]+)\)", line)
+            if ml:
+                args = [a.strip() for a in ml.group(1).split(",")]
+                if len(args) >= 5:
+                    lh = parse_val(args[0])
+                    rh = parse_val(args[1])
+                    ll = parse_val(args[2])
+                    rl = parse_val(args[3])
+                    spd = round(float(args[4]), 2) if re.match(r"[\d.]+", args[4]) else 0.85
+                    hold = 0.0
+                    # check next non-empty line for time.sleep
+                    for j in range(i + 1, min(i + 3, len(lines))):
+                        sl = re.search(r"time\.sleep\(([^)]+)\)", lines[j])
+                        if sl:
+                            try:
+                                hold = float(sl.group(1))
+                            except ValueError:
+                                pass
+                            break
+                    result.append({
+                        "left_height": lh, "right_height": rh,
+                        "left_leg": ll, "right_leg": rl,
+                        "speed": spd, "hold_time": hold
+                    })
+            i += 1
+        return result
+
+    steps = extract_steps(body.splitlines())
 
     if not steps:
         raise HTTPException(422, f"No move_legs calls found in '{name}'")
