@@ -155,6 +155,9 @@ function Control() {
       })
       .filter(Boolean)
   )
+  // Sequences that override a preexisting button shouldn't appear in Custom Sequences
+  const buttonNamesNormalized = new Set(allMovements.map(m => normalize(m.name)))
+  const isButtonOverride = (name) => buttonNamesNormalized.has(normalize(name))
 
   return (
     <div className="p-4 space-y-4">
@@ -354,54 +357,58 @@ function Control() {
             </div>
           </div>
 
-          {/* Custom Expression Sequences */}
-          {Object.entries(savedSequences).some(([, entry]) => getSeqType(entry) === 'expression') && (
-            <div>
-              <div className="text-sm text-muted-foreground mb-2">Custom Expressions</div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {Object.entries(savedSequences)
-                  .filter(([, entry]) => getSeqType(entry) === 'expression')
-                  .map(([name]) => (
-                    <Button
-                      key={name}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => playSaved(name)}
-                      disabled={executing !== null || sequencePlaying}
-                      className="flex flex-col h-16 sm:h-auto py-2"
-                    >
-                      <span className="text-xs">{name}</span>
-                    </Button>
-                  ))}
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Custom Movements */}
-      {Object.entries(savedSequences).some(([, entry]) => getSeqType(entry) === 'movement') && (
+      {/* Custom Sequences (non-quick expressions + movements, excluding button overrides) */}
+      {Object.entries(savedSequences).some(([name, entry]) => !(entry.quick && getSeqType(entry) === 'expression') && !isButtonOverride(name)) && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Custom Movements</CardTitle>
+            <CardTitle className="text-lg">Custom Sequences</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(savedSequences)
-                .filter(([, entry]) => getSeqType(entry) === 'movement')
-                .map(([name]) => (
-                  <Button
-                    key={name}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => playSaved(name)}
-                    disabled={sequencePlaying}
-                    className="h-10"
-                  >
-                    {name}
-                  </Button>
-                ))}
-            </div>
+          <CardContent className="space-y-3">
+            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'expression' && !entry.quick && !isButtonOverride(name)) && (
+              <div>
+                <div className="text-sm text-muted-foreground mb-2">Expressions</div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {Object.entries(savedSequences)
+                    .filter(([name, entry]) => getSeqType(entry) === 'expression' && !entry.quick && !isButtonOverride(name))
+                    .map(([name]) => (
+                      <Button
+                        key={name}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => playSaved(name)}
+                        disabled={executing !== null || sequencePlaying}
+                        className="flex flex-col h-16 sm:h-auto py-2"
+                      >
+                        <span className="text-xs">{name}</span>
+                      </Button>
+                    ))}
+                </div>
+              </div>
+            )}
+            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'movement' && !isButtonOverride(name)) && (
+              <div>
+                <div className="text-sm text-muted-foreground mb-2">Movements</div>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(savedSequences)
+                    .filter(([name, entry]) => getSeqType(entry) === 'movement' && !isButtonOverride(name))
+                    .map(([name]) => (
+                      <Button
+                        key={name}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => playSaved(name)}
+                        disabled={sequencePlaying}
+                        className="h-10"
+                      >
+                        {name}
+                      </Button>
+                    ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

@@ -84,6 +84,7 @@ function MovementBuilder() {
   const [livePreview, setLivePreview] = useState(false)
   const [confirmOverwrite, setConfirmOverwrite] = useState(false)
   const [seqType, setSeqType] = useState('movement')
+  const [isQuick, setIsQuick] = useState(false)
   const dragIndex = useRef(null)
   const dragFromHandle = useRef(false)
 
@@ -160,7 +161,7 @@ function MovementBuilder() {
       const res = await fetch('/api/control/save-sequence', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, steps, type: seqType }),
+        body: JSON.stringify({ name, steps, type: seqType, quick: isQuick }),
       })
       if (res.ok) { setFeedback(`Saved "${name}"`); setSequenceName(''); loadSavedSequences() }
       else setFeedback('Save failed')
@@ -326,6 +327,15 @@ function MovementBuilder() {
                 <option value="movement">Movement</option>
                 <option value="expression">Expression</option>
               </select>
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer select-none whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={isQuick}
+                  onChange={e => setIsQuick(e.target.checked)}
+                  className="w-4 h-4 accent-primary"
+                />
+                Quick
+              </label>
               <Button size="sm" onClick={saveSequence}>Save</Button>
               <Button size="sm" variant="outline" onClick={resetSteps} title="Clear all steps">
                 <Trash2 className="w-4 h-4" />

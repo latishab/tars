@@ -55,6 +55,7 @@ class SaveSequenceRequest(BaseModel):
     name: str
     steps: list[SequenceStep]
     type: str = "movement"
+    quick: bool = False
 
 @router.post("/emotion")
 async def set_emotion(request: EmotionRequest, req: Request):
@@ -205,7 +206,8 @@ async def save_sequence(request: SaveSequenceRequest):
         except Exception:
             data = {}
 
-    data[request.name] = {"type": request.type, "steps": [step.dict() for step in request.steps]}
+    existing = data.get(request.name, {})
+    data[request.name] = {**existing, "type": request.type, "quick": request.quick, "steps": [step.dict() for step in request.steps]}
     SEQUENCES_FILE.write_text(json.dumps(data, indent=2))
     return {"status": "ok", "name": request.name}
 

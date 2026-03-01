@@ -14,7 +14,7 @@
       {
         "movement": null,
         "left_height": 35,
-        "right_height": 58,
+        "right_height": 60,
         "left_leg": 50,
         "right_leg": 50,
         "speed": 0.9,
@@ -22,7 +22,7 @@
       },
       {
         "movement": null,
-        "left_height": 58,
+        "left_height": 60,
         "right_height": 35,
         "left_leg": 50,
         "right_leg": 50,
@@ -38,9 +38,76 @@
         "speed": 0.8,
         "hold_time": 0.0
       }
-    ]
+    ],
+    "quick": true
   },
-  "Wave Short": {
+  "Tilt R Fast": {
+    "type": "expression",
+    "steps": [
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 0.85,
+        "hold_time": 0.4
+      },
+      {
+        "movement": null,
+        "left_height": 20,
+        "right_height": 70,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 0.85,
+        "hold_time": 0.4
+      },
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 0.8,
+        "hold_time": 0.0
+      }
+    ],
+    "quick": true
+  },
+  "Tilt L Fast": {
+    "type": "expression",
+    "steps": [
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 0.85,
+        "hold_time": 0.4
+      },
+      {
+        "movement": null,
+        "left_height": 70,
+        "right_height": 20,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 0.85,
+        "hold_time": 0.4
+      },
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 0.8,
+        "hold_time": 0.0
+      }
+    ],
+    "quick": true
+  },
+  "Wave Fast": {
     "type": "expression",
     "steps": [
       {
@@ -54,8 +121,8 @@
       },
       {
         "movement": null,
-        "left_height": 50,
-        "right_height": 85,
+        "left_height": 35,
+        "right_height": 90,
         "left_leg": 50,
         "right_leg": 50,
         "speed": 0.8,
@@ -63,8 +130,8 @@
       },
       {
         "movement": null,
-        "left_height": 30,
-        "right_height": 85,
+        "left_height": 35,
+        "right_height": 90,
         "left_leg": 50,
         "right_leg": 100,
         "speed": 0.85,
@@ -72,8 +139,8 @@
       },
       {
         "movement": null,
-        "left_height": 30,
-        "right_height": 85,
+        "left_height": 35,
+        "right_height": 90,
         "left_leg": 50,
         "right_leg": 65,
         "speed": 0.85,
@@ -81,8 +148,8 @@
       },
       {
         "movement": null,
-        "left_height": 30,
-        "right_height": 85,
+        "left_height": 35,
+        "right_height": 90,
         "left_leg": 50,
         "right_leg": 100,
         "speed": 0.85,
@@ -90,8 +157,8 @@
       },
       {
         "movement": null,
-        "left_height": 30,
-        "right_height": 85,
+        "left_height": 35,
+        "right_height": 90,
         "left_leg": 50,
         "right_leg": 65,
         "speed": 0.85,
@@ -106,10 +173,11 @@
         "speed": 0.7,
         "hold_time": 0.0
       }
-    ]
+    ],
+    "quick": true
   },
-  "Bow Short": {
-    "type": "movement",
+  "Bow Fast": {
+    "type": "expression",
     "steps": [
       {
         "movement": null,
@@ -165,10 +233,12 @@
         "speed": 0.4,
         "hold_time": 0.0
       }
-    ]
+    ],
+    "quick": false
   },
-  "Tilt R Fast": {
+  "Pose": {
     "type": "expression",
+    "quick": false,
     "steps": [
       {
         "movement": null,
@@ -176,57 +246,61 @@
         "right_height": 50,
         "left_leg": 50,
         "right_leg": 50,
-        "speed": 0.85,
-        "hold_time": 0.4
+        "speed": 0.6,
+        "hold_time": 0.0
       },
       {
         "movement": null,
-        "left_height": 20,
-        "right_height": 70,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.85,
-        "hold_time": 0.4
+        "left_height": 30,
+        "right_height": 30,
+        "left_leg": 40,
+        "right_leg": 40,
+        "speed": 0.6,
+        "hold_time": 1.5
       },
       {
         "movement": null,
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
+        "left_height": 90,
+        "right_height": 90,
+        "left_leg": 25,
+        "right_leg": 25,
+        "speed": 0.6,
+        "hold_time": 3.0
+      },
+      {
+        "movement": null,
+        "left_height": 90,
+        "right_height": 90,
+        "left_leg": 25,
+        "right_leg": 25,
         "speed": 0.8,
         "hold_time": 0.0
-      }
-    ]
-  },
-  "Tilt L Fast": {
-    "type": "expression",
-    "steps": [
-      {
-        "movement": null,
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.85,
-        "hold_time": 0.4
       },
       {
         "movement": null,
-        "left_height": 70,
-        "right_height": 20,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.85,
-        "hold_time": 0.4
-      },
-      {
-        "movement": null,
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
+        "left_height": 30,
+        "right_height": 30,
+        "left_leg": 25,
+        "right_leg": 25,
         "speed": 0.8,
+        "hold_time": 0.0
+      },
+      {
+        "movement": null,
+        "left_height": 30,
+        "right_height": 30,
+        "left_leg": 40,
+        "right_leg": 40,
+        "speed": 0.6,
+        "hold_time": 0.0
+      },
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 0.6,
         "hold_time": 0.0
       }
     ]
