@@ -45,25 +45,10 @@ class SpeakerOutput:
         self._thread: Optional[threading.Thread] = None
         self._running = False
 
-        # Diagnostics
-        self._prev_was_silence = True
-        self._silence_cb_count = 0
-
     def _audio_callback(self, outdata, frames, time_info, status):
         """Called by sounddevice on the hardware clock every `frames` samples."""
-        if status:
-            logger.warning(f"[AudioDiag] OutputStream status: {status}")
-
         try:
             data = self._queue.get_nowait()
-            if self._prev_was_silence:
-                logger.info(
-                    f"[AudioDiag] callback: first non-silence, "
-                    f"queue_depth={self._queue.qsize()}, "
-                    f"silence_blocks_skipped={self._silence_cb_count}"
-                )
-                self._prev_was_silence = False
-                self._silence_cb_count = 0
 
             # Pad or trim to exact frame size
             if len(data) < frames:
@@ -72,10 +57,9 @@ class SpeakerOutput:
                 data = data[:frames]
             outdata[:] = data
 
+
         except queue.Empty:
             outdata.fill(0)  # hardware clock ticks — output silence, no backlog
-            self._prev_was_silence = True
-            self._silence_cb_count += 1
 
     def _run_stream(self):
         """Background thread that keeps the OutputStream open."""
@@ -90,7 +74,7 @@ class SpeakerOutput:
                 callback=self._audio_callback,
             ) as stream:
                 logger.info(
-                    f"[AudioDiag] Speaker stream opened (callback): "
+                    f"Speaker stream opened: "
                     f"device={stream.device}, rate={self.sample_rate}Hz, "
                     f"latency={stream.latency*1000:.1f}ms, blocksize={self.BLOCK_SIZE}"
                 )
@@ -134,7 +118,7 @@ class SpeakerOutput:
             except queue.Empty:
                 break
         if drained:
-            logger.info(f"[AudioDiag] Speaker queue flushed: {drained} frames discarded")
+            logger.info(f"Speaker queue flushed: {drained} frames discarded")
 
     def play(self, audio_bytes: bytes):
         """Queue audio for playback. Non-blocking: drops frames if queue is full."""
@@ -149,7 +133,7 @@ class SpeakerOutput:
         try:
             self._queue.put_nowait(audio_float)
         except queue.Full:
-            logger.warning("[AudioDiag] Speaker queue full — dropping frame")
+            logger.warning("Speaker queue full — dropping frame")
 
     @property
     def is_playing(self) -> bool:
