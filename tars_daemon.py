@@ -318,6 +318,7 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
 
                 # Register routers with new structure
                 app.include_router(control_routes.router, prefix="/api/control", tags=["Robot Control"])
+                app.include_router(expressions_routes.router, prefix="/api/expressions", tags=["Expressions"])
                 app.include_router(webrtc_routes.router, prefix="/api/webrtc", tags=["WebRTC"])
                 app.include_router(status_routes.router, prefix="/api/status", tags=["Status & Monitoring"])
                 app.include_router(apps_routes.router, prefix="/api/apps", tags=["Apps"])
@@ -592,6 +593,7 @@ try:
         control as control_routes,
         system as system_routes,
         webrtc as webrtc_routes,
+        expressions as expressions_routes,
     )
     from dashboard.backend.ws import ConnectionManager
     DASHBOARD_AVAILABLE = True

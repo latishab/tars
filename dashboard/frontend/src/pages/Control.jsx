@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -65,11 +66,17 @@ function Control() {
   const [eyeState, setEyeState] = useState('idle')
   const [savedSequences, setSavedSequences] = useState({})
   const [sequencePlaying, setSequencePlaying] = useState(false)
+  const [expressionMap, setExpressionMap] = useState({})
+  const [activeExpression, setActiveExpression] = useState(null)
 
   useEffect(() => {
     fetch('/api/control/saved-sequences')
       .then(r => r.json())
       .then(setSavedSequences)
+      .catch(() => {})
+    fetch('/api/expressions/map')
+      .then(r => r.json())
+      .then(data => setExpressionMap(data.map || {}))
       .catch(() => {})
   }, [])
 
@@ -140,6 +147,20 @@ function Control() {
       console.error('Reset failed:', err)
     }
     setExecuting(null)
+  }
+
+  const triggerExpression = async (emotion, intensity) => {
+    const key = `${emotion}:${intensity}`
+    setActiveExpression(key)
+    try {
+      await fetch('/api/expressions/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emotion, intensity }),
+      })
+    } catch (err) {
+      console.error('Expression trigger failed:', err)
+    }
   }
 
   const overrideMap = Object.fromEntries(
@@ -241,6 +262,41 @@ function Control() {
           </Card>
         </div>
       </div>
+
+      {/* Expressions Quick Access */}
+      {Object.keys(expressionMap).filter(k => expressionMap[k]?.gesture).length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center justify-between">
+              <span>Expressions</span>
+              <Link to="/expressions" className="text-xs text-muted-foreground hover:text-foreground">
+                All Expressions →
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {Object.entries(expressionMap)
+                .filter(([, entry]) => entry?.gesture)
+                .map(([key]) => {
+                  const [emotion, intensity] = key.split(':')
+                  const label = `${emotion.charAt(0).toUpperCase() + emotion.slice(1).replace('_', ' ')} (${intensity})`
+                  return (
+                    <Button
+                      key={key}
+                      variant={activeExpression === key ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => triggerExpression(emotion, intensity)}
+                      className="h-9 text-xs"
+                    >
+                      {label}
+                    </Button>
+                  )
+                })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Movement Controls - Full width */}
       <Card>

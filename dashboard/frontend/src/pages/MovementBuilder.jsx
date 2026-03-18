@@ -221,6 +221,7 @@ function MovementBuilder() {
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">Movement Builder</h1>
 
+      {/* Card 1: Sequence Editor */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center justify-between">
@@ -295,6 +296,16 @@ function MovementBuilder() {
             </div>
           </div>
 
+        </CardContent>
+      </Card>
+
+      {/* Card 2: Playback & Save */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">Playback & Save</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+
           {/* Playback */}
           <div className="space-y-2">
             <SectionLabel>Playback</SectionLabel>
@@ -354,30 +365,34 @@ function MovementBuilder() {
           {/* Feedback */}
           {feedback && <p className="text-sm text-muted-foreground">{feedback}</p>}
 
-          {/* Saved sequences */}
-          {Object.keys(savedSequences).length > 0 && (
-            <div className="space-y-2">
-              <SectionLabel>Saved Sequences</SectionLabel>
-              <div className="flex flex-wrap gap-2">
-                {Object.keys(savedSequences).map(name => (
-                  <div key={name} className="flex items-center gap-1 bg-muted rounded-md px-2 py-1">
-                    <button onClick={() => playSaved(name)} disabled={sequencePlaying} className="text-sm hover:text-primary transition-colors disabled:opacity-50">
-                      {name}
-                    </button>
-                    <button onClick={() => loadIntoEditor(name)} title="Load into editor" className="text-muted-foreground hover:text-primary transition-colors">
-                      <Pencil className="w-3 h-3" />
-                    </button>
-                    <button onClick={() => deleteSaved(name)} className="text-muted-foreground hover:text-destructive transition-colors">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
         </CardContent>
       </Card>
+
+      {/* Card 3: Saved Sequences */}
+      {Object.keys(savedSequences).length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Saved Sequences</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {Object.keys(savedSequences).map(name => (
+                <div key={name} className="flex items-center gap-1 bg-muted rounded-md px-2 py-1">
+                  <button onClick={() => playSaved(name)} disabled={sequencePlaying} className="text-sm hover:text-primary transition-colors disabled:opacity-50">
+                    {name}
+                  </button>
+                  <button onClick={() => loadIntoEditor(name)} title="Load into editor" className="text-muted-foreground hover:text-primary transition-colors">
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => deleteSaved(name)} className="text-muted-foreground hover:text-destructive transition-colors">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
