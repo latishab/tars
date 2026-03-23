@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any
 from modules.modules_roboeyes import Mood
 from loguru import logger
 
-_CUSTOM_SEQUENCES_FILE = Path(__file__).parent.parent.parent / "custom_sequences.json"
+_CUSTOM_SEQUENCES_FILE = Path(__file__).parent.parent / "custom_sequences.json"
 
 # Valid values - generated from Mood enum
 VALID_EMOTIONS = [mood.name.lower() for mood in Mood]

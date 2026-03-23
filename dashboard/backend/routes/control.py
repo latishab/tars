@@ -10,7 +10,7 @@ import re
 
 router = APIRouter()
 
-SEQUENCES_FILE = Path(__file__).parent.parent.parent.parent / "custom_sequences.json"
+SEQUENCES_FILE = Path(__file__).parent.parent.parent.parent / "src" / "custom_sequences.json"
 
 from modules.module_movement_registry import MOVEMENTS as _MOVEMENT_REGISTRY
 MOVEMENTS = sorted(_MOVEMENT_REGISTRY.keys())
