@@ -35,8 +35,6 @@ class EyeState(Enum):
 # Emotion transition speeds (higher = faster)
 EMOTION_TRANSITION_SPEEDS = {
     Mood.EXCITED: 8.0,
-    
-    # Mood.SURPRISED (removed): 15.0,
     Mood.ANGRY: 6.0,
     Mood.HAPPY: 5.0,
     Mood.NEUTRAL: 4.0,
@@ -158,8 +156,6 @@ class RoboEyes:
         self._right_open_target = 1.0
         
         # New expressive features
-        self._pupil_scale = 1.0
-        self._pupil_scale_target = 1.0
         self._squint_intensity = 0.0
         self._squint_target = 0.0
         self._eye_offset_y_left = 0.0
@@ -267,10 +263,6 @@ class RoboEyes:
         """Set look direction (-1 to 1)"""
         self._target_look_x = max(-1.0, min(1.0, x))
         self._target_look_y = max(-1.0, min(1.0, y))
-    
-    def set_pupil_scale(self, scale: float):
-        """Set pupil dilation (0.5 = constricted, 1.5 = dilated)"""
-        self._pupil_scale_target = max(0.5, min(1.5, scale))
     
     def set_squint(self, intensity: float):
         """Set squint intensity (0.0 = normal, 1.0 = fully squinted)"""
@@ -422,7 +414,6 @@ class RoboEyes:
         self._listening_focus = smooth_lerp(self._listening_focus, _focus_target, 5.0, dt)
         self._speaking_pulse = smooth_lerp(self._speaking_pulse, _pulse_target, 10.0, dt)
         self._glow_intensity = smooth_lerp(self._glow_intensity, self._glow_target, 8.0, dt)
-        self._pupil_scale = smooth_lerp(self._pupil_scale, self._pupil_scale_target, 10.0, dt)
         self._squint_intensity = smooth_lerp(self._squint_intensity, self._squint_target, 6.0, dt)
         
         # Smooth glow color transition
@@ -549,7 +540,6 @@ class RoboEyes:
             target_top_r = 0.0
             target_bot_l = 0.0
             target_bot_r = 0.0
-            self._pupil_scale_target = 1.3
 
         # Smooth transitions
         # Update curved bottom state
@@ -629,17 +619,7 @@ class RoboEyes:
         )
         border_radius = min(self.config.border_radius, self.config.width // 2, eye_height // 2)
         pygame.draw.rect(surface, self._current_glow_color, eye_rect, border_radius=border_radius)
-        
-        # Pupil - removed per user request
-        # pupil_size = int(self.config.width * 0.3 * self._pupil_scale)
-        # pupil_rect = pygame.Rect(
-        #     total_x + self.config.width // 2 - pupil_size // 2,
-        #     total_y - pupil_size // 2,
-        #     pupil_size,
-        #     pupil_size
-        # )
-        # pygame.draw.ellipse(surface, (0, 0, 0), pupil_rect)
-        
+
         # Eyelids
         lid_color = self.config.bg_color
         
