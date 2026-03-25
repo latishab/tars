@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react'
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom'
-import { Activity, Gamepad2, Settings, Download, Sun, Moon, SlidersHorizontal, Grid3X3 } from 'lucide-react'
-import { Button } from './components/ui/button'
+import { Activity, Gamepad2, SlidersHorizontal, Grid3X3, Download, Settings } from 'lucide-react'
 import Status from './pages/Status'
 import Control from './pages/Control'
 import MovementBuilder from './pages/MovementBuilder'
@@ -9,131 +7,90 @@ import SettingsPage from './pages/Settings'
 import AppStore from './pages/AppStore'
 import Expressions from './pages/Expressions'
 
+const NAV = [
+  { to: '/',           icon: Activity,          label: 'STATUS'  },
+  { to: '/control',    icon: Gamepad2,           label: 'CONTROL' },
+  { to: '/builder',    icon: SlidersHorizontal,  label: 'BUILD'   },
+  { to: '/expressions',icon: Grid3X3,            label: 'EXPR'    },
+  { to: '/apps',       icon: Download,           label: 'APPS'    },
+  { to: '/settings',   icon: Settings,           label: 'SET'     },
+]
+
 function App() {
-  const [theme, setTheme] = useState('dark')
-
-  useEffect(() => {
-    // Load theme from localStorage
-    const savedTheme = localStorage.getItem('theme') || 'dark'
-    setTheme(savedTheme)
-    document.documentElement.classList.toggle('dark', savedTheme === 'dark')
-  }, [])
-
-  const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark'
-    setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
-    document.documentElement.classList.toggle('dark', newTheme === 'dark')
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-50 bg-card border-b border-border">
-        <div className="flex items-center justify-between h-14 px-4 max-w-6xl mx-auto">
-          <h1 className="text-xl font-bold">TARS</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-5 h-5" />
-            ) : (
-              <Moon className="w-5 h-5" />
-            )}
-          </Button>
+    <div style={{ minHeight: '100vh', background: 'hsl(214 35% 4%)', fontFamily: "'Share Tech Mono', monospace" }}>
+
+      {/* Top bar */}
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 50,
+        background: 'hsl(214 35% 3%)',
+        borderBottom: '1px solid hsl(214 28% 11%)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 44, padding: '0 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Corner bracket logo mark */}
+            <div style={{ position: 'relative', width: 18, height: 18, flexShrink: 0 }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: 7, height: 7, borderTop: '2px solid hsl(36 100% 46%)', borderLeft: '2px solid hsl(36 100% 46%)' }} />
+              <div style={{ position: 'absolute', bottom: 0, right: 0, width: 7, height: 7, borderBottom: '2px solid hsl(36 100% 46%)', borderRight: '2px solid hsl(36 100% 46%)' }} />
+            </div>
+            <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 16, letterSpacing: '0.25em', color: 'hsl(36 100% 55%)' }}>TARS</span>
+            <span style={{ fontSize: 8, letterSpacing: '0.2em', color: 'hsl(214 14% 32%)', paddingTop: 1 }}>MISSION CONTROL</span>
+          </div>
+          {/* Live indicator */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'hsl(141 70% 45%)', boxShadow: '0 0 5px hsl(141 70% 45%)', animation: 'tars-pulse-green 2s ease-in-out infinite' }} />
+            <span style={{ fontSize: 8, letterSpacing: '0.2em', color: 'hsl(214 14% 35%)' }}>LIVE</span>
+          </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="pb-20 pt-2">
+      {/* Content */}
+      <main style={{ paddingBottom: 64 }}>
         <Routes>
-          <Route path="/" element={<Status />} />
-          <Route path="/control" element={<Control />} />
-          <Route path="/builder" element={<MovementBuilder />} />
-          <Route path="/apps" element={<AppStore />} />
+          <Route path="/"            element={<Status />} />
+          <Route path="/control"     element={<Control />} />
+          <Route path="/builder"     element={<MovementBuilder />} />
+          <Route path="/apps"        element={<AppStore />} />
           <Route path="/expressions" element={<Expressions />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/settings"    element={<SettingsPage />} />
+          <Route path="*"            element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border">
-        <div className="flex justify-around items-center h-16 max-w-lg mx-auto">
-          <NavLink
-            to="/"
-            className={({ isActive }) =>
-              `flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`
-            }
-          >
-            <Activity className="w-5 h-5" />
-            <span className="text-xs">Status</span>
-          </NavLink>
-
-          <NavLink
-            to="/control"
-            className={({ isActive }) =>
-              `flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`
-            }
-          >
-            <Gamepad2 className="w-5 h-5" />
-            <span className="text-xs">Control</span>
-          </NavLink>
-
-          <NavLink
-            to="/builder"
-            className={({ isActive }) =>
-              `flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`
-            }
-          >
-            <SlidersHorizontal className="w-5 h-5" />
-            <span className="text-xs">Builder</span>
-          </NavLink>
-
-          <NavLink
-            to="/expressions"
-            className={({ isActive }) =>
-              `flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`
-            }
-          >
-            <Grid3X3 className="w-5 h-5" />
-            <span className="text-xs">Express</span>
-          </NavLink>
-
-          <NavLink
-            to="/apps"
-            className={({ isActive }) =>
-              `flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`
-            }
-          >
-            <Download className="w-5 h-5" />
-            <span className="text-xs">Apps</span>
-          </NavLink>
-
-          <NavLink
-            to="/settings"
-            className={({ isActive }) =>
-              `flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
-                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
-              }`
-            }
-          >
-            <Settings className="w-5 h-5" />
-            <span className="text-xs">Settings</span>
-          </NavLink>
+      {/* Bottom nav */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: 'hsl(214 35% 3%)',
+        borderTop: '1px solid hsl(214 28% 11%)',
+        zIndex: 50,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', height: 56, maxWidth: 480, margin: '0 auto' }}>
+          {NAV.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              style={({ isActive }) => ({
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 3,
+                padding: '6px 8px',
+                textDecoration: 'none',
+                color: isActive ? 'hsl(36 100% 55%)' : 'hsl(214 14% 35%)',
+                borderTop: isActive ? '2px solid hsl(36 100% 46%)' : '2px solid transparent',
+                marginTop: -1,
+                transition: 'color 0.15s ease',
+              })}
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon size={16} style={{ filter: isActive ? 'drop-shadow(0 0 4px hsl(36 100% 46%))' : 'none' }} />
+                  <span style={{ fontSize: 7, letterSpacing: '0.15em' }}>{label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
         </div>
       </nav>
     </div>

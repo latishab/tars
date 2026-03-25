@@ -1,234 +1,225 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check, Wind } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
-function Status() {
-  const [status, setStatus] = useState(null)
-  const [error, setError] = useState(null)
-  const [copied, setCopied] = useState(false)
-  const [ventilating, setVentilating] = useState(false)
-  const [ventilateLoading, setVentilateLoading] = useState(false)
-
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await fetch('/api/status/')
-        const data = await res.json()
-        setStatus(data)
-        setError(null)
-      } catch (err) {
-        setError('Failed to fetch status')
-      }
-    }
-
-    const fetchVentilate = async () => {
-      try {
-        const res = await fetch('/api/control/ventilate')
-        const data = await res.json()
-        setVentilating(data.ventilating)
-      } catch (_) {}
-    }
-
-    fetchStatus()
-    fetchVentilate()
-    const interval = setInterval(fetchStatus, 2000)
-    const ventInterval = setInterval(fetchVentilate, 5000)
-    return () => { clearInterval(interval); clearInterval(ventInterval) }
-  }, [])
-
-  const toggleVentilate = async () => {
-    setVentilateLoading(true)
-    try {
-      const res = await fetch('/api/control/ventilate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !ventilating }),
-      })
-      const data = await res.json()
-      setVentilating(data.ventilating)
-    } catch (_) {}
-    setVentilateLoading(false)
-  }
-
-  if (error) {
-    return (
-      <div className="p-4">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-destructive">{error}</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (!status) {
-    return (
-      <div className="p-4">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground">Loading...</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const battery = status.battery || {}
-  const system = status.system || {}
-  const connections = status.connections || {}
-  const network = status.network || {}
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
+// ── Gauge bar ─────────────────────────────────────────────────────────────
+function GaugeBar({ value, max = 100, warn = 80, danger = 95, low = 20 }) {
+  const pct = Math.min(100, Math.max(0, (value / max) * 100))
+  const color = value <= low
+    ? 'hsl(0 80% 50%)'
+    : value >= danger
+    ? 'hsl(0 80% 50%)'
+    : value >= warn
+    ? 'hsl(36 100% 46%)'
+    : 'hsl(36 100% 46%)'
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">TARS Status</h1>
-
-      {/* Battery */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Battery className="w-5 h-5" />
-            Battery
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="text-4xl font-bold">{battery.level}%</div>
-              <div className="text-sm text-muted-foreground">
-              </div>
-            </div>
-            <div className="text-right text-sm text-muted-foreground">
-              <div>{battery.voltage?.toFixed(2)}V</div>
-              <div>{battery.current?.toFixed(0)}mA</div>
-            </div>
-          </div>
-          <div className="mt-2 h-2 bg-secondary rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all ${
-                battery.level > 20 ? 'bg-green-500' : 'bg-red-500'
-              }`}
-              style={{ width: `${battery.level}%` }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* System */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Cpu className="w-5 h-5" />
-            System
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* 2 columns on mobile, 3 on tablet+ */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div>
-              <div className="text-sm text-muted-foreground">CPU</div>
-              <div className="text-xl font-semibold">{system.cpu_percent?.toFixed(0)}%</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Memory</div>
-              <div className="text-xl font-semibold">{system.memory_percent?.toFixed(0)}%</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground flex items-center gap-1">
-                <Thermometer className="w-3 h-3" /> Temp
-              </div>
-              <div className="text-xl font-semibold">
-                {system.cpu_temp ? `${system.cpu_temp.toFixed(1)}C` : 'N/A'}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Ventilation */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Wind className="w-5 h-5" />
-            Ventilation
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-muted-foreground">Status</div>
-              <div className={`text-xl font-semibold ${ventilating ? 'text-blue-500' : ''}`}>
-                {ventilating ? 'Active' : 'Off'}
-              </div>
-            </div>
-            <Button
-              variant={ventilating ? 'default' : 'outline'}
-              onClick={toggleVentilate}
-              disabled={ventilateLoading}
-            >
-              {ventilating ? 'Turn Off' : 'Turn On'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Network & Connections */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Wifi className={`w-5 h-5 ${network.wifi_mode === "wlan" ? "text-blue-500" : network.wifi_mode === "hotspot" ? "text-orange-500" : "text-gray-500"}`} />
-            Network & Connections
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Connection mode */}
-          {network.connection_mode && (
-            <div>
-              <div className="text-sm text-muted-foreground mb-2">Connection Mode</div>
-              <div className="text-lg font-semibold capitalize">{network.connection_mode}</div>
-              {network.connection_mode === 'tailscale' && network.tailscale_ip && (
-                <div className="mt-2 flex items-center gap-2 bg-secondary p-2 rounded">
-                  <code className="text-sm flex-1">{network.tailscale_ip}</code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(network.tailscale_ip)}
-                  >
-                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Connection status - stack on mobile */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex items-center gap-2">
-              <Radio className={`w-4 h-4 ${connections.webrtc ? 'text-green-500' : 'text-red-500'}`} />
-              <span>WebRTC</span>
-              <span className={`text-sm ${connections.webrtc ? 'text-green-500' : 'text-muted-foreground'}`}>
-                {connections.webrtc ? 'Connected' : 'Disconnected'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Radio className={`w-4 h-4 ${connections.grpc ? 'text-green-500' : 'text-red-500'}`} />
-              <span>gRPC</span>
-              <span className={`text-sm ${connections.grpc ? 'text-green-500' : 'text-muted-foreground'}`}>
-                {connections.grpc ? 'Ready' : 'Error'}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div style={{ position: 'relative', height: 3, background: 'hsl(214 28% 11%)', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${pct}%`, background: color, transition: 'width 0.6s ease', boxShadow: `0 0 6px ${color}` }} />
     </div>
   )
 }
 
-export default Status
+// ── Metric tile ──────────────────────────────────────────────────────────
+function MetricTile({ label, value, unit, sub, gauge, gaugeLow, gaugeWarn, gaugeMax = 100 }) {
+  return (
+    <div style={{ padding: '12px 14px', background: 'hsl(214 35% 5%)', border: '1px solid hsl(214 28% 11%)', borderLeft: '2px solid hsl(36 100% 46% / 0.25)' }}>
+      <div style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(214 14% 40%)', marginBottom: 6 }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
+        <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 28, color: 'hsl(210 22% 88%)', lineHeight: 1 }}>{value ?? '—'}</span>
+        {unit && <span style={{ fontSize: 10, letterSpacing: '0.08em', color: 'hsl(214 14% 45%)' }}>{unit}</span>}
+      </div>
+      {sub && <div style={{ fontSize: 9, letterSpacing: '0.1em', color: 'hsl(214 14% 40%)', marginBottom: 4 }}>{sub}</div>}
+      {gauge != null && <GaugeBar value={gauge} max={gaugeMax} low={gaugeLow} warn={gaugeWarn} />}
+    </div>
+  )
+}
+
+// ── Connection row ────────────────────────────────────────────────────────
+function ConnRow({ label, active }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid hsl(214 28% 9%)' }}>
+      <div style={{ width: 6, height: 6, borderRadius: '50%', background: active ? 'hsl(141 70% 45%)' : 'hsl(214 14% 28%)', boxShadow: active ? '0 0 6px hsl(141 70% 45%)' : 'none', flexShrink: 0 }} />
+      <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'hsl(214 14% 50%)', flex: 1 }}>{label}</span>
+      <span style={{ fontSize: 9, letterSpacing: '0.1em', color: active ? 'hsl(141 70% 55%)' : 'hsl(214 14% 35%)' }}>{active ? 'ONLINE' : 'OFFLINE'}</span>
+    </div>
+  )
+}
+
+// ── Panel ─────────────────────────────────────────────────────────────────
+function Panel({ title, icon: Icon, children, action }) {
+  return (
+    <div className="tars-panel tars-panel-inner-br">
+      <div className="tars-panel-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {Icon && <Icon size={12} style={{ color: 'hsl(36 100% 46% / 0.7)' }} />}
+          <span className="tars-panel-title">{title}</span>
+        </div>
+        {action}
+      </div>
+      <div className="tars-panel-body">{children}</div>
+    </div>
+  )
+}
+
+// ── Timestamp ────────────────────────────────────────────────────────────
+function Timestamp() {
+  const [time, setTime] = useState(new Date())
+  useEffect(() => { const t = setInterval(() => setTime(new Date()), 1000); return () => clearInterval(t) }, [])
+  const fmt = t => t.toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
+  return <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: '0.1em', color: 'hsl(214 14% 35%)' }}>{fmt(time)}</span>
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────
+export default function Status() {
+  const [status, setStatus] = useState(null)
+  const [error, setError] = useState(null)
+  const [copied, setCopied] = useState(false)
+  const [ventilating, setVentilating] = useState(false)
+  const [ventLoading, setVentLoading] = useState(false)
+
+  useEffect(() => {
+    const fetch_ = async () => {
+      try { const r = await fetch('/api/status/'); setStatus(await r.json()); setError(null) }
+      catch { setError('TELEMETRY FEED LOST') }
+    }
+    const fetchVent = async () => {
+      try { const r = await fetch('/api/control/ventilate'); const d = await r.json(); setVentilating(d.ventilating) }
+      catch {}
+    }
+    fetch_(); fetchVent()
+    const t1 = setInterval(fetch_, 2000)
+    const t2 = setInterval(fetchVent, 5000)
+    return () => { clearInterval(t1); clearInterval(t2) }
+  }, [])
+
+  const toggleVent = async () => {
+    setVentLoading(true)
+    try { const r = await fetch('/api/control/ventilate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !ventilating }) }); setVentilating((await r.json()).ventilating) }
+    catch {}
+    setVentLoading(false)
+  }
+
+  const copyToClipboard = (text) => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+
+  const bat = status?.battery || {}
+  const sys = status?.system || {}
+  const net = status?.network || {}
+  const conn = status?.connections || {}
+
+  return (
+    <div style={{ padding: '12px 12px 24px', fontFamily: "'Share Tech Mono', monospace" }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid hsl(214 28% 11%)' }}>
+        <div>
+          <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(36 100% 55%)' }}>SYSTEM TELEMETRY</div>
+          <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 38%)', marginTop: 1 }}>TARS UNIT — LIVE READOUT</div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+          <Timestamp />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span className={`tars-status-dot ${status ? '' : ''}`} style={{ background: status ? 'hsl(141 70% 45%)' : 'hsl(0 80% 50%)', boxShadow: status ? '0 0 6px hsl(141 70% 45%)' : 'none' }} />
+            <span style={{ fontSize: 9, letterSpacing: '0.15em', color: status ? 'hsl(141 70% 55%)' : 'hsl(0 80% 60%)' }}>{status ? 'NOMINAL' : error ? 'FAULT' : 'CONNECTING'}</span>
+          </div>
+        </div>
+      </div>
+
+      {error && !status && (
+        <div className="tars-feedback" style={{ marginBottom: 12, borderLeftColor: 'hsl(0 80% 50% / 0.5)', color: 'hsl(0 80% 65%)' }}>{error}</div>
+      )}
+
+      {/* Loading skeleton */}
+      {!status && !error && (
+        <div style={{ fontSize: 10, letterSpacing: '0.15em', color: 'hsl(214 14% 35%)', textAlign: 'center', padding: '40px 0' }}>ACQUIRING TELEMETRY…</div>
+      )}
+
+      {status && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* ── Power Cell ──────────────────────────────────────────── */}
+          <Panel title="Power Cell" icon={Battery}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'center', marginBottom: 12 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 48, color: bat.level > 20 ? 'hsl(210 22% 90%)' : 'hsl(0 80% 60%)', lineHeight: 1 }}>{bat.level ?? '—'}</span>
+                  <span style={{ fontSize: 14, color: 'hsl(214 14% 45%)', letterSpacing: '0.05em' }}>%</span>
+                </div>
+                <div style={{ fontSize: 9, letterSpacing: '0.15em', color: 'hsl(214 14% 40%)', marginTop: 2 }}>
+                  {bat.level > 60 ? 'CHARGE SUFFICIENT' : bat.level > 20 ? 'CHARGE LOW' : 'CRITICAL — RECHARGE REQUIRED'}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontSize: 9, letterSpacing: '0.12em', color: 'hsl(214 14% 40%)' }}>VOLTAGE</div>
+                <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 22, color: 'hsl(36 100% 55%)' }}>{bat.voltage != null ? `${bat.voltage.toFixed(2)}V` : '—'}</div>
+                <div style={{ fontSize: 9, letterSpacing: '0.12em', color: 'hsl(214 14% 40%)' }}>CURRENT</div>
+                <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 16, color: 'hsl(214 14% 55%)' }}>{bat.current != null ? `${Math.round(bat.current)}mA` : '—'}</div>
+              </div>
+            </div>
+            <GaugeBar value={bat.level ?? 0} max={100} low={20} warn={50} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 9, letterSpacing: '0.1em', color: 'hsl(214 14% 30%)' }}>
+              <span>0%</span><span>50%</span><span>100%</span>
+            </div>
+          </Panel>
+
+          {/* ── Core Systems ─────────────────────────────────────────── */}
+          <Panel title="Core Systems" icon={Cpu}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              <MetricTile label="CPU Load" value={sys.cpu_percent?.toFixed(0)} unit="%" gauge={sys.cpu_percent} warn={70} danger={90} />
+              <MetricTile label="Memory" value={sys.memory_percent?.toFixed(0)} unit="%" gauge={sys.memory_percent} warn={75} danger={90} />
+              <MetricTile label="Core Temp" value={sys.cpu_temp?.toFixed(1)} unit="°C" gauge={sys.cpu_temp} gaugeMax={85} warn={65} danger={80} />
+            </div>
+          </Panel>
+
+          {/* ── Ventilation ──────────────────────────────────────────── */}
+          <Panel title="Thermal Management" icon={Wind}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 40%)', marginBottom: 4 }}>VENTILATION STATUS</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: ventilating ? 'hsl(191 100% 44%)' : 'hsl(214 14% 28%)', boxShadow: ventilating ? '0 0 8px hsl(191 100% 44%)' : 'none', animation: ventilating ? 'tars-pulse-cyan 1.2s ease-in-out infinite' : 'none' }} />
+                  <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 20, color: ventilating ? 'hsl(191 100% 55%)' : 'hsl(214 14% 45%)' }}>
+                    {ventilating ? 'ACTIVE' : 'STANDBY'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={toggleVent}
+                disabled={ventLoading}
+                className={`tars-btn ${ventilating ? 'tars-btn-cyan' : 'tars-btn-ghost'}`}
+                style={{ minWidth: 100 }}
+              >
+                {ventLoading ? '…' : ventilating ? 'Disable' : 'Enable'}
+              </button>
+            </div>
+          </Panel>
+
+          {/* ── Network ──────────────────────────────────────────────── */}
+          <Panel title="Network & Links" icon={Wifi}>
+            {net.connection_mode && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 40%)', marginBottom: 6 }}>CONNECTION MODE</div>
+                <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 18, letterSpacing: '0.1em', color: 'hsl(36 100% 55%)', textTransform: 'uppercase', marginBottom: 6 }}>{net.connection_mode}</div>
+                {net.connection_mode === 'tailscale' && net.tailscale_ip && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'hsl(214 35% 5%)', border: '1px solid hsl(214 28% 12%)' }}>
+                    <span style={{ flex: 1, fontSize: 11, letterSpacing: '0.06em', color: 'hsl(191 100% 55%)' }}>{net.tailscale_ip}</span>
+                    <button
+                      onClick={() => copyToClipboard(net.tailscale_ip)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied ? 'hsl(141 70% 50%)' : 'hsl(214 14% 40%)', display: 'flex', padding: 4 }}
+                    >
+                      {copied ? <Check size={14} /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            <div>
+              <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 40%)', marginBottom: 8 }}>SUBSYSTEM LINKS</div>
+              <ConnRow label="WebRTC" active={conn.webrtc} />
+              <ConnRow label="gRPC" active={conn.grpc} />
+            </div>
+          </Panel>
+
+        </div>
+      )}
+    </div>
+  )
+}

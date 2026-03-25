@@ -141,6 +141,10 @@
   0%, 100% { opacity: 1; box-shadow: 0 0 10px hsl(191 100% 44%); }
   50%       { opacity: 0.7; box-shadow: 0 0 4px hsl(191 100% 44%); }
 }
+@keyframes tars-pulse-green {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px hsl(141 70% 45%); }
+  50%       { opacity: 0.5; box-shadow: 0 0 2px hsl(141 70% 45%); }
+}
 
 /* ── Section labels ──────────────────────────────────────────────────────── */
 .tars-section-label {

@@ -1,12 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
 import { Pencil, X, RotateCcw } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 const EMOTIONS = [
   'neutral', 'happy', 'sad', 'angry', 'excited', 'afraid',
@@ -22,13 +15,6 @@ const EMOTION_LABELS = {
 
 const INTENSITIES = ['low', 'medium', 'high']
 
-// SVG eye simulation parameters per emotion
-// openL/R: eye openness (1.0 = normal, >1.0 = wide, <1.0 = narrow)
-// lookX: horizontal look direction (-1 left, +1 right)
-// lidL/R: top lid coverage as fraction of eye height (0 = none)
-// lidSideL/R: 'flat' | 'left' | 'right' — which corner of the triangular lid droops
-// curveL/R: bottom curved lid amount for happy/smug (0 = none, ~0.5 = full smile)
-// color: eye fill color
 const EYE_PARAMS = {
   neutral:       { openL: 1.0,  openR: 1.0,  lookX: 0,    lidL: 0,    lidR: 0,    lidSideL: 'flat',  lidSideR: 'flat',  curveL: 0,    curveR: 0,    color: '#00CED1' },
   happy:         { openL: 0.85, openR: 0.85, lookX: 0,    lidL: 0,    lidR: 0,    lidSideL: 'flat',  lidSideR: 'flat',  curveL: 0.48, curveR: 0.48, color: '#00CED1' },
@@ -45,10 +31,10 @@ const EYE_PARAMS = {
   surprised:     { openL: 1.35, openR: 1.35, lookX: 0,    lidL: 0,    lidR: 0,    lidSideL: 'flat',  lidSideR: 'flat',  curveL: 0,    curveR: 0,    color: '#FFFFFF' },
 }
 
-const BG = '#0D1117'
-const EW = 44   // eye width
-const EH = 64   // eye base height
-const R  = 10   // border radius
+const BG = 'hsl(214 35% 5%)'
+const EW = 44
+const EH = 64
+const R  = 10
 
 function Eye({ cx, cy, open, lid, lidSide, curve, color, lookX }) {
   const eh = Math.max(4, EH * open)
@@ -57,13 +43,11 @@ function Eye({ cx, cy, open, lid, lidSide, curve, color, lookX }) {
   const ex = cx - EW / 2 + lx
   const ey = cy - eh / 2
   const lidPx = eh * lid
-  // Curved bottom lid path (happy/smug)
   const curveH = eh * 0.5 * curve
   const curveY = ey + eh * 0.75
   const curvePath = curve > 0.01
     ? `M ${ex},${curveY} Q ${cx + lx},${curveY - curveH} ${ex + EW},${curveY} L ${ex + EW},${ey + eh + 4} L ${ex},${ey + eh + 4} Z`
     : null
-  // Top lid polygon points
   let lidPoints = null
   if (lidPx > 0.5) {
     if (lidSide === 'left')
@@ -76,8 +60,8 @@ function Eye({ cx, cy, open, lid, lidSide, curve, color, lookX }) {
   return (
     <g>
       <rect x={ex} y={ey} width={EW} height={eh} rx={er} ry={er} fill={color} />
-      {lidPoints && <polygon points={lidPoints} fill={BG} />}
-      {curvePath && <path d={curvePath} fill={BG} />}
+      {lidPoints && <polygon points={lidPoints} fill="#0a0e14" />}
+      {curvePath && <path d={curvePath} fill="#0a0e14" />}
     </g>
   )
 }
@@ -85,10 +69,22 @@ function Eye({ cx, cy, open, lid, lidSide, curve, color, lookX }) {
 function EyePreview({ emotion }) {
   const p = EYE_PARAMS[emotion] || EYE_PARAMS.neutral
   return (
-    <svg viewBox="0 0 200 90" width="200" height="90" style={{ background: BG, borderRadius: 8 }}>
+    <svg viewBox="0 0 200 90" width="180" height="81"
+      style={{ background: 'hsl(214 35% 5%)', border: '1px solid hsl(214 28% 11%)' }}>
       <Eye cx={55}  cy={45} open={p.openL} lid={p.lidL} lidSide={p.lidSideL} curve={p.curveL} color={p.color} lookX={p.lookX} />
       <Eye cx={145} cy={45} open={p.openR} lid={p.lidR} lidSide={p.lidSideR} curve={p.curveR} color={p.color} lookX={p.lookX} />
     </svg>
+  )
+}
+
+function Panel({ title, children }) {
+  return (
+    <div className="tars-panel tars-panel-inner-br">
+      <div className="tars-panel-header">
+        <span className="tars-panel-title">{title}</span>
+      </div>
+      <div className="tars-panel-body">{children}</div>
+    </div>
   )
 }
 
@@ -105,10 +101,7 @@ export default function Expressions() {
   const fetchMap = () => {
     fetch('/api/expressions/map')
       .then(r => r.json())
-      .then(data => {
-        setExpressionMap(data.map || {})
-        setCustomKeys(data.custom_keys || [])
-      })
+      .then(data => { setExpressionMap(data.map || {}); setCustomKeys(data.custom_keys || []) })
       .catch(() => {})
   }
 
@@ -130,9 +123,7 @@ export default function Expressions() {
         body: JSON.stringify({ emotion, intensity }),
       })
       if (res.ok) setActiveCell(key)
-    } catch (err) {
-      console.error('Trigger failed:', err)
-    }
+    } catch {}
     setExecuting(null)
   }
 
@@ -165,138 +156,169 @@ export default function Expressions() {
     setEditingCell(null)
   }
 
-  // Active emotion for eye preview: show eyes of the edited/triggered cell
   const previewEmotion = editingCell
-    ? (expressionMap[editingCell]?.eyes || editingCell.split(':')[0])
+    ? (editEyes || editingCell.split(':')[0])
     : activeCell
       ? (expressionMap[activeCell]?.eyes || activeCell.split(':')[0])
       : 'neutral'
 
   return (
-    <div className="p-4 space-y-4">
+    <div style={{ padding: '12px 12px 24px', fontFamily: "'Share Tech Mono', monospace" }}>
 
-      {/* Header with eye preview */}
-      <div className="flex items-center justify-between gap-4">
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid hsl(214 28% 11%)' }}>
         <div>
-          <h1 className="text-2xl font-bold">Expressions</h1>
+          <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(36 100% 55%)' }}>EXPRESSION MATRIX</div>
+          <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 38%)', marginTop: 1 }}>TARS UNIT — FACIAL CONTROL</div>
           {activeCell && (
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Active: <span className="text-foreground font-medium">{activeCell.replace(':', ' / ')}</span>
-            </p>
+            <div style={{ fontSize: 9, letterSpacing: '0.15em', color: 'hsl(191 100% 55%)', marginTop: 4 }}>
+              ACTIVE: {activeCell.replace(':', ' / ').toUpperCase()}
+            </div>
           )}
         </div>
-        <div className="shrink-0">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
           <EyePreview emotion={previewEmotion} />
-          <p className="text-xs text-center text-muted-foreground mt-1">{EMOTION_LABELS[previewEmotion] || previewEmotion}</p>
+          <div style={{ fontSize: 9, letterSpacing: '0.15em', color: 'hsl(214 14% 38%)', textAlign: 'right' }}>
+            {(EMOTION_LABELS[previewEmotion] || previewEmotion).toUpperCase()}
+          </div>
         </div>
       </div>
 
       {/* Expression Grid */}
-      <Card>
-        <CardContent className="p-3">
-          <div className="grid grid-cols-[80px,1fr,1fr,1fr] gap-1 mb-1">
-            <div />
-            {INTENSITIES.map(i => (
-              <div key={i} className="text-xs text-center text-muted-foreground font-medium capitalize pb-1">{i}</div>
-            ))}
-          </div>
-          <div className="space-y-1">
-            {EMOTIONS.map(emotion => (
-              <div key={emotion} className="grid grid-cols-[80px,1fr,1fr,1fr] gap-1 items-center">
-                <div className="text-xs text-muted-foreground truncate pr-1">{EMOTION_LABELS[emotion]}</div>
-                {INTENSITIES.map(intensity => {
-                  const key = `${emotion}:${intensity}`
-                  const entry = expressionMap[key]
-                  const hasGesture = !!entry?.gesture
-                  const isCustom = customKeys.includes(key)
-                  const isActive = activeCell === key
-                  const isExecuting = executing === key
-                  // Show first word of gesture name, or 'eyes', or '—'
-                  const label = isExecuting ? '...' : entry
-                    ? (entry.gesture ? entry.gesture.split(' ')[0] : 'eyes')
-                    : '—'
-                  return (
-                    <div key={intensity} className="relative group">
-                      <Button
-                        variant={isActive ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => trigger(emotion, intensity)}
-                        disabled={isExecuting}
-                        className={cn(
-                          'w-full h-8 text-xs px-1',
-                          hasGesture && !isActive && 'border-l-2 border-l-primary',
-                          isCustom && !isActive && 'ring-1 ring-amber-500',
-                        )}
-                      >
-                        {label}
-                      </Button>
-                      <button
-                        onClick={() => openEditor(emotion, intensity)}
-                        className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center w-4 h-4 rounded-full bg-muted border border-border text-muted-foreground hover:text-foreground z-10"
-                      >
-                        <Pencil className="w-2 h-2" />
-                      </button>
-                    </div>
-                  )
-                })}
+      <Panel title="Expression Map">
+        {/* Column headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr 1fr 1fr', gap: 4, marginBottom: 6 }}>
+          <div />
+          {INTENSITIES.map(i => (
+            <div key={i} style={{ fontSize: 8, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(214 14% 35%)', textAlign: 'center', paddingBottom: 2, borderBottom: '1px solid hsl(214 28% 11%)' }}>{i}</div>
+          ))}
+        </div>
+        {/* Rows */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {EMOTIONS.map(emotion => (
+            <div key={emotion} style={{ display: 'grid', gridTemplateColumns: '72px 1fr 1fr 1fr', gap: 4, alignItems: 'center' }}>
+              <div style={{ fontSize: 9, letterSpacing: '0.1em', color: 'hsl(214 14% 45%)', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {EMOTION_LABELS[emotion]}
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              {INTENSITIES.map(intensity => {
+                const key = `${emotion}:${intensity}`
+                const entry = expressionMap[key]
+                const isActive = activeCell === key
+                const isExecuting = executing === key
+                const isEditing = editingCell === key
+                const hasGesture = !!entry?.gesture
+                const isCustom = customKeys.includes(key)
+                const label = isExecuting ? '…' : entry ? (entry.gesture ? entry.gesture.split(' ')[0] : 'eyes') : '—'
+
+                return (
+                  <div key={intensity} style={{ position: 'relative' }} className="group">
+                    <button
+                      onClick={() => trigger(emotion, intensity)}
+                      disabled={isExecuting}
+                      style={{
+                        width: '100%',
+                        padding: '5px 4px',
+                        fontSize: 9,
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        fontFamily: "'Share Tech Mono', monospace",
+                        cursor: isExecuting ? 'wait' : 'pointer',
+                        background: isActive ? 'hsl(36 100% 46% / 0.15)' : isEditing ? 'hsl(191 100% 44% / 0.08)' : 'hsl(214 35% 5%)',
+                        border: isActive
+                          ? '1px solid hsl(36 100% 46% / 0.6)'
+                          : isEditing
+                          ? '1px solid hsl(191 100% 44% / 0.5)'
+                          : hasGesture
+                          ? '1px solid hsl(214 28% 16%)'
+                          : '1px solid hsl(214 28% 11%)',
+                        borderLeft: isCustom && !isActive ? '2px solid hsl(36 100% 46% / 0.4)' : undefined,
+                        color: isActive ? 'hsl(36 100% 60%)' : isEditing ? 'hsl(191 100% 55%)' : entry ? 'hsl(210 22% 65%)' : 'hsl(214 14% 28%)',
+                        transition: 'all 0.15s ease',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {label}
+                    </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); openEditor(emotion, intensity) }}
+                      className="group-hover:flex"
+                      style={{
+                        display: 'none',
+                        position: 'absolute',
+                        top: -4, right: -4,
+                        width: 14, height: 14,
+                        background: 'hsl(214 28% 14%)',
+                        border: '1px solid hsl(214 28% 22%)',
+                        cursor: 'pointer',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                        zIndex: 10,
+                      }}
+                    >
+                      <Pencil size={7} style={{ color: 'hsl(36 100% 46%)' }} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </Panel>
 
       {/* Editor */}
       {editingCell && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span>Edit: <span className="font-normal text-muted-foreground">{editingCell.replace(':', ' / ')}</span></span>
-              <Button variant="ghost" size="icon" className="w-6 h-6" onClick={() => setEditingCell(null)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pb-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Eyes</label>
-                <Select value={editEyes} onValueChange={setEditEyes}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
+        <div style={{ marginTop: 12 }}>
+          <Panel title={`EDIT / ${editingCell.replace(':', ' / ').toUpperCase()}`}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 8, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(214 14% 40%)', marginBottom: 6 }}>Eyes</div>
+                  <select
+                    value={editEyes}
+                    onChange={e => setEditEyes(e.target.value)}
+                    className="tars-select"
+                    style={{ width: '100%' }}
+                  >
                     {EMOTIONS.map(e => (
-                      <SelectItem key={e} value={e}>{EMOTION_LABELS[e]}</SelectItem>
+                      <option key={e} value={e}>{EMOTION_LABELS[e]}</option>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Gesture</label>
-                <Select value={editGesture || '__none__'} onValueChange={v => setEditGesture(v === '__none__' ? '' : v)}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
+                  </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: 8, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(214 14% 40%)', marginBottom: 6 }}>Gesture</div>
+                  <select
+                    value={editGesture || '__none__'}
+                    onChange={e => setEditGesture(e.target.value === '__none__' ? '' : e.target.value)}
+                    className="tars-select"
+                    style={{ width: '100%' }}
+                  >
+                    <option value="__none__">None</option>
                     {gestures.map(g => (
-                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                      <option key={g} value={g}>{g}</option>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={saveEdit} className="tars-btn tars-btn-amber" style={{ flex: 1 }}>Save</button>
+                {customKeys.includes(editingCell) && (
+                  <button onClick={resetEntry} className="tars-btn tars-btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <RotateCcw size={11} />
+                    Reset
+                  </button>
+                )}
+                <button
+                  onClick={() => setEditingCell(null)}
+                  className="tars-btn tars-btn-ghost"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }}
+                >
+                  <X size={12} />
+                </button>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={saveEdit} className="flex-1">Save</Button>
-              {customKeys.includes(editingCell) && (
-                <Button size="sm" variant="outline" onClick={resetEntry}>
-                  <RotateCcw className="w-3 h-3 mr-1" />
-                  Reset
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+          </Panel>
+        </div>
       )}
     </div>
   )
