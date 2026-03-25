@@ -11,17 +11,17 @@ router = APIRouter()
 STATE_FILE = Path(__file__).parent.parent.parent.parent / "state" / "expression_map.json"
 
 DEFAULT_EXPRESSION_MAP = {
-    "happy:high": {"eyes": "happy", "gesture": "Wave Fast"},
-    "sad:high": {"eyes": "sad", "gesture": "Bow Fast"},
-    "angry:medium": {"eyes": "angry", "gesture": "Wiggle"},
-    "angry:high": {"eyes": "angry", "gesture": "Wiggle"},
-    "excited:medium": {"eyes": "excited", "gesture": "Wiggle"},
-    "excited:high": {"eyes": "excited", "gesture": "Laugh Fast"},
-    "afraid:high": {"eyes": "afraid", "gesture": "Wiggle"},
-    "curious:high": {"eyes": "curious", "gesture": "Tilt R Fast"},
-    "skeptical:high": {"eyes": "skeptical", "gesture": "Wiggle"},
-    "smug:high": {"eyes": "smug", "gesture": "Tilt R Fast"},
-    "surprised:high": {"eyes": "surprised", "gesture": "Tilt L Fast"},
+    "happy:high":     {"eyes": "happy",     "gesture": "wave_fast"},
+    "sad:high":       {"eyes": "sad",        "gesture": "bow_fast"},
+    "angry:medium":   {"eyes": "angry",      "gesture": "wiggle"},
+    "angry:high":     {"eyes": "angry",      "gesture": "wiggle"},
+    "excited:medium": {"eyes": "excited",    "gesture": "wiggle"},
+    "excited:high":   {"eyes": "excited",    "gesture": "laugh_fast"},
+    "afraid:high":    {"eyes": "afraid",     "gesture": "wiggle"},
+    "curious:high":   {"eyes": "curious",    "gesture": "tilt_r_fast"},
+    "skeptical:high": {"eyes": "skeptical",  "gesture": "wiggle"},
+    "smug:high":      {"eyes": "smug",       "gesture": "tilt_r_fast"},
+    "surprised:high": {"eyes": "surprised",  "gesture": "tilt_l_fast"},
 }
 
 from modules.module_movement_registry import MOVEMENTS as _MOVEMENT_REGISTRY

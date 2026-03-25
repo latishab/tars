@@ -10,6 +10,11 @@ import re
 
 router = APIRouter()
 
+def _normalize_name(name: str) -> str:
+    """Normalize sequence name to snake_case so 'Step Forward' == 'step_forward'."""
+    return re.sub(r'[^a-z0-9]+', '_', name.strip().lower()).strip('_')
+
+
 SEQUENCES_FILE = Path(__file__).parent.parent.parent.parent / "src" / "custom_sequences.json"
 
 from modules.module_movement_registry import MOVEMENTS as _MOVEMENT_REGISTRY
@@ -231,7 +236,8 @@ async def play_sequence(request: PlaySequenceRequest, req: Request):
 
 @router.post("/save-sequence")
 async def save_sequence(request: SaveSequenceRequest):
-    """Save a named sequence to disk."""
+    """Save a named sequence to disk, normalizing the name to snake_case."""
+    name = _normalize_name(request.name)
     data = {}
     if SEQUENCES_FILE.exists():
         try:
@@ -239,8 +245,8 @@ async def save_sequence(request: SaveSequenceRequest):
         except Exception:
             data = {}
 
-    existing = data.get(request.name, {})
-    data[request.name] = {**existing, "type": request.type, "quick": request.quick, "steps": request.steps}
+    existing = data.get(name, {})
+    data[name] = {**existing, "type": request.type, "quick": request.quick, "steps": request.steps}
     SEQUENCES_FILE.write_text(json.dumps(data, indent=2))
     return {"status": "ok", "name": request.name}
 
@@ -256,29 +262,31 @@ async def get_saved_sequences():
 
 @router.delete("/saved-sequences/{name}")
 async def delete_saved_sequence(name: str):
-    """Delete a saved sequence by name."""
+    """Delete a saved sequence by name (normalizes name)."""
     if not SEQUENCES_FILE.exists():
         raise HTTPException(404, "No sequences file")
 
+    key = _normalize_name(name)
     data = json.loads(SEQUENCES_FILE.read_text())
-    if name not in data:
-        raise HTTPException(404, f"Sequence '{name}' not found")
+    if key not in data:
+        raise HTTPException(404, f"Sequence '{key}' not found")
 
-    del data[name]
+    del data[key]
     SEQUENCES_FILE.write_text(json.dumps(data, indent=2))
     return {"status": "ok"}
 
 @router.post("/play-saved/{name}")
 async def play_saved_sequence(name: str, req: Request):
-    """Play a saved sequence by name."""
+    """Play a saved sequence by name (normalizes name)."""
     if not SEQUENCES_FILE.exists():
         raise HTTPException(404, "No sequences file")
 
+    key = _normalize_name(name)
     data = json.loads(SEQUENCES_FILE.read_text())
-    if name not in data:
-        raise HTTPException(404, f"Sequence '{name}' not found")
+    if key not in data:
+        raise HTTPException(404, f"Sequence '{key}' not found")
 
-    entry = data[name]
+    entry = data[key]
     steps = entry["steps"] if isinstance(entry, dict) else entry
     return await play_sequence(PlaySequenceRequest(steps=steps), req)
 

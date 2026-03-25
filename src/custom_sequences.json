@@ -1,5 +1,5 @@
 {
-  "Wiggle": {
+  "wiggle": {
     "type": "gesture",
     "steps": [
       {
@@ -41,7 +41,7 @@
     ],
     "quick": true
   },
-  "Tilt R Fast": {
+  "tilt_r_fast": {
     "type": "gesture",
     "steps": [
       {
@@ -74,7 +74,7 @@
     ],
     "quick": true
   },
-  "Tilt L Fast": {
+  "tilt_l_fast": {
     "type": "gesture",
     "steps": [
       {
@@ -107,7 +107,7 @@
     ],
     "quick": true
   },
-  "Wave Fast": {
+  "wave_fast": {
     "type": "gesture",
     "steps": [
       {
@@ -176,7 +176,7 @@
     ],
     "quick": true
   },
-  "Bow Fast": {
+  "bow_fast": {
     "type": "gesture",
     "steps": [
       {
@@ -236,7 +236,7 @@
     ],
     "quick": true
   },
-  "Pose": {
+  "pose": {
     "type": "gesture",
     "quick": false,
     "steps": [
@@ -305,7 +305,7 @@
       }
     ]
   },
-  "Laugh Fast": {
+  "laugh_fast": {
     "type": "gesture",
     "quick": true,
     "steps": [
@@ -353,289 +353,6 @@
         "right_leg": 50,
         "speed": 1.0,
         "hold_time": 0.2
-      }
-    ]
-  },
-  "step_forward": {
-    "type": "locomotion",
-    "quick": false,
-    "steps": [
-      {
-        "movement": null,
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.9,
-        "hold_time": 0.0
-      },
-      {
-        "movement": null,
-        "left_height": 30,
-        "right_height": 30,
-        "left_leg": 15,
-        "right_leg": 15,
-        "speed": 0.75,
-        "hold_time": 0.0
-      },
-      {
-        "movement": null,
-        "left_height": 70,
-        "right_height": 70,
-        "left_leg": 10,
-        "right_leg": 10,
-        "speed": 0.75,
-        "hold_time": 0.0
-      },
-      {
-        "movement": null,
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 15,
-        "right_leg": 15,
-        "speed": 0.65,
-        "hold_time": 0.0
-      },
-      {
-        "movement": null,
-        "left_height": 85,
-        "right_height": 85,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.75,
-        "hold_time": 0.0
-      },
-      {
-        "movement": null,
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.8,
-        "hold_time": 0.1
-      }
-    ]
-  },
-  "walk_forward": {
-    "type": "locomotion",
-    "quick": false,
-    "steps": [
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.8,
-        "hold_time": 0
-      },
-      {
-        "repeat": 2,
-        "steps": [
-          {
-            "left_height": 35,
-            "right_height": 80,
-            "left_leg": 50,
-            "right_leg": 50,
-            "speed": 0.5,
-            "hold_time": 0
-          },
-          {
-            "left_height": 35,
-            "right_height": 80,
-            "left_leg": 25,
-            "right_leg": 50,
-            "speed": 0.5,
-            "hold_time": 0
-          },
-          {
-            "left_height": 50,
-            "right_height": 50,
-            "left_leg": 25,
-            "right_leg": 50,
-            "speed": 0.5,
-            "hold_time": 0
-          },
-          {
-            "left_height": 80,
-            "right_height": 35,
-            "left_leg": 50,
-            "right_leg": 50,
-            "speed": 0.5,
-            "hold_time": 0
-          },
-          {
-            "left_height": 80,
-            "right_height": 35,
-            "left_leg": 50,
-            "right_leg": 25,
-            "speed": 0.5,
-            "hold_time": 0
-          },
-          {
-            "left_height": 50,
-            "right_height": 50,
-            "left_leg": 50,
-            "right_leg": 25,
-            "speed": 0.5,
-            "hold_time": 0
-          }
-        ]
-      },
-      {
-        "left_height": 35,
-        "right_height": 80,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.5,
-        "hold_time": 0
-      },
-      {
-        "left_height": 35,
-        "right_height": 80,
-        "left_leg": 25,
-        "right_leg": 50,
-        "speed": 0.5,
-        "hold_time": 0
-      },
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 25,
-        "right_leg": 50,
-        "speed": 0.5,
-        "hold_time": 0
-      },
-      {
-        "left_height": 80,
-        "right_height": 35,
-        "left_leg": 25,
-        "right_leg": 50,
-        "speed": 0.5,
-        "hold_time": 0
-      },
-      {
-        "left_height": 80,
-        "right_height": 35,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.5,
-        "hold_time": 0.1
-      },
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.8,
-        "hold_time": 0.1
-      }
-    ]
-  },
-  "turn_right_slow": {
-    "type": "locomotion",
-    "quick": false,
-    "steps": [
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 40,
-        "right_height": 80,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.7,
-        "hold_time": 0
-      },
-      {
-        "left_height": 40,
-        "right_height": 80,
-        "left_leg": 30,
-        "right_leg": 50,
-        "speed": 0.7,
-        "hold_time": 0
-      },
-      {
-        "left_height": 80,
-        "right_height": 50,
-        "left_leg": 30,
-        "right_leg": 50,
-        "speed": 0.7,
-        "hold_time": 0
-      },
-      {
-        "left_height": 80,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.7,
-        "hold_time": 0.1
-      },
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.9,
-        "hold_time": 0.1
-      }
-    ]
-  },
-  "turn_left_slow": {
-    "type": "locomotion",
-    "quick": false,
-    "steps": [
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 80,
-        "right_height": 40,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.7,
-        "hold_time": 0
-      },
-      {
-        "left_height": 80,
-        "right_height": 40,
-        "left_leg": 50,
-        "right_leg": 30,
-        "speed": 0.7,
-        "hold_time": 0
-      },
-      {
-        "left_height": 50,
-        "right_height": 80,
-        "left_leg": 50,
-        "right_leg": 30,
-        "speed": 0.7,
-        "hold_time": 0
-      },
-      {
-        "left_height": 50,
-        "right_height": 80,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.7,
-        "hold_time": 0.1
-      },
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.9,
-        "hold_time": 0.1
       }
     ]
   },
@@ -695,168 +412,6 @@
         "right_leg": 50,
         "speed": 0.7,
         "hold_time": 0.2
-      }
-    ]
-  },
-  "turn_right": {
-    "type": "locomotion",
-    "quick": false,
-    "steps": [
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 80,
-        "right_height": 80,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 80,
-        "right_height": 80,
-        "left_leg": 65,
-        "right_leg": 35,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 45,
-        "right_height": 45,
-        "left_leg": 65,
-        "right_leg": 35,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 52,
-        "right_height": 52,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.8,
-        "hold_time": 0.1
-      },
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.8,
-        "hold_time": 0.1
-      }
-    ]
-  },
-  "turn_left": {
-    "type": "locomotion",
-    "quick": false,
-    "steps": [
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 80,
-        "right_height": 80,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 80,
-        "right_height": 80,
-        "left_leg": 35,
-        "right_leg": 65,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 45,
-        "right_height": 45,
-        "left_leg": 35,
-        "right_leg": 65,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 52,
-        "right_height": 52,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.8,
-        "hold_time": 0.1
-      },
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.8,
-        "hold_time": 0.1
-      }
-    ]
-  },
-  "step_backward": {
-    "type": "locomotion",
-    "quick": false,
-    "steps": [
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.9,
-        "hold_time": 0
-      },
-      {
-        "left_height": 10,
-        "right_height": 10,
-        "left_leg": 80,
-        "right_leg": 80,
-        "speed": 0.75,
-        "hold_time": 0
-      },
-      {
-        "left_height": 65,
-        "right_height": 65,
-        "left_leg": 90,
-        "right_leg": 90,
-        "speed": 0.75,
-        "hold_time": 0
-      },
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 85,
-        "right_leg": 85,
-        "speed": 0.65,
-        "hold_time": 0
-      },
-      {
-        "left_height": 85,
-        "right_height": 85,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.75,
-        "hold_time": 0
-      },
-      {
-        "left_height": 50,
-        "right_height": 50,
-        "left_leg": 50,
-        "right_leg": 50,
-        "speed": 0.8,
-        "hold_time": 0.1
       }
     ]
   }
