@@ -355,5 +355,65 @@
         "hold_time": 0.2
       }
     ]
+  },
+  "step_forward": {
+    "type": "movement",
+    "quick": false,
+    "steps": [
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 0.9,
+        "hold_time": 0.0
+      },
+      {
+        "movement": null,
+        "left_height": 30,
+        "right_height": 30,
+        "left_leg": 15,
+        "right_leg": 15,
+        "speed": 0.75,
+        "hold_time": 0.0
+      },
+      {
+        "movement": null,
+        "left_height": 70,
+        "right_height": 70,
+        "left_leg": 10,
+        "right_leg": 10,
+        "speed": 0.75,
+        "hold_time": 0.0
+      },
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 15,
+        "right_leg": 15,
+        "speed": 0.65,
+        "hold_time": 0.0
+      },
+      {
+        "movement": null,
+        "left_height": 85,
+        "right_height": 85,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 0.75,
+        "hold_time": 0.0
+      },
+      {
+        "movement": null,
+        "left_height": 50,
+        "right_height": 50,
+        "left_leg": 50,
+        "right_leg": 50,
+        "speed": 0.8,
+        "hold_time": 0.1
+      }
+    ]
   }
 }
