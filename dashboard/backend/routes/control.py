@@ -269,52 +269,121 @@ async def get_movement_steps(name: str):
 
     body = fn_match.group(1)
 
-    def parse_val(v, default=50):
+    def collect_block(lines, i, parent_indent):
+        """Collect lines indented deeper than parent_indent, starting at i."""
+        block = []
+        while i < len(lines):
+            bl = lines[i]
+            if bl.strip() == "":
+                i += 1
+                continue
+            if len(bl) - len(bl.lstrip()) > parent_indent:
+                block.append(bl)
+                i += 1
+            else:
+                break
+        return block, i
+
+    def resolve(v, variables):
+        if v in variables:
+            try:
+                return int(round(float(variables[v])))
+            except (ValueError, TypeError):
+                return 50
         try:
             return int(round(float(v)))
         except (ValueError, TypeError):
-            return default
+            return 50
 
-    def extract_steps(lines):
-        """Extract move_legs steps from a list of lines, expanding range loops."""
+    def extract_steps(lines, variables=None):
+        """Extract move_legs steps, handling range loops, tuple-unpacking loops,
+        list variable assignments, and ARMS_PRESENT conditional branches."""
+        if variables is None:
+            variables = {}
         result = []
         i = 0
         while i < len(lines):
             line = lines[i]
-            # Detect `for _ in range(N):` loops
-            loop_m = re.search(r"for\s+\w+\s+in\s+range\((\d+)\)\s*:", line)
-            if loop_m:
-                repeat = int(loop_m.group(1))
-                loop_indent = len(line) - len(line.lstrip())
-                # Collect loop body (lines indented deeper than the for line)
-                body_lines = []
+            if not line.strip():
                 i += 1
-                while i < len(lines):
-                    bl = lines[i]
-                    if bl.strip() == "":
-                        i += 1
-                        continue
-                    bl_indent = len(bl) - len(bl.lstrip())
-                    if bl_indent > loop_indent:
-                        body_lines.append(bl)
-                        i += 1
-                    else:
-                        break
-                for _ in range(repeat):
-                    result.extend(extract_steps(body_lines))
                 continue
-            # Extract move_legs call
+
+            indent = len(line) - len(line.lstrip())
+
+            # List assignment: `name = [(a,b,c,d), ...]`
+            var_m = re.match(r"\s*(\w+)\s*=\s*\[", line)
+            if var_m:
+                var_name = var_m.group(1)
+                # Collect until closing bracket
+                assign_text = line
+                j = i + 1
+                while j < len(lines) and "]" not in assign_text:
+                    assign_text += lines[j]
+                    j += 1
+                tuples = re.findall(r"\(([^)]+)\)", assign_text)
+                parsed = []
+                for t in tuples:
+                    vals = [v.strip() for v in t.split(",")]
+                    parsed.append(vals)
+                variables = dict(variables)
+                variables[var_name] = parsed
+                i = j
+                continue
+
+            # `if` block — skip ARMS_PRESENT=True branches, process everything else
+            if_m = re.match(r"\s*if\s+(.+):", line)
+            if if_m:
+                condition = if_m.group(1)
+                block, i = collect_block(lines, i + 1, indent)
+                skip = "ARMS_PRESENT" in condition and "not" not in condition
+                if not skip:
+                    result.extend(extract_steps(block, variables))
+                continue
+
+            # `for _ in range(N):` loop
+            range_m = re.search(r"for\s+\w+\s+in\s+range\((\d+)\)\s*:", line)
+            if range_m:
+                repeat = int(range_m.group(1))
+                block, i = collect_block(lines, i + 1, indent)
+                for _ in range(repeat):
+                    result.extend(extract_steps(block, variables))
+                continue
+
+            # `for a, b, c, d in varname[optional_slice]:` tuple-unpacking loop
+            tuple_m = re.match(r"\s*for\s+([\w\s,]+)\s+in\s+(\w+)(\[.*?\])?\s*:", line)
+            if tuple_m:
+                var_names = [v.strip() for v in tuple_m.group(1).split(",")]
+                seq_name = tuple_m.group(2)
+                slice_part = tuple_m.group(3)
+                block, i = collect_block(lines, i + 1, indent)
+                seq = variables.get(seq_name, [])
+                if slice_part:
+                    try:
+                        seq = eval(f"seq{slice_part}", {"seq": seq})
+                    except Exception:
+                        pass
+                for tup in seq:
+                    local = dict(variables)
+                    for k, v in zip(var_names, tup):
+                        local[k] = v
+                    result.extend(extract_steps(block, local))
+                continue
+
+            # move_legs call (literal or variable args)
             ml = re.search(r"move_legs\(([^)]+)\)", line)
             if ml:
                 args = [a.strip() for a in ml.group(1).split(",")]
                 if len(args) >= 5:
-                    lh = parse_val(args[0])
-                    rh = parse_val(args[1])
-                    ll = parse_val(args[2])
-                    rl = parse_val(args[3])
-                    spd = round(float(args[4]), 2) if re.match(r"[\d.]+", args[4]) else 0.85
+                    lh = resolve(args[0], variables)
+                    rh = resolve(args[1], variables)
+                    ll = resolve(args[2], variables)
+                    rl = resolve(args[3], variables)
+                    spd_str = args[4]
+                    try:
+                        spd = round(float(variables[spd_str]) if spd_str in variables else float(spd_str), 2)
+                    except (ValueError, TypeError):
+                        spd = 0.85
                     hold = 0.0
-                    # check next non-empty line for time.sleep
                     for j in range(i + 1, min(i + 3, len(lines))):
                         sl = re.search(r"time\.sleep\(([^)]+)\)", lines[j])
                         if sl:
