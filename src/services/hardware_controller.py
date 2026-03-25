@@ -132,16 +132,14 @@ class HardwareController:
     # === Movement ===
     
     def execute_movement(self, movement: str, speed: float = 1.0) -> Dict[str, Any]:
-        """Execute a movement."""
-        if movement not in self.movement_map:
-            # Try custom sequence fallback
-            try:
-                with open(_CUSTOM_SEQUENCES_FILE) as f:
-                    sequences = json.load(f)
-            except (FileNotFoundError, json.JSONDecodeError):
-                sequences = {}
-            if movement not in sequences:
-                raise ValueError(f"Unknown movement: {movement}")
+        """Execute a movement. Custom sequences take priority over built-in movements."""
+        try:
+            with open(_CUSTOM_SEQUENCES_FILE) as f:
+                sequences = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            sequences = {}
+
+        if movement in sequences:
             entry = sequences[movement]
             steps = entry["steps"] if isinstance(entry, dict) else entry
             import time
@@ -168,6 +166,9 @@ class HardwareController:
             finally:
                 servo._notify_movement_end()
             return {"success": True, "duration": time.time() - start, "movement": movement}
+
+        if movement not in self.movement_map:
+            raise ValueError(f"Unknown movement: {movement}")
 
         import time
         start_time = time.time()
