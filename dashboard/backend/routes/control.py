@@ -398,6 +398,12 @@ async def get_movement_steps(name: str):
 
     steps = extract_steps(body.splitlines())
 
+    # Follow delegation to impl functions (e.g. turn_left -> _turn_left_impl)
+    if not steps:
+        impl_match = re.search(r"^def _" + re.escape(name) + r"_impl\(.*?\):(.*?)(?=^def |\Z)", text, re.MULTILINE | re.DOTALL)
+        if impl_match:
+            steps = extract_steps(impl_match.group(1).splitlines())
+
     if not steps:
         raise HTTPException(422, f"No move_legs calls found in '{name}'")
 
