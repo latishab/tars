@@ -65,7 +65,6 @@ function Control() {
   const [emotion, setEmotion] = useState('neutral')
   const [eyeState, setEyeState] = useState('idle')
   const [savedSequences, setSavedSequences] = useState({})
-  const [sequencePlaying, setSequencePlaying] = useState(false)
   const [expressionMap, setExpressionMap] = useState({})
   const [activeExpression, setActiveExpression] = useState(null)
 
@@ -80,20 +79,8 @@ function Control() {
       .catch(() => {})
   }, [])
 
-  const playSaved = async (name) => {
-    setSequencePlaying(true)
-    try {
-      await fetch(`/api/control/play-saved/${encodeURIComponent(name)}`, { method: 'POST' })
-    } catch (err) {
-      console.error('play-saved failed:', err)
-    }
-    setSequencePlaying(false)
-  }
-
   const getSeqType = (entry) =>
     entry && typeof entry === 'object' && !Array.isArray(entry) ? (entry.type || 'movement') : 'movement'
-
-  const normalize = (s) => s.toLowerCase().replace(/[_\s]/g, '')
 
   const executeMovement = async (movement) => {
     setExecuting(movement)
@@ -163,22 +150,7 @@ function Control() {
     }
   }
 
-  const overrideMap = Object.fromEntries(
-    Object.keys(savedSequences).map(k => [normalize(k), k])
-  )
-  // Also build a label-based lookup so saved sequences match button labels too
-  const allMovements = Object.values(MOVEMENT_GROUPS).flat()
-  const labelOverrideMap = Object.fromEntries(
-    allMovements
-      .map(m => {
-        const match = Object.keys(savedSequences).find(k => normalize(k) === normalize(m.label))
-        return match ? [m.name, match] : null
-      })
-      .filter(Boolean)
-  )
-  // Sequences that override a preexisting button shouldn't appear in Custom Sequences
-  const buttonNamesNormalized = new Set(allMovements.map(m => normalize(m.name)))
-  const isButtonOverride = (name) => buttonNamesNormalized.has(normalize(name))
+  const buttonNames = new Set(Object.values(MOVEMENT_GROUPS).flat().map(m => m.name))
 
   return (
     <div className="p-4 space-y-4">
@@ -324,7 +296,7 @@ function Control() {
                   key={m.name}
                   variant="outline"
                   size="sm"
-                  onClick={() => { const ov = overrideMap[normalize(m.name)] || labelOverrideMap[m.name]; ov ? playSaved(ov) : executeMovement(m.name) }}
+                  onClick={() => executeMovement(m.name)}
                   disabled={executing !== null}
                   className="flex flex-col h-16 sm:h-auto py-2"
                 >
@@ -344,7 +316,7 @@ function Control() {
                   key={m.name}
                   variant="outline"
                   size="sm"
-                  onClick={() => { const ov = overrideMap[normalize(m.name)] || labelOverrideMap[m.name]; ov ? playSaved(ov) : executeMovement(m.name) }}
+                  onClick={() => executeMovement(m.name)}
                   disabled={executing !== null}
                   className="flex flex-col h-16 sm:h-auto py-2"
                 >
@@ -364,7 +336,7 @@ function Control() {
                   key={m.name}
                   variant="outline"
                   size="sm"
-                  onClick={() => { const ov = overrideMap[normalize(m.name)] || labelOverrideMap[m.name]; ov ? playSaved(ov) : executeMovement(m.name) }}
+                  onClick={() => executeMovement(m.name)}
                   disabled={executing !== null}
                   className="flex flex-col h-16 sm:h-auto py-2"
                 >
@@ -384,7 +356,7 @@ function Control() {
                   key={m.name}
                   variant="outline"
                   size="sm"
-                  onClick={() => { const ov = overrideMap[normalize(m.name)] || labelOverrideMap[m.name]; ov ? playSaved(ov) : executeMovement(m.name) }}
+                  onClick={() => executeMovement(m.name)}
                   disabled={executing !== null}
                   className="flex flex-col h-16 sm:h-auto py-2"
                 >
@@ -403,7 +375,7 @@ function Control() {
                   key={m.name}
                   variant="outline"
                   size="sm"
-                  onClick={() => { const ov = overrideMap[normalize(m.name)] || labelOverrideMap[m.name]; ov ? playSaved(ov) : executeMovement(m.name) }}
+                  onClick={() => executeMovement(m.name)}
                   disabled={executing !== null}
                   className="flex flex-col h-16 sm:h-auto py-2"
                 >
@@ -417,25 +389,25 @@ function Control() {
       </Card>
 
       {/* Custom Sequences (all saved sequences, excluding button overrides) */}
-      {Object.entries(savedSequences).some(([name, entry]) => !isButtonOverride(name)) && (
+      {Object.entries(savedSequences).some(([name, entry]) => !buttonNames.has(name)) && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg">Custom Sequences</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'expression' && entry.quick && !isButtonOverride(name)) && (
+            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'expression' && entry.quick && !buttonNames.has(name)) && (
               <div>
                 <div className="text-sm text-muted-foreground mb-2">Quick Expressions</div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {Object.entries(savedSequences)
-                    .filter(([name, entry]) => getSeqType(entry) === 'expression' && entry.quick && !isButtonOverride(name))
+                    .filter(([name, entry]) => getSeqType(entry) === 'expression' && entry.quick && !buttonNames.has(name))
                     .map(([name]) => (
                       <Button
                         key={name}
                         variant="outline"
                         size="sm"
-                        onClick={() => playSaved(name)}
-                        disabled={executing !== null || sequencePlaying}
+                        onClick={() => executeMovement(name)}
+                        disabled={executing !== null}
                         className="flex flex-col h-16 sm:h-auto py-2"
                       >
                         <span className="text-xs">{name}</span>
@@ -444,19 +416,19 @@ function Control() {
                 </div>
               </div>
             )}
-            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'expression' && !entry.quick && !isButtonOverride(name)) && (
+            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'expression' && !entry.quick && !buttonNames.has(name)) && (
               <div>
                 <div className="text-sm text-muted-foreground mb-2">Expressions</div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {Object.entries(savedSequences)
-                    .filter(([name, entry]) => getSeqType(entry) === 'expression' && !entry.quick && !isButtonOverride(name))
+                    .filter(([name, entry]) => getSeqType(entry) === 'expression' && !entry.quick && !buttonNames.has(name))
                     .map(([name]) => (
                       <Button
                         key={name}
                         variant="outline"
                         size="sm"
-                        onClick={() => playSaved(name)}
-                        disabled={executing !== null || sequencePlaying}
+                        onClick={() => executeMovement(name)}
+                        disabled={executing !== null}
                         className="flex flex-col h-16 sm:h-auto py-2"
                       >
                         <span className="text-xs">{name}</span>
@@ -465,19 +437,19 @@ function Control() {
                 </div>
               </div>
             )}
-            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'movement' && !isButtonOverride(name)) && (
+            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'movement' && !buttonNames.has(name)) && (
               <div>
                 <div className="text-sm text-muted-foreground mb-2">Movements</div>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(savedSequences)
-                    .filter(([name, entry]) => getSeqType(entry) === 'movement' && !isButtonOverride(name))
+                    .filter(([name, entry]) => getSeqType(entry) === 'movement' && !buttonNames.has(name))
                     .map(([name]) => (
                       <Button
                         key={name}
                         variant="outline"
                         size="sm"
-                        onClick={() => playSaved(name)}
-                        disabled={sequencePlaying}
+                        onClick={() => executeMovement(name)}
+                        disabled={executing !== null}
                         className="h-10"
                       >
                         {name}
