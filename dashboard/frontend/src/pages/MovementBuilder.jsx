@@ -147,9 +147,11 @@ function MovementBuilder() {
   const [importing, setImporting] = useState(false)
   const [livePreview, setLivePreview] = useState(false)
   const [confirmOverwrite, setConfirmOverwrite] = useState(false)
-  const [seqType, setSeqType] = useState('movement')
+  const [seqType, setSeqType] = useState('gesture')
   const [isQuick, setIsQuick] = useState(false)
   const [importedFrom, setImportedFrom] = useState('')
+  // movement name -> type map, populated by loadMovements
+  const movementTypes = useRef({})
   const dragIndex = useRef(null)
   const dragFromHandle = useRef(false)
 
@@ -160,9 +162,13 @@ function MovementBuilder() {
   }
   const loadMovements = () => {
     fetch('/api/control/movements').then(r => r.json()).then(data => {
-      const list = (data.legs_only || data.movements || [])
-        .filter(m => (m.id || m) !== 'reset_positions')
-        .map(m => m.id || m)
+      const raw = data.movements || []
+      // Support both old flat string list and new [{name, type}] format
+      const typed = raw.map(m => typeof m === 'string' ? { name: m, type: 'gesture' } : m)
+      const typeMap = {}
+      typed.forEach(m => { typeMap[m.name] = m.type })
+      movementTypes.current = typeMap
+      const list = typed.map(m => m.name)
       setMovements(list)
       if (list.length > 0) setSelectedMovement(list[0])
     }).catch(() => {})
@@ -257,7 +263,7 @@ function MovementBuilder() {
   const loadIntoEditor = (name) => {
     const loaded = savedSequences[name]; if (!loaded) return
     const rawSteps = Array.isArray(loaded) ? loaded : (loaded.steps || [])
-    const type = Array.isArray(loaded) ? 'movement' : (loaded.type || 'movement')
+    const type = Array.isArray(loaded) ? 'gesture' : (loaded.type || 'gesture')
     setSteps(rawSteps.map(normalizeStep)); setSequenceName(name); setSeqType(type)
     setImportedFrom(name); setFeedback(`» LOADED "${name}"`)
   }
@@ -269,7 +275,8 @@ function MovementBuilder() {
       if (res.ok) {
         const data = await res.json()
         setSteps((data.steps || []).map(normalizeStep))
-        setSequenceName(name); setImportedFrom(name)
+        const type = movementTypes.current[name] || 'gesture'
+        setSequenceName(name); setImportedFrom(name); setSeqType(type)
         setFeedback(`» IMPORTED "${name}" — SAVE UNDER NEW NAME`)
       } else setFeedback(`» IMPORT FAILED: ${(await res.json()).detail}`)
     } catch (err) { setFeedback(`» ERR ${err.message}`) }
@@ -277,6 +284,7 @@ function MovementBuilder() {
   }
 
   const previewMovementName = importedFrom || sequenceName
+  const previewIsLocomotion = seqType === 'locomotion'
 
   return (
     <div style={{ padding: '12px 12px 24px', fontFamily: "'Share Tech Mono', monospace" }}>
@@ -394,7 +402,7 @@ function MovementBuilder() {
 
           {/* 3D Preview */}
           <Panel title="3D Preview" badge={previewMovementName ? previewMovementName.toUpperCase() : 'EDITOR'}>
-            <TarsPreview steps={steps} movementName={previewMovementName} />
+            <TarsPreview steps={steps} movementName={previewMovementName} isLocomotion={previewIsLocomotion} />
           </Panel>
 
           {/* Execution */}

@@ -6,7 +6,6 @@ const EMOTIONS = ['neutral','happy','sad','angry','excited','sleepy','afraid','s
 const EMOTION_LABELS = { neutral:'Neutral', happy:'Happy', sad:'Sad', angry:'Angry', excited:'Excited', sleepy:'Sleepy', afraid:'Afraid', sideeye_left:'Side-L', sideeye_right:'Side-R', curious:'Curious', skeptical:'Skeptic', smug:'Smug', surprised:'Surprise' }
 const EYE_STATES = ['idle','listening','thinking','speaking']
 
-const QUICK_BTNS = new Set(['step_forward','step_backward','walk_forward','walk_backward','turn_left','turn_right','turn_left_slow','turn_right_slow','wave_right','wave_left','bow','pose','laugh','neutral_legs','tilt_left','tilt_right','side_side','swing_legs'])
 
 // ── Reusable command button ───────────────────────────────────────────────
 function CmdBtn({ label, icon: Icon, onClick, disabled, active, variant = 'ghost', style }) {
@@ -81,7 +80,14 @@ function Control() {
     fetch('/api/expressions/map').then(r => r.json()).then(d => setExpressionMap(d.map || {})).catch(() => {})
   }, [])
 
-  const getSeqType = (entry) => entry && typeof entry === 'object' && !Array.isArray(entry) ? (entry.type || 'movement') : 'movement'
+  const getSeqType = (entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return 'gesture'
+    const t = entry.type || 'gesture'
+    // Normalize legacy type names
+    if (t === 'expression') return 'gesture'
+    if (t === 'movement') return 'locomotion'
+    return t
+  }
 
   const exec = async (movement) => {
     setExecuting(movement)
@@ -114,7 +120,8 @@ function Control() {
     catch {}
   }
 
-  const customSeqs = Object.entries(savedSequences).filter(([name]) => !QUICK_BTNS.has(name))
+  // Show gesture-type sequences in custom panel; locomotion is handled by the grid
+  const customSeqs = Object.entries(savedSequences).filter(([, e]) => getSeqType(e) === 'gesture')
   const expressionBtns = Object.entries(expressionMap).filter(([, e]) => e?.gesture)
 
   return (
@@ -229,34 +236,24 @@ function Control() {
           </Panel>
         )}
 
-        {/* Custom sequences */}
+        {/* Custom gesture sequences */}
         {customSeqs.length > 0 && (
-          <Panel title="Custom Sequences">
-            {customSeqs.some(([, e]) => getSeqType(e) === 'expression' && e.quick) && (
+          <Panel title="Custom Gestures">
+            {customSeqs.some(([, e]) => e?.quick) && (
               <>
-                <SectionLabel>Quick Expressions</SectionLabel>
+                <SectionLabel>Quick</SectionLabel>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
-                  {customSeqs.filter(([, e]) => getSeqType(e) === 'expression' && e.quick).map(([name]) => (
+                  {customSeqs.filter(([, e]) => e?.quick).map(([name]) => (
                     <Chip key={name} label={name} color="cyan" onClick={() => exec(name)} disabled={executing !== null} />
                   ))}
                 </div>
               </>
             )}
-            {customSeqs.some(([, e]) => getSeqType(e) === 'expression' && !e.quick) && (
+            {customSeqs.some(([, e]) => !e?.quick) && (
               <>
-                <SectionLabel>Expressions</SectionLabel>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
-                  {customSeqs.filter(([, e]) => getSeqType(e) === 'expression' && !e.quick).map(([name]) => (
-                    <Chip key={name} label={name} color="cyan" onClick={() => exec(name)} disabled={executing !== null} />
-                  ))}
-                </div>
-              </>
-            )}
-            {customSeqs.some(([, e]) => getSeqType(e) === 'movement') && (
-              <>
-                <SectionLabel>Movements</SectionLabel>
+                <SectionLabel>Standard</SectionLabel>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                  {customSeqs.filter(([, e]) => getSeqType(e) === 'movement').map(([name]) => (
+                  {customSeqs.filter(([, e]) => !e?.quick).map(([name]) => (
                     <Chip key={name} label={name} onClick={() => exec(name)} disabled={executing !== null} />
                   ))}
                 </div>

@@ -1,6 +1,6 @@
 {
   "Wiggle": {
-    "type": "expression",
+    "type": "gesture",
     "steps": [
       {
         "movement": null,
@@ -42,7 +42,7 @@
     "quick": true
   },
   "Tilt R Fast": {
-    "type": "expression",
+    "type": "gesture",
     "steps": [
       {
         "movement": null,
@@ -75,7 +75,7 @@
     "quick": true
   },
   "Tilt L Fast": {
-    "type": "expression",
+    "type": "gesture",
     "steps": [
       {
         "movement": null,
@@ -108,7 +108,7 @@
     "quick": true
   },
   "Wave Fast": {
-    "type": "expression",
+    "type": "gesture",
     "steps": [
       {
         "movement": null,
@@ -177,7 +177,7 @@
     "quick": true
   },
   "Bow Fast": {
-    "type": "expression",
+    "type": "gesture",
     "steps": [
       {
         "movement": null,
@@ -237,7 +237,7 @@
     "quick": true
   },
   "Pose": {
-    "type": "expression",
+    "type": "gesture",
     "quick": false,
     "steps": [
       {
@@ -306,7 +306,7 @@
     ]
   },
   "Laugh Fast": {
-    "type": "expression",
+    "type": "gesture",
     "quick": true,
     "steps": [
       {
@@ -357,7 +357,7 @@
     ]
   },
   "step_forward": {
-    "type": "movement",
+    "type": "locomotion",
     "quick": false,
     "steps": [
       {
@@ -417,7 +417,7 @@
     ]
   },
   "walk_forward": {
-    "type": "movement",
+    "type": "locomotion",
     "quick": false,
     "steps": [
       {
@@ -532,7 +532,7 @@
     ]
   },
   "turn_right_slow": {
-    "type": "movement",
+    "type": "locomotion",
     "quick": false,
     "steps": [
       {
@@ -586,7 +586,7 @@
     ]
   },
   "turn_left_slow": {
-    "type": "movement",
+    "type": "locomotion",
     "quick": false,
     "steps": [
       {
@@ -640,7 +640,7 @@
     ]
   },
   "swing_legs": {
-    "type": "movement",
+    "type": "gesture",
     "quick": false,
     "steps": [
       {
@@ -699,7 +699,7 @@
     ]
   },
   "turn_right": {
-    "type": "movement",
+    "type": "locomotion",
     "quick": false,
     "steps": [
       {
@@ -753,7 +753,7 @@
     ]
   },
   "turn_left": {
-    "type": "movement",
+    "type": "locomotion",
     "quick": false,
     "steps": [
       {
@@ -807,7 +807,7 @@
     ]
   },
   "step_backward": {
-    "type": "movement",
+    "type": "locomotion",
     "quick": false,
     "steps": [
       {

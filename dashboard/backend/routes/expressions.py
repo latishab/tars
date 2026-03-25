@@ -25,7 +25,20 @@ DEFAULT_EXPRESSION_MAP = {
 }
 
 from modules.module_movement_registry import MOVEMENTS as _MOVEMENT_REGISTRY
-GESTURES = sorted(_MOVEMENT_REGISTRY.keys())
+
+def _build_gesture_list() -> list[str]:
+    """Return all gesture-type sequence names from registry + custom_sequences.json."""
+    names: dict[str, str] = {k: v["type"] for k, v in _MOVEMENT_REGISTRY.items()}
+    seqs_file = Path(__file__).parent.parent.parent.parent / "src" / "custom_sequences.json"
+    if seqs_file.exists():
+        try:
+            seqs = json.loads(seqs_file.read_text())
+            for name, entry in seqs.items():
+                if isinstance(entry, dict) and "type" in entry:
+                    names[name] = entry["type"]
+        except Exception:
+            pass
+    return sorted(k for k, t in names.items() if t == "gesture")
 
 
 def _load_custom() -> dict:
@@ -92,8 +105,8 @@ async def delete_map_entry(emotion: str, intensity: str):
 
 @router.get("/gestures")
 async def list_gestures():
-    """List available gesture names for editor dropdowns."""
-    return {"gestures": GESTURES}
+    """List gesture-type movement names for editor dropdowns (excludes locomotion)."""
+    return {"gestures": _build_gesture_list()}
 
 
 @router.post("/trigger")

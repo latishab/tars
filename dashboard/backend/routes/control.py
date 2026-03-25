@@ -13,7 +13,6 @@ router = APIRouter()
 SEQUENCES_FILE = Path(__file__).parent.parent.parent.parent / "src" / "custom_sequences.json"
 
 from modules.module_movement_registry import MOVEMENTS as _MOVEMENT_REGISTRY
-MOVEMENTS = sorted(_MOVEMENT_REGISTRY.keys())
 
 class EmotionRequest(BaseModel):
     emotion: str
@@ -41,7 +40,7 @@ class PlaySequenceRequest(BaseModel):
 class SaveSequenceRequest(BaseModel):
     name: str
     steps: list[dict]
-    type: str = "movement"
+    type: str = "gesture"
     quick: bool = False
 
 @router.post("/emotion")
@@ -78,8 +77,30 @@ async def set_eye_state(request: EyeStateRequest, req: Request):
 
 @router.get("/movements")
 async def list_movements():
-    """List all available robot movements."""
-    return {"movements": MOVEMENTS}
+    """List all movements with their type (locomotion or gesture).
+
+    Merges the built-in registry with custom_sequences.json so that
+    overridden entries report the type from the sequences file.
+    Returns: {"movements": [{"name": str, "type": str}, ...]}
+    """
+    # Start from registry
+    entries: dict[str, str] = {k: v["type"] for k, v in _MOVEMENT_REGISTRY.items()}
+
+    # Sequences file may override type or add new named sequences
+    if SEQUENCES_FILE.exists():
+        try:
+            seqs = json.loads(SEQUENCES_FILE.read_text())
+            for name, entry in seqs.items():
+                if isinstance(entry, dict) and "type" in entry:
+                    entries[name] = entry["type"]
+        except Exception:
+            pass
+
+    movements = sorted(
+        [{"name": k, "type": v} for k, v in entries.items()],
+        key=lambda x: x["name"],
+    )
+    return {"movements": movements}
 
 @router.post("/move")
 async def execute_movement(request: MoveRequest, req: Request):

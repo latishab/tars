@@ -11,12 +11,8 @@ const GAP        = 0.15
 const SMOOTH     = 0.12
 
 // ── Locomotion map (same as Dev branch) ───────────────────────────────────
-const LOCOMOTION_MAP = {
-  walk_forward: 1, walk_backward: -1,
-  step_forward: 1,
-  turn_left: 1, turn_right: 1,
-  turn_left_slow: 1, turn_right_slow: 1,
-}
+// Locomotion direction hint — backward movements reverse the body drift
+const BACKWARD_MAP = { walk_backward: true, step_backward: true }
 
 // ── Texture helpers ────────────────────────────────────────────────────────
 function makeOuterTexture() {
@@ -172,7 +168,7 @@ function doAnimStep(state, setPlaying) {
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
-export default function TarsPreview({ steps, movementName = '' }) {
+export default function TarsPreview({ steps, movementName = '', isLocomotion = false }) {
   const containerRef = useRef(null)
   const stRef = useRef(null)
   const [playing, setPlaying] = useState(false)
@@ -420,15 +416,14 @@ export default function TarsPreview({ steps, movementName = '' }) {
     if (!state) return
     const animSteps = resolveSteps(flattenSteps(steps).filter(s => !s.movement))
     if (animSteps.length === 0) return
-    const locoVal = LOCOMOTION_MAP[movementName]
     state.animSteps = animSteps
     state.animIndex = 0
     state.playing   = true
-    state.allowLoco = !!locoVal
-    state.locoDir   = locoVal === -1 ? -1 : 1
+    state.allowLoco = isLocomotion
+    state.locoDir   = BACKWARD_MAP[movementName] ? -1 : 1
     setPlaying(true)
     doAnimStep(state, setPlaying)
-  }, [steps, movementName])
+  }, [steps, movementName, isLocomotion])
 
   const stop = useCallback(() => {
     const state = stRef.current
