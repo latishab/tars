@@ -2,79 +2,478 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Google Fonts ─────────────────────────────────────────────────────────── */
+/* Share Tech Mono (data readouts) + Rajdhani (headings) loaded in index.html  */
+
+/* ── TARS Dark Theme (always dark — no light mode) ──────────────────────── */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+    /* shadcn/ui CSS var mapping → TARS palette */
+    --background:         214 45%  3%;   /* #040810 */
+    --foreground:         210 22% 84%;   /* #c0ceda */
+    --card:               216 40%  5%;   /* #07090f */
+    --card-foreground:    210 22% 84%;
+    --primary:             36 100% 46%;  /* #eb8c00 amber */
+    --primary-foreground: 214 45%  3%;
+    --secondary:          214 28% 11%;
+    --secondary-foreground: 210 22% 84%;
+    --muted:              214 28%  9%;
+    --muted-foreground:   214 14% 42%;   /* #526070 */
+    --accent:             191 100% 44%;  /* #00c4e0 cyan */
+    --accent-foreground:  214 45%  3%;
+    --destructive:          0  80% 58%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84.2% 4.9%;
-    --radius: 0.5rem;
+    --border:             214 28% 13%;   /* #16202e */
+    --input:              214 35%  7%;
+    --ring:                36 100% 46%;
+    --popover:            216 40%  5%;
+    --popover-foreground: 210 22% 84%;
+    --radius:             0rem;          /* sharp corners everywhere */
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-  }
-}
+  /* Force always-dark — ignore prefers-color-scheme */
+  html { color-scheme: dark; }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; box-sizing: border-box; }
+
   body {
     @apply bg-background text-foreground;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Subtle noise texture */
+    background-image:
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
   }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* ── TARS Panel System ────────────────────────────────────────────────────── */
+.tars-panel {
+  position: relative;
+  background: hsl(216 40% 5%);
+  border: 1px solid hsl(214 28% 13%);
 }
 
-::-webkit-scrollbar-track {
-  background: hsl(var(--muted));
-  border-radius: 4px;
+/* Corner bracket decoration — amber corners on each panel */
+.tars-panel::before,
+.tars-panel::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: hsl(36 100% 46% / 0.7);
+  border-style: solid;
+  pointer-events: none;
+  z-index: 1;
+}
+.tars-panel::before {
+  top: -1px; left: -1px;
+  border-width: 1px 0 0 1px;
+}
+.tars-panel::after {
+  bottom: -1px; right: -1px;
+  border-width: 0 1px 1px 0;
 }
 
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 4px;
+/* Second set of corners (using inner child) */
+.tars-panel-inner-br::before,
+.tars-panel-inner-br::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: hsl(36 100% 46% / 0.7);
+  border-style: solid;
+  pointer-events: none;
+}
+.tars-panel-inner-br::before {
+  top: -1px; right: -1px;
+  border-width: 1px 1px 0 0;
+}
+.tars-panel-inner-br::after {
+  bottom: -1px; left: -1px;
+  border-width: 0 0 1px 1px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+.tars-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid hsl(214 28% 13%);
+  background: hsl(214 40% 4%);
 }
+
+.tars-panel-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: hsl(36 100% 46%);
+}
+
+.tars-panel-body {
+  padding: 14px;
+}
+
+/* ── Status indicator ────────────────────────────────────────────────────── */
+.tars-status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: hsl(36 100% 46%);
+  box-shadow: 0 0 6px hsl(36 100% 46%);
+  animation: tars-pulse 2.4s ease-in-out infinite;
+}
+.tars-status-dot.active {
+  background: hsl(191 100% 44%);
+  box-shadow: 0 0 8px hsl(191 100% 44%);
+  animation: tars-pulse-cyan 1.2s ease-in-out infinite;
+}
+
+@keyframes tars-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+@keyframes tars-pulse-cyan {
+  0%, 100% { opacity: 1; box-shadow: 0 0 10px hsl(191 100% 44%); }
+  50%       { opacity: 0.7; box-shadow: 0 0 4px hsl(191 100% 44%); }
+}
+
+/* ── Section labels ──────────────────────────────────────────────────────── */
+.tars-section-label {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: hsl(36 100% 46% / 0.7);
+  margin-bottom: 6px;
+}
+
+/* ── Step rows ───────────────────────────────────────────────────────────── */
+.tars-step-outer {
+  margin-bottom: 6px;
+}
+.tars-step-num {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: hsl(214 14% 35%);
+  margin-bottom: 3px;
+}
+.tars-step-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  background: hsl(214 35% 6%);
+  border: 1px solid hsl(214 28% 11%);
+  border-left: 2px solid hsl(36 100% 46% / 0.2);
+  transition: border-left-color 0.15s;
+}
+.tars-step-row:hover {
+  border-left-color: hsl(36 100% 46% / 0.55);
+}
+.tars-movement-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: hsl(214 35% 6%);
+  border: 1px solid hsl(214 28% 11%);
+  border-left: 2px solid hsl(191 100% 44% / 0.3);
+}
+
+/* ── Servo sliders ───────────────────────────────────────────────────────── */
+.servo-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px 14px;
+}
+@media (min-width: 400px) {
+  .servo-grid { grid-template-columns: repeat(6, 1fr); }
+}
+
+.servo-field {}
+.servo-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 3px;
+}
+.servo-label {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: hsl(214 14% 40%);
+  text-transform: uppercase;
+}
+.servo-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(36 100% 52%);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom range slider */
+.servo-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  cursor: pointer;
+  outline: none;
+  background: linear-gradient(
+    to right,
+    hsl(36 100% 46%) 0%,
+    hsl(36 100% 46%) var(--pct, 50%),
+    hsl(214 28% 13%) var(--pct, 50%),
+    hsl(214 28% 13%) 100%
+  );
+}
+.servo-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 2px;
+  height: 10px;
+  background: hsl(36 100% 70%);
+  cursor: ew-resize;
+}
+.servo-slider::-moz-range-thumb {
+  width: 2px;
+  height: 10px;
+  background: hsl(36 100% 70%);
+  border: none;
+  cursor: ew-resize;
+}
+.servo-slider:focus {
+  background: linear-gradient(
+    to right,
+    hsl(191 100% 44%) 0%,
+    hsl(191 100% 44%) var(--pct, 50%),
+    hsl(214 28% 16%) var(--pct, 50%),
+    hsl(214 28% 16%) 100%
+  );
+}
+
+/* ── Loop block ──────────────────────────────────────────────────────────── */
+.tars-loop-block {
+  border: 1px solid hsl(191 100% 44% / 0.2);
+  border-left: 2px solid hsl(191 100% 44% / 0.5);
+  background: hsl(191 40% 5%);
+}
+.tars-loop-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: hsl(191 40% 4%);
+  border-bottom: 1px solid hsl(191 100% 44% / 0.15);
+}
+.tars-loop-body {
+  padding: 8px 8px 8px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tars-loop-add {
+  width: 100%;
+  padding: 4px;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: hsl(191 100% 44% / 0.5);
+  border: 1px dashed hsl(191 100% 44% / 0.2);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tars-loop-add:hover {
+  color: hsl(191 100% 44%);
+  border-color: hsl(191 100% 44% / 0.5);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.tars-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1px solid;
+  transition: background 0.12s, color 0.12s, box-shadow 0.12s;
+  white-space: nowrap;
+}
+.tars-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tars-btn-amber {
+  background: hsl(36 100% 46% / 0.12);
+  border-color: hsl(36 100% 46% / 0.6);
+  color: hsl(36 100% 60%);
+}
+.tars-btn-amber:hover:not(:disabled) {
+  background: hsl(36 100% 46% / 0.22);
+  box-shadow: 0 0 10px hsl(36 100% 46% / 0.25);
+}
+.tars-btn-amber:active:not(:disabled) {
+  background: hsl(36 100% 46% / 0.32);
+}
+
+.tars-btn-ghost {
+  background: transparent;
+  border-color: hsl(214 28% 18%);
+  color: hsl(214 14% 55%);
+}
+.tars-btn-ghost:hover:not(:disabled) {
+  border-color: hsl(36 100% 46% / 0.5);
+  color: hsl(36 100% 60%);
+}
+
+.tars-btn-cyan {
+  background: hsl(191 100% 44% / 0.1);
+  border-color: hsl(191 100% 44% / 0.5);
+  color: hsl(191 100% 55%);
+}
+.tars-btn-cyan:hover:not(:disabled) {
+  background: hsl(191 100% 44% / 0.2);
+  box-shadow: 0 0 10px hsl(191 100% 44% / 0.2);
+}
+
+.tars-btn-danger {
+  background: hsl(0 80% 50% / 0.1);
+  border-color: hsl(0 80% 50% / 0.5);
+  color: hsl(0 80% 65%);
+}
+.tars-btn-danger:hover:not(:disabled) {
+  background: hsl(0 80% 50% / 0.2);
+}
+
+.tars-btn-icon {
+  padding: 7px 10px;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────────────────── */
+.tars-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: hsl(210 22% 84%);
+  background: hsl(214 35% 6%);
+  border: 1px solid hsl(214 28% 13%);
+  border-bottom-color: hsl(36 100% 46% / 0.3);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.tars-input:focus {
+  border-color: hsl(214 28% 18%);
+  border-bottom-color: hsl(36 100% 46% / 0.8);
+}
+.tars-input::placeholder {
+  color: hsl(214 14% 35%);
+}
+
+.tars-select {
+  height: 34px;
+  padding: 0 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: hsl(210 22% 75%);
+  background: hsl(214 35% 6%);
+  border: 1px solid hsl(214 28% 13%);
+  border-bottom-color: hsl(36 100% 46% / 0.3);
+  outline: none;
+  cursor: pointer;
+}
+.tars-select:focus {
+  border-bottom-color: hsl(36 100% 46% / 0.8);
+}
+
+/* ── Saved sequence chips ───────────────────────────────────────────────── */
+.tars-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: hsl(214 35% 7%);
+  border: 1px solid hsl(214 28% 14%);
+  font-size: 11px;
+}
+
+/* ── Feedback / log ─────────────────────────────────────────────────────── */
+.tars-feedback {
+  padding: 8px 10px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: hsl(191 100% 55%);
+  border-left: 2px solid hsl(191 100% 44% / 0.4);
+  background: hsl(191 40% 4%);
+}
+
+/* ── Drag handle ─────────────────────────────────────────────────────────── */
+.tars-drag-handle {
+  margin-top: 2px;
+  cursor: grab;
+  color: hsl(214 14% 30%);
+  flex-shrink: 0;
+  transition: color 0.12s;
+}
+.tars-drag-handle:active { cursor: grabbing; }
+.tars-step-row:hover .tars-drag-handle { color: hsl(214 14% 45%); }
+
+/* ── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: hsl(214 40% 4%); }
+::-webkit-scrollbar-thumb { background: hsl(214 28% 16%); }
+::-webkit-scrollbar-thumb:hover { background: hsl(36 100% 46% / 0.4); }
+
+/* ── Loop repeat input ──────────────────────────────────────────────────── */
+.tars-num-input {
+  width: 48px;
+  height: 24px;
+  text-align: center;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  color: hsl(191 100% 55%);
+  background: hsl(191 40% 4%);
+  border: 1px solid hsl(191 100% 44% / 0.25);
+  outline: none;
+}
+.tars-num-input:focus {
+  border-color: hsl(191 100% 44% / 0.6);
+}
+
+/* ── Overwrite confirm ──────────────────────────────────────────────────── */
+.tars-confirm-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid hsl(0 80% 50% / 0.25);
+  background: hsl(0 40% 5%);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: hsl(0 80% 65%);
+}
+
+/* ── Channel legend ─────────────────────────────────────────────────────── */
+.tars-ch-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 16px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: hsl(214 14% 40%);
+  font-family: 'Share Tech Mono', monospace;
+}
+.tars-ch-label { color: hsl(210 22% 72%); }

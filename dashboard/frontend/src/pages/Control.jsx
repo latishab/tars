@@ -1,64 +1,72 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import {
-  ArrowUp, ArrowDown, ArrowLeft, ArrowRight,
-  Hand, Smile, Frown, Meh, Zap, RotateCcw, Camera
-} from 'lucide-react'
+import { Camera, RotateCcw } from 'lucide-react'
 
-const EMOTIONS = ['neutral', 'happy', 'sad', 'angry', 'excited', 'afraid', 'sleepy', 'sideeye_left', 'sideeye_right', 'curious', 'skeptical', 'smug', 'surprised']
-const EMOTION_LABELS = {
-  'neutral': 'Neutral',
-  'happy': 'Happy',
-  'sad': 'Sad',
-  'angry': 'Angry',
-  'excited': 'Excited',
-  'sleepy': 'Sleepy',
-  'afraid': 'Afraid',
-  'sideeye_left': 'Side Eye L',
-  'sideeye_right': 'Side Eye R',
-  'curious': 'Curious',
-  'skeptical': 'Skeptical',
-  'smug': 'Smug',
-  'surprised': 'Surprised'
+const EMOTIONS = ['neutral','happy','sad','angry','excited','sleepy','afraid','sideeye_left','sideeye_right','curious','skeptical','smug','surprised']
+const EMOTION_LABELS = { neutral:'Neutral', happy:'Happy', sad:'Sad', angry:'Angry', excited:'Excited', sleepy:'Sleepy', afraid:'Afraid', sideeye_left:'Side-L', sideeye_right:'Side-R', curious:'Curious', skeptical:'Skeptic', smug:'Smug', surprised:'Surprise' }
+const EYE_STATES = ['idle','listening','thinking','speaking']
+
+const QUICK_BTNS = new Set(['step_forward','step_backward','walk_forward','walk_backward','turn_left','turn_right','turn_left_slow','turn_right_slow','wave_right','wave_left','bow','pose','laugh','neutral_legs','tilt_left','tilt_right','side_side','swing_legs'])
+
+// ── Reusable command button ───────────────────────────────────────────────
+function CmdBtn({ label, icon: Icon, onClick, disabled, active, variant = 'ghost', style }) {
+  const base = {
+    display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    gap: 3, padding: '8px 6px', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase',
+    fontFamily: "'Share Tech Mono', monospace", cursor: disabled ? 'not-allowed' : 'pointer',
+    border: '1px solid', transition: 'all 0.12s', opacity: disabled ? 0.45 : 1, ...style,
+  }
+  const variants = {
+    ghost:  { background: active ? 'hsl(36 100% 46% / 0.15)' : 'transparent', borderColor: active ? 'hsl(36 100% 46% / 0.6)' : 'hsl(214 28% 14%)', color: active ? 'hsl(36 100% 60%)' : 'hsl(214 14% 55%)' },
+    amber:  { background: 'hsl(36 100% 46% / 0.1)', borderColor: 'hsl(36 100% 46% / 0.5)', color: 'hsl(36 100% 60%)' },
+    cyan:   { background: active ? 'hsl(191 100% 44% / 0.18)' : 'hsl(191 100% 44% / 0.06)', borderColor: active ? 'hsl(191 100% 44% / 0.7)' : 'hsl(191 100% 44% / 0.25)', color: active ? 'hsl(191 100% 60%)' : 'hsl(191 100% 44% / 0.7)' },
+    danger: { background: 'transparent', borderColor: 'hsl(0 80% 50% / 0.4)', color: 'hsl(0 80% 65%)' },
+  }
+  const s = { ...base, ...variants[variant] }
+  return (
+    <button style={s} onClick={onClick} disabled={disabled}
+      onMouseEnter={e => { if (!disabled) { e.currentTarget.style.background = variants[variant].background.replace('0.1','0.22').replace('0.06','0.18'); e.currentTarget.style.boxShadow = variant === 'amber' ? '0 0 8px hsl(36 100% 46% / 0.2)' : ''; }}}
+      onMouseLeave={e => { e.currentTarget.style.background = s.background; e.currentTarget.style.boxShadow = ''; }}
+    >
+      {Icon && <Icon size={14} />}
+      {label}
+    </button>
+  )
 }
 
-const MOVEMENT_GROUPS = {
-  walking: [
-    { name: 'step_forward', label: 'Step Fwd', icon: ArrowUp },
-    { name: 'step_backward', label: 'Step Back', icon: ArrowDown },
-    { name: 'walk_forward', label: 'Walk Fwd', icon: ArrowUp },
-    { name: 'walk_backward', label: 'Walk Back', icon: ArrowDown },
-  ],
-  turning: [
-    { name: 'turn_left', label: 'Turn Left', icon: ArrowLeft },
-    { name: 'turn_right', label: 'Turn Right', icon: ArrowRight },
-    { name: 'turn_left_slow', label: 'Slow Left', icon: ArrowLeft },
-    { name: 'turn_right_slow', label: 'Slow Right', icon: ArrowRight },
-  ],
-  expressions: [
-    { name: 'wave_right', label: 'Wave R', icon: Hand },
-    { name: 'wave_left', label: 'Wave L', icon: Hand },
-    { name: 'bow', label: 'Bow', icon: null },
-    { name: 'pose', label: 'Pose', icon: null },
-    { name: 'laugh', label: 'Laugh', icon: Smile },
-    { name: 'neutral_legs', label: 'Neutral', icon: null },
-  ],
-  balance: [
-    { name: 'tilt_left', label: 'Tilt L', icon: null },
-    { name: 'tilt_right', label: 'Tilt R', icon: null },
-    { name: 'side_side', label: 'Side-Side', icon: null },
-    { name: 'swing_legs', label: 'Swing', icon: null },
-  ],
-  quickGestures: [
-    { name: 'Tilt R Fast', label: 'Tilt R Fast', icon: null },
-    { name: 'Tilt L Fast', label: 'Tilt L Fast', icon: null },
-    { name: 'Wiggle', label: 'Wiggle', icon: null },
-    { name: 'Wave Fast', label: 'Wave Fast', icon: null },
-  ],
+// ── Chip button (for emotions, eye states, sequences) ─────────────────────
+function Chip({ label, active, onClick, disabled, color = 'amber' }) {
+  const colors = {
+    amber: { bg: active ? 'hsl(36 100% 46% / 0.18)' : 'hsl(214 35% 6%)', border: active ? 'hsl(36 100% 46% / 0.7)' : 'hsl(214 28% 12%)', text: active ? 'hsl(36 100% 60%)' : 'hsl(214 14% 55%)' },
+    cyan:  { bg: active ? 'hsl(191 100% 44% / 0.15)' : 'hsl(214 35% 6%)', border: active ? 'hsl(191 100% 44% / 0.6)' : 'hsl(214 28% 12%)', text: active ? 'hsl(191 100% 60%)' : 'hsl(214 14% 55%)' },
+  }
+  const c = colors[color]
+  return (
+    <button
+      onClick={onClick} disabled={disabled}
+      style={{ padding: '5px 10px', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: "'Share Tech Mono', monospace", background: c.bg, border: `1px solid ${c.border}`, color: c.text, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1, transition: 'all 0.12s' }}
+    >
+      {label}
+    </button>
+  )
 }
 
+function SectionLabel({ children }) {
+  return <div style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(36 100% 46% / 0.65)', marginBottom: 8 }}>{children}</div>
+}
+
+function Panel({ title, children, style }) {
+  return (
+    <div className="tars-panel tars-panel-inner-br" style={style}>
+      <div className="tars-panel-header">
+        <span className="tars-panel-title">{title}</span>
+      </div>
+      <div className="tars-panel-body">{children}</div>
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────
 function Control() {
   const [executing, setExecuting] = useState(null)
   const [cameraUrl, setCameraUrl] = useState(null)
@@ -69,398 +77,194 @@ function Control() {
   const [activeExpression, setActiveExpression] = useState(null)
 
   useEffect(() => {
-    fetch('/api/control/saved-sequences')
-      .then(r => r.json())
-      .then(setSavedSequences)
-      .catch(() => {})
-    fetch('/api/expressions/map')
-      .then(r => r.json())
-      .then(data => setExpressionMap(data.map || {}))
-      .catch(() => {})
+    fetch('/api/control/saved-sequences').then(r => r.json()).then(setSavedSequences).catch(() => {})
+    fetch('/api/expressions/map').then(r => r.json()).then(d => setExpressionMap(d.map || {})).catch(() => {})
   }, [])
 
-  const getSeqType = (entry) =>
-    entry && typeof entry === 'object' && !Array.isArray(entry) ? (entry.type || 'movement') : 'movement'
+  const getSeqType = (entry) => entry && typeof entry === 'object' && !Array.isArray(entry) ? (entry.type || 'movement') : 'movement'
 
-  const executeMovement = async (movement) => {
+  const exec = async (movement) => {
     setExecuting(movement)
-    try {
-      await fetch('/api/control/move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ movement }),
-      })
-    } catch (err) {
-      console.error('Movement failed:', err)
-    }
+    try { await fetch('/api/control/move', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ movement }) }) }
+    catch {}
     setExecuting(null)
   }
 
-  const setEmotionApi = async (newEmotion) => {
-    try {
-      await fetch('/api/control/emotion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emotion: newEmotion }),
-      })
-      setEmotion(newEmotion)
-    } catch (err) {
-      console.error('Set emotion failed:', err)
-    }
+  const setEmotionApi = async (e) => {
+    try { await fetch('/api/control/emotion', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emotion: e }) }); setEmotion(e) }
+    catch {}
   }
 
-  const setEyeStateApi = async (state) => {
-    try {
-      await fetch('/api/control/eye-state', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state }),
-      })
-      setEyeState(state)
-    } catch (err) {
-      console.error('Set eye state failed:', err)
-    }
-  }
-
-  const captureCamera = () => {
-    setCameraUrl(`/api/status/camera?t=${Date.now()}`)
+  const setEyeApi = async (s) => {
+    try { await fetch('/api/control/eye-state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ state: s }) }); setEyeState(s) }
+    catch {}
   }
 
   const resetPosition = async () => {
     setExecuting('reset')
-    try {
-      await fetch('/api/control/reset', { method: 'POST' })
-    } catch (err) {
-      console.error('Reset failed:', err)
-    }
+    try { await fetch('/api/control/reset', { method: 'POST' }) }
+    catch {}
     setExecuting(null)
   }
 
-  const triggerExpression = async (emotion, intensity) => {
-    const key = `${emotion}:${intensity}`
+  const triggerExpression = async (em, intensity) => {
+    const key = `${em}:${intensity}`
     setActiveExpression(key)
-    try {
-      await fetch('/api/expressions/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emotion, intensity }),
-      })
-    } catch (err) {
-      console.error('Expression trigger failed:', err)
-    }
+    try { await fetch('/api/expressions/trigger', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ emotion: em, intensity }) }) }
+    catch {}
   }
 
-  const buttonNames = new Set(Object.values(MOVEMENT_GROUPS).flat().map(m => m.name))
+  const customSeqs = Object.entries(savedSequences).filter(([name]) => !QUICK_BTNS.has(name))
+  const expressionBtns = Object.entries(expressionMap).filter(([, e]) => e?.gesture)
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Control</h1>
+    <div style={{ padding: '12px 12px 24px', fontFamily: "'Share Tech Mono', monospace" }}>
 
-      {/* Camera + Emotions - Stack on mobile, 40/60 split on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-[2fr,3fr] gap-4">
-        {/* Camera - 40% on desktop */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Camera className="w-4 h-4" />
-                Camera
-              </span>
-              <Button size="sm" variant="outline" onClick={captureCamera}>
-                Capture
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3">
-            {cameraUrl ? (
-              <img
-                src={cameraUrl}
-                alt="Camera"
-                className="w-full aspect-square object-cover rounded-lg bg-muted"
-                onError={() => setCameraUrl(null)}
-              />
-            ) : (
-              <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground">
-                Click Capture
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Right column: Eye State + Emotions stacked */}
-        <div className="flex flex-col gap-4">
-          {/* Eye State */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Eye State</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-3">
-              <div className="grid grid-cols-4 gap-2">
-                {['idle', 'listening', 'thinking', 'speaking'].map((s) => (
-                  <Button
-                    key={s}
-                    variant={eyeState === s ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEyeStateApi(s)}
-                    className="h-9 text-xs capitalize"
-                  >
-                    {s}
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Emotions */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Emotion</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-3">
-              <div className="grid grid-cols-2 gap-2">
-                {EMOTIONS.map((e) => (
-                  <Button
-                    key={e}
-                    variant={emotion === e ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setEmotionApi(e)}
-                    className="h-10 text-xs"
-                  >
-                    {EMOTION_LABELS[e] || e}
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Header */}
+      <div style={{ marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid hsl(214 28% 11%)' }}>
+        <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(36 100% 55%)' }}>COMMAND INTERFACE</div>
+        <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 38%)', marginTop: 1 }}>TARS DIRECT CONTROL</div>
       </div>
 
-      {/* Expressions Quick Access */}
-      {Object.keys(expressionMap).filter(k => expressionMap[k]?.gesture).length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center justify-between">
-              <span>Expressions</span>
-              <Link to="/expressions" className="text-xs text-muted-foreground hover:text-foreground">
-                All Expressions →
-              </Link>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {Object.entries(expressionMap)
-                .filter(([, entry]) => entry?.gesture)
-                .map(([key]) => {
-                  const [emotion, intensity] = key.split(':')
-                  const label = `${emotion.charAt(0).toUpperCase() + emotion.slice(1).replace('_', ' ')} (${intensity})`
-                  return (
-                    <Button
-                      key={key}
-                      variant={activeExpression === key ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => triggerExpression(emotion, intensity)}
-                      className="h-9 text-xs"
-                    >
-                      {label}
-                    </Button>
-                  )
-                })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* ── Row 1: Locomotion (left) + Face (right) ──────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginBottom: 12 }}>
 
-      {/* Movement Controls - Full width */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center justify-between">
-            <span>Movement</span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={resetPosition}
-              disabled={executing === 'reset'}
+        {/* Locomotion D-pad */}
+        <Panel title="Locomotion">
+          {/* D-pad grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: 'auto auto auto auto', gap: 5, maxWidth: 280, margin: '0 auto 12px' }}>
+            {/* Row 1: Walk Fwd */}
+            <div />
+            <CmdBtn label="Walk ↑" onClick={() => exec('walk_forward')} disabled={executing !== null} style={{ width: '100%' }} />
+            <div />
+            {/* Row 2: Turn L | Step Fwd | Turn R */}
+            <CmdBtn label="← Turn" onClick={() => exec('turn_left')} disabled={executing !== null} style={{ width: '100%' }} />
+            <CmdBtn label="Step ↑" onClick={() => exec('step_forward')} disabled={executing !== null} style={{ width: '100%' }} />
+            <CmdBtn label="Turn →" onClick={() => exec('turn_right')} disabled={executing !== null} style={{ width: '100%' }} />
+            {/* Row 3: Slow L | Step Back | Slow R */}
+            <CmdBtn label="← Slow" onClick={() => exec('turn_left_slow')} disabled={executing !== null} style={{ width: '100%', fontSize: 9 }} />
+            <CmdBtn label="Step ↓" onClick={() => exec('step_backward')} disabled={executing !== null} style={{ width: '100%' }} />
+            <CmdBtn label="Slow →" onClick={() => exec('turn_right_slow')} disabled={executing !== null} style={{ width: '100%', fontSize: 9 }} />
+            {/* Row 4: Walk Back */}
+            <div />
+            <CmdBtn label="Walk ↓" onClick={() => exec('walk_backward')} disabled={executing !== null} style={{ width: '100%' }} />
+            <div />
+          </div>
+
+          {/* Balance + Reset row */}
+          <div style={{ borderTop: '1px solid hsl(214 28% 11%)', paddingTop: 10 }}>
+            <SectionLabel>Balance & Reset</SectionLabel>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {[['tilt_left','Tilt L'],['tilt_right','Tilt R'],['side_side','Side-Side'],['swing_legs','Swing']].map(([name, label]) => (
+                <CmdBtn key={name} label={label} onClick={() => exec(name)} disabled={executing !== null} style={{ flex: 1, minWidth: 60 }} />
+              ))}
+              <CmdBtn label="Reset" icon={RotateCcw} onClick={resetPosition} disabled={executing !== null} variant="amber" style={{ flex: 1, minWidth: 60 }} />
+            </div>
+          </div>
+        </Panel>
+
+        {/* Face: Eye State + Emotion */}
+        <Panel title="Face & Emotion">
+          <SectionLabel>Eye State</SectionLabel>
+          <div style={{ display: 'flex', gap: 5, marginBottom: 14, flexWrap: 'wrap' }}>
+            {EYE_STATES.map(s => (
+              <Chip key={s} label={s} active={eyeState === s} color="cyan" onClick={() => setEyeApi(s)} />
+            ))}
+          </div>
+
+          <SectionLabel>Emotion</SectionLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 14 }}>
+            {EMOTIONS.map(e => (
+              <Chip key={e} label={EMOTION_LABELS[e] || e} active={emotion === e} onClick={() => setEmotionApi(e)} />
+            ))}
+          </div>
+
+          <SectionLabel>Gestures</SectionLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {[['wave_right','Wave R'],['wave_left','Wave L'],['bow','Bow'],['pose','Pose'],['laugh','Laugh'],['neutral_legs','Neutral']].map(([name, label]) => (
+              <CmdBtn key={name} label={label} onClick={() => exec(name)} disabled={executing !== null} />
+            ))}
+          </div>
+        </Panel>
+      </div>
+
+      {/* ── Row 2: Camera + Custom Expressions + Sequences ───────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+
+        {/* Camera */}
+        <Panel title="Camera">
+          <div style={{ marginBottom: 8 }}>
+            <button
+              onClick={() => setCameraUrl(`/api/status/camera?t=${Date.now()}`)}
+              className="tars-btn tars-btn-ghost"
+              style={{ width: '100%', marginBottom: 8 }}
             >
-              <RotateCcw className="w-4 h-4 mr-1" />
-              Reset
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Walking */}
-          <div>
-            <div className="text-sm text-muted-foreground mb-2">Walking</div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {MOVEMENT_GROUPS.walking.map((m) => (
-                <Button
-                  key={m.name}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => executeMovement(m.name)}
-                  disabled={executing !== null}
-                  className="flex flex-col h-16 sm:h-auto py-2"
-                >
-                  {m.icon && <m.icon className="w-4 h-4 mb-1" />}
-                  <span className="text-xs">{m.label}</span>
-                </Button>
-              ))}
-            </div>
+              <Camera size={12} /> Capture Frame
+            </button>
           </div>
-
-          {/* Turning */}
-          <div>
-            <div className="text-sm text-muted-foreground mb-2">Turning</div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {MOVEMENT_GROUPS.turning.map((m) => (
-                <Button
-                  key={m.name}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => executeMovement(m.name)}
-                  disabled={executing !== null}
-                  className="flex flex-col h-16 sm:h-auto py-2"
-                >
-                  {m.icon && <m.icon className="w-4 h-4 mb-1" />}
-                  <span className="text-xs">{m.label}</span>
-                </Button>
-              ))}
+          {cameraUrl ? (
+            <img src={cameraUrl} alt="Camera" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', background: 'hsl(214 35% 6%)', display: 'block' }} onError={() => setCameraUrl(null)} />
+          ) : (
+            <div style={{ width: '100%', aspectRatio: '1', background: 'hsl(214 35% 5%)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid hsl(214 28% 11%)', fontSize: 10, letterSpacing: '0.1em', color: 'hsl(214 14% 30%)' }}>
+              NO SIGNAL
             </div>
-          </div>
+          )}
+        </Panel>
 
-          {/* Expressions */}
-          <div>
-            <div className="text-sm text-muted-foreground mb-2">Expressions</div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {MOVEMENT_GROUPS.expressions.map((m) => (
-                <Button
-                  key={m.name}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => executeMovement(m.name)}
-                  disabled={executing !== null}
-                  className="flex flex-col h-16 sm:h-auto py-2"
-                >
-                  {m.icon && <m.icon className="w-4 h-4 mb-1" />}
-                  <span className="text-xs">{m.label}</span>
-                </Button>
-              ))}
+        {/* Expression triggers (from expression map) */}
+        {expressionBtns.length > 0 && (
+          <Panel title="Expression Triggers">
+            <div style={{ marginBottom: 6, fontSize: 9, letterSpacing: '0.1em', color: 'hsl(214 14% 38%)' }}>
+              <Link to="/expressions" style={{ color: 'hsl(191 100% 44% / 0.7)', textDecoration: 'none' }}>All Expressions →</Link>
             </div>
-          </div>
-
-          {/* Balance */}
-          <div>
-            <div className="text-sm text-muted-foreground mb-2">Balance</div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {MOVEMENT_GROUPS.balance.map((m) => (
-                <Button
-                  key={m.name}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => executeMovement(m.name)}
-                  disabled={executing !== null}
-                  className="flex flex-col h-16 sm:h-auto py-2"
-                >
-                  <span className="text-xs">{m.label}</span>
-                </Button>
-              ))}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {expressionBtns.map(([key]) => {
+                const [em, intensity] = key.split(':')
+                const label = `${em.replace('_',' ')} (${intensity})`
+                return (
+                  <Chip key={key} label={label} active={activeExpression === key} color="cyan" onClick={() => triggerExpression(em, intensity)} />
+                )
+              })}
             </div>
-          </div>
+          </Panel>
+        )}
 
-          {/* Quick Gestures */}
-          <div>
-            <div className="text-sm text-muted-foreground mb-2">Quick Gestures</div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {MOVEMENT_GROUPS.quickGestures.map((m) => (
-                <Button
-                  key={m.name}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => executeMovement(m.name)}
-                  disabled={executing !== null}
-                  className="flex flex-col h-16 sm:h-auto py-2"
-                >
-                  <span className="text-xs">{m.label}</span>
-                </Button>
-              ))}
-            </div>
-          </div>
-
-        </CardContent>
-      </Card>
-
-      {/* Custom Sequences (all saved sequences, excluding button overrides) */}
-      {Object.entries(savedSequences).some(([name, entry]) => !buttonNames.has(name)) && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Custom Sequences</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'expression' && entry.quick && !buttonNames.has(name)) && (
-              <div>
-                <div className="text-sm text-muted-foreground mb-2">Quick Expressions</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {Object.entries(savedSequences)
-                    .filter(([name, entry]) => getSeqType(entry) === 'expression' && entry.quick && !buttonNames.has(name))
-                    .map(([name]) => (
-                      <Button
-                        key={name}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => executeMovement(name)}
-                        disabled={executing !== null}
-                        className="flex flex-col h-16 sm:h-auto py-2"
-                      >
-                        <span className="text-xs">{name}</span>
-                      </Button>
-                    ))}
+        {/* Custom sequences */}
+        {customSeqs.length > 0 && (
+          <Panel title="Custom Sequences">
+            {customSeqs.some(([, e]) => getSeqType(e) === 'expression' && e.quick) && (
+              <>
+                <SectionLabel>Quick Expressions</SectionLabel>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+                  {customSeqs.filter(([, e]) => getSeqType(e) === 'expression' && e.quick).map(([name]) => (
+                    <Chip key={name} label={name} color="cyan" onClick={() => exec(name)} disabled={executing !== null} />
+                  ))}
                 </div>
-              </div>
+              </>
             )}
-            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'expression' && !entry.quick && !buttonNames.has(name)) && (
-              <div>
-                <div className="text-sm text-muted-foreground mb-2">Expressions</div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {Object.entries(savedSequences)
-                    .filter(([name, entry]) => getSeqType(entry) === 'expression' && !entry.quick && !buttonNames.has(name))
-                    .map(([name]) => (
-                      <Button
-                        key={name}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => executeMovement(name)}
-                        disabled={executing !== null}
-                        className="flex flex-col h-16 sm:h-auto py-2"
-                      >
-                        <span className="text-xs">{name}</span>
-                      </Button>
-                    ))}
+            {customSeqs.some(([, e]) => getSeqType(e) === 'expression' && !e.quick) && (
+              <>
+                <SectionLabel>Expressions</SectionLabel>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 10 }}>
+                  {customSeqs.filter(([, e]) => getSeqType(e) === 'expression' && !e.quick).map(([name]) => (
+                    <Chip key={name} label={name} color="cyan" onClick={() => exec(name)} disabled={executing !== null} />
+                  ))}
                 </div>
-              </div>
+              </>
             )}
-            {Object.entries(savedSequences).some(([name, entry]) => getSeqType(entry) === 'movement' && !buttonNames.has(name)) && (
-              <div>
-                <div className="text-sm text-muted-foreground mb-2">Movements</div>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(savedSequences)
-                    .filter(([name, entry]) => getSeqType(entry) === 'movement' && !buttonNames.has(name))
-                    .map(([name]) => (
-                      <Button
-                        key={name}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => executeMovement(name)}
-                        disabled={executing !== null}
-                        className="h-10"
-                      >
-                        {name}
-                      </Button>
-                    ))}
+            {customSeqs.some(([, e]) => getSeqType(e) === 'movement') && (
+              <>
+                <SectionLabel>Movements</SectionLabel>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                  {customSeqs.filter(([, e]) => getSeqType(e) === 'movement').map(([name]) => (
+                    <Chip key={name} label={name} onClick={() => exec(name)} disabled={executing !== null} />
+                  ))}
                 </div>
-              </div>
+              </>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </Panel>
+        )}
+      </div>
     </div>
   )
 }
