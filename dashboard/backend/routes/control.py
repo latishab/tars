@@ -247,6 +247,14 @@ async def play_saved_sequence(name: str, req: Request):
 @router.get("/movement-steps/{name}")
 async def get_movement_steps(name: str):
     """Extract move_legs steps from a named movement function."""
+    # Custom sequences take priority over built-in movements
+    if SEQUENCES_FILE.exists():
+        sequences = json.loads(SEQUENCES_FILE.read_text())
+        if name in sequences:
+            entry = sequences[name]
+            steps = entry["steps"] if isinstance(entry, dict) else entry
+            return {"steps": steps}
+
     from pathlib import Path as _Path
     src = _Path(__file__).parent.parent.parent.parent / "src" / "modules" / "module_movements.py"
     if not src.exists():
