@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Play, Plus, X, Zap, Pencil, Download, RotateCcw, Trash2, GripVertical, Repeat2 } from 'lucide-react'
+import TarsPreview from './TarsPreview'
 
 const DEFAULT_STEP = () => ({ left_height: 50, right_height: 50, left_leg: 50, right_leg: 50, speed: 0.85, hold_time: 0 })
 const DEFAULT_LOOP = () => ({ repeat: 2, steps: [DEFAULT_STEP()] })
@@ -121,6 +122,7 @@ function MovementBuilder() {
   const [confirmOverwrite, setConfirmOverwrite] = useState(false)
   const [seqType, setSeqType] = useState('movement')
   const [isQuick, setIsQuick] = useState(false)
+  const [importedFrom, setImportedFrom] = useState('')
   const dragIndex = useRef(null)
   const dragFromHandle = useRef(false)
 
@@ -132,14 +134,16 @@ function MovementBuilder() {
 
   const loadMovements = () => {
     fetch('/api/control/movements').then(r => r.json()).then(data => {
-      const list = data.movements || []
+      const list = (data.legs_only || data.movements || [])
+        .filter(m => (m.id || m) !== 'reset_positions')
+        .map(m => m.id || m)
       setMovements(list)
       if (list.length > 0) setSelectedMovement(list[0])
     }).catch(() => {})
   }
 
   const addPositionStep = () => setSteps(s => [...s, DEFAULT_STEP()])
-  const addMovementStep = () => setSteps(s => [...s, { movement: selectedMovement, hold_time: 0 }])
+  const addMovementStep = () => { setSteps(s => [...s, { movement: selectedMovement, hold_time: 0 }]); setImportedFrom('') }
   const addLoop = () => setSteps(s => [...s, DEFAULT_LOOP()])
   const deleteStep = (i) => setSteps(s => s.filter((_, idx) => idx !== i))
   const updateStep = (i, field, value) => setSteps(s => s.map((step, idx) => idx === i ? { ...step, [field]: value } : step))
@@ -147,7 +151,7 @@ function MovementBuilder() {
   const updateLoopInnerStep = (i, si, field, value) => setSteps(s => s.map((step, idx) => idx === i ? { ...step, steps: step.steps.map((inner, sidx) => sidx === si ? { ...inner, [field]: value } : inner) } : step))
   const deleteLoopInnerStep = (i, si) => setSteps(s => s.map((step, idx) => idx === i ? { ...step, steps: step.steps.filter((_, sidx) => sidx !== si) } : step))
   const addLoopInnerStep = (i) => setSteps(s => s.map((step, idx) => idx === i ? { ...step, steps: [...step.steps, DEFAULT_STEP()] } : step))
-  const resetSteps = () => { setSteps([DEFAULT_STEP()]); setSequenceName(''); setFeedback('') }
+  const resetSteps = () => { setSteps([DEFAULT_STEP()]); setSequenceName(''); setFeedback(''); setImportedFrom('') }
 
   const handleDragStart = (e, i) => {
     if (!dragFromHandle.current) { e.preventDefault(); return }
@@ -248,6 +252,7 @@ function MovementBuilder() {
     setSteps(rawSteps.map(normalizeStep))
     setSequenceName(name)
     setSeqType(type)
+    setImportedFrom(name)
     setFeedback(`Loaded "${name}"`)
   }
 
@@ -259,7 +264,8 @@ function MovementBuilder() {
       if (res.ok) {
         const data = await res.json()
         setSteps((data.steps || []).map(normalizeStep))
-        setSequenceName('')
+        setSequenceName(name)
+        setImportedFrom(name)
         setFeedback(`Imported "${name}" — edit then save under a new name`)
       } else {
         setFeedback(`Import failed: ${(await res.json()).detail}`)
@@ -268,198 +274,216 @@ function MovementBuilder() {
     setImporting(false)
   }
 
+  // Use the most recently imported movement name for locomotion detection in preview
+  const previewMovementName = importedFrom || sequenceName
+
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold">Movement Builder</h1>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Movement Builder</h1>
 
-      {/* Card 1: Sequence Editor */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center justify-between">
-            <span>Sequence Editor</span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={resetSteps}
-                className="text-xs px-2 py-1 rounded border border-input text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
-              >
-                Clear
-              </button>
-              <button
-                onClick={() => setLivePreview(v => !v)}
-                className={`text-xs px-2 py-1 rounded border transition-colors ${livePreview ? 'border-primary text-primary bg-primary/10' : 'border-input text-muted-foreground'}`}
-              >
-                {livePreview ? 'Live: on' : 'Live: off'}
-              </button>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
 
-          {/* Channel legend + safety note */}
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-0.5 font-mono">
-              <span><span className="text-foreground">LH</span> ch0 — left height</span>
-              <span><span className="text-foreground">RH</span> ch1 — right height</span>
-              <span><span className="text-foreground">LL</span> ch2 — left leg fwd/back</span>
-              <span><span className="text-foreground">RL</span> ch3 — right leg fwd/back</span>
-            </div>
-            <p>Heights same direction (20,20 or 80,80) may tip. Tilts (35,65) are safer.</p>
-          </div>
-
-          {/* Steps list */}
-          <div className="space-y-2">
-            {steps.map((step, i) => (
-              <div
-                key={i}
-                draggable
-                onDragStart={(e) => handleDragStart(e, i)}
-                onDragEnd={handleDragEnd}
-                onDragOver={handleDragOver}
-                onDrop={() => handleDrop(i)}
-                className="cursor-default"
-              >
-                <div className="text-xs text-muted-foreground mb-1">Step {i + 1}</div>
-                {step.repeat !== undefined
-                  ? <LoopBlock loop={step} index={i} onUpdateRepeat={updateLoopRepeat} onUpdateInnerStep={updateLoopInnerStep} onDeleteInnerStep={deleteLoopInnerStep} onAddInnerStep={addLoopInnerStep} onDelete={deleteStep} onGripPointerDown={() => { dragFromHandle.current = true }} onRelease={sendMoveLeg} />
-                  : step.movement
-                    ? <MovementStepRow step={step} index={i} onDelete={deleteStep} onGripPointerDown={() => { dragFromHandle.current = true }} />
-                    : <PositionStepRow step={step} index={i} onUpdate={updateStep} onDelete={deleteStep} onRelease={sendMoveLeg} onGripPointerDown={() => { dragFromHandle.current = true }} />
-                }
-              </div>
-            ))}
-          </div>
-
-          {/* Add steps */}
-          <div className="space-y-2">
-            <SectionLabel>Add Steps</SectionLabel>
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={addPositionStep} className="flex-1">
-                <Plus className="w-4 h-4 mr-1" />
-                Add Position Step
-              </Button>
-              <Button size="sm" variant="outline" onClick={addLoop} className="flex-1">
-                <Repeat2 className="w-4 h-4 mr-1" />
-                Add Loop
-              </Button>
-            </div>
-            <div className="flex gap-1">
-              <select
-                value={selectedMovement}
-                onChange={e => setSelectedMovement(e.target.value)}
-                className="flex-1 h-9 rounded-md border border-input bg-background px-2 text-sm"
-              >
-                {movements.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-              <Button size="sm" variant="outline" onClick={addMovementStep} title="Append as named step">
-                <Zap className="w-4 h-4" />
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => importFromMovement(selectedMovement)} disabled={importing} title="Import as editable position steps">
-                <Download className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground px-0.5">
-              <span><Zap className="w-3 h-3 inline mr-1" />append as named step</span>
-              <span><Download className="w-3 h-3 inline mr-1" />import as editable steps</span>
-            </div>
-          </div>
-
-        </CardContent>
-      </Card>
-
-      {/* Card 2: Playback & Save */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Playback & Save</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-
-          {/* Playback */}
-          <div className="space-y-2">
-            <SectionLabel>Playback</SectionLabel>
-            <div className="flex gap-2">
-              <Button size="sm" onClick={playSequence} disabled={sequencePlaying} className="flex-1">
-                <Play className="w-4 h-4 mr-1" />
-                {sequencePlaying ? 'Playing...' : 'Play Sequence'}
-              </Button>
-              <Button size="sm" variant="outline" onClick={resetToNeutral} disabled={sequencePlaying}>
-                <RotateCcw className="w-4 h-4 mr-1" />
-                Neutral
-              </Button>
-            </div>
-          </div>
-
-          {/* Save */}
-          <div className="space-y-2">
-            <SectionLabel>Save</SectionLabel>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Sequence name"
-                value={sequenceName}
-                onChange={e => { setSequenceName(e.target.value); setConfirmOverwrite(false) }}
-                className="flex-1 h-9 text-sm"
-              />
-              <select
-                value={seqType}
-                onChange={e => setSeqType(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-              >
-                <option value="movement">Movement</option>
-                <option value="expression">Expression</option>
-              </select>
-              <label className="flex items-center gap-1.5 text-sm cursor-pointer select-none whitespace-nowrap">
-                <input
-                  type="checkbox"
-                  checked={isQuick}
-                  onChange={e => setIsQuick(e.target.checked)}
-                  className="w-4 h-4 accent-primary"
-                />
-                Quick
-              </label>
-              <Button size="sm" onClick={saveSequence}>Save</Button>
-              <Button size="sm" variant="outline" onClick={resetSteps} title="Clear all steps">
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-            {confirmOverwrite && (
-              <div className="flex items-center gap-2 p-2 rounded-md bg-muted text-sm">
-                <span className="flex-1 text-muted-foreground">"{sequenceName}" already exists. Replace?</span>
-                <Button size="sm" variant="destructive" onClick={saveSequence}>Replace</Button>
-                <Button size="sm" variant="outline" onClick={() => setConfirmOverwrite(false)}>Cancel</Button>
-              </div>
-            )}
-          </div>
-
-          {/* Feedback */}
-          {feedback && <p className="text-sm text-muted-foreground">{feedback}</p>}
-
-        </CardContent>
-      </Card>
-
-      {/* Card 3: Saved Sequences */}
-      {Object.keys(savedSequences).length > 0 && (
+        {/* ── Left: Sequence Editor ──────────────────────────────────── */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Saved Sequences</CardTitle>
+            <CardTitle className="text-lg flex items-center justify-between">
+              <span>Sequence Editor</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={resetSteps}
+                  className="text-xs px-2 py-1 rounded border border-input text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={() => setLivePreview(v => !v)}
+                  className={`text-xs px-2 py-1 rounded border transition-colors ${livePreview ? 'border-primary text-primary bg-primary/10' : 'border-input text-muted-foreground'}`}
+                >
+                  {livePreview ? 'Live: on' : 'Live: off'}
+                </button>
+              </div>
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(savedSequences).map(name => (
-                <div key={name} className="flex items-center gap-1 bg-muted rounded-md px-2 py-1">
-                  <button onClick={() => playSaved(name)} disabled={sequencePlaying} className="text-sm hover:text-primary transition-colors disabled:opacity-50">
-                    {name}
-                  </button>
-                  <button onClick={() => loadIntoEditor(name)} title="Load into editor" className="text-muted-foreground hover:text-primary transition-colors">
-                    <Pencil className="w-3 h-3" />
-                  </button>
-                  <button onClick={() => deleteSaved(name)} className="text-muted-foreground hover:text-destructive transition-colors">
-                    <X className="w-3 h-3" />
-                  </button>
+          <CardContent className="space-y-4">
+
+            {/* Channel legend */}
+            <div className="text-xs text-muted-foreground space-y-1">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono">
+                <span><span className="text-foreground">LH</span> ch0 — left height</span>
+                <span><span className="text-foreground">RH</span> ch1 — right height</span>
+                <span><span className="text-foreground">LL</span> ch2 — left leg fwd/back</span>
+                <span><span className="text-foreground">RL</span> ch3 — right leg fwd/back</span>
+              </div>
+              <p>Heights same direction (20,20 or 80,80) may tip. Tilts (35,65) are safer.</p>
+            </div>
+
+            {/* Steps list */}
+            <div className="space-y-2">
+              {steps.map((step, i) => (
+                <div
+                  key={i}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, i)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={handleDragOver}
+                  onDrop={() => handleDrop(i)}
+                  className="cursor-default"
+                >
+                  <div className="text-xs text-muted-foreground mb-1">Step {i + 1}</div>
+                  {step.repeat !== undefined
+                    ? <LoopBlock loop={step} index={i} onUpdateRepeat={updateLoopRepeat} onUpdateInnerStep={updateLoopInnerStep} onDeleteInnerStep={deleteLoopInnerStep} onAddInnerStep={addLoopInnerStep} onDelete={deleteStep} onGripPointerDown={() => { dragFromHandle.current = true }} onRelease={sendMoveLeg} />
+                    : step.movement
+                      ? <MovementStepRow step={step} index={i} onDelete={deleteStep} onGripPointerDown={() => { dragFromHandle.current = true }} />
+                      : <PositionStepRow step={step} index={i} onUpdate={updateStep} onDelete={deleteStep} onRelease={sendMoveLeg} onGripPointerDown={() => { dragFromHandle.current = true }} />
+                  }
                 </div>
               ))}
             </div>
+
+            {/* Add steps */}
+            <div className="space-y-2">
+              <SectionLabel>Add Steps</SectionLabel>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={addPositionStep} className="flex-1">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Position Step
+                </Button>
+                <Button size="sm" variant="outline" onClick={addLoop} className="flex-1">
+                  <Repeat2 className="w-4 h-4 mr-1" />
+                  Add Loop
+                </Button>
+              </div>
+              <div className="flex gap-1">
+                <select
+                  value={selectedMovement}
+                  onChange={e => setSelectedMovement(e.target.value)}
+                  className="flex-1 h-9 rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  {movements.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <Button size="sm" variant="outline" onClick={addMovementStep} title="Append as named step">
+                  <Zap className="w-4 h-4" />
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => importFromMovement(selectedMovement)} disabled={importing} title="Import as editable position steps">
+                  <Download className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground px-0.5">
+                <span><Zap className="w-3 h-3 inline mr-1" />append as named step</span>
+                <span><Download className="w-3 h-3 inline mr-1" />import as editable steps</span>
+              </div>
+            </div>
+
           </CardContent>
         </Card>
-      )}
+
+        {/* ── Right: Preview + Playback + Save + Saved ──────────────── */}
+        <div className="space-y-4">
+
+          {/* 3D Preview */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">3D Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <TarsPreview steps={steps} movementName={previewMovementName} />
+            </CardContent>
+          </Card>
+
+          {/* Playback & Save */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Playback & Save</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+
+              <div className="space-y-2">
+                <SectionLabel>Play on Robot</SectionLabel>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={playSequence} disabled={sequencePlaying} className="flex-1">
+                    <Play className="w-4 h-4 mr-1" />
+                    {sequencePlaying ? 'Playing...' : 'Play Sequence'}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={resetToNeutral} disabled={sequencePlaying}>
+                    <RotateCcw className="w-4 h-4 mr-1" />
+                    Neutral
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <SectionLabel>Save</SectionLabel>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Sequence name"
+                    value={sequenceName}
+                    onChange={e => { setSequenceName(e.target.value); setConfirmOverwrite(false) }}
+                    className="flex-1 h-9 text-sm"
+                  />
+                  <select
+                    value={seqType}
+                    onChange={e => setSeqType(e.target.value)}
+                    className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                  >
+                    <option value="movement">Movement</option>
+                    <option value="expression">Expression</option>
+                  </select>
+                  <label className="flex items-center gap-1.5 text-sm cursor-pointer select-none whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={isQuick}
+                      onChange={e => setIsQuick(e.target.checked)}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    Quick
+                  </label>
+                  <Button size="sm" onClick={saveSequence}>Save</Button>
+                  <Button size="sm" variant="outline" onClick={resetSteps} title="Clear all steps">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+                {confirmOverwrite && (
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-muted text-sm">
+                    <span className="flex-1 text-muted-foreground">"{sequenceName}" already exists. Replace?</span>
+                    <Button size="sm" variant="destructive" onClick={saveSequence}>Replace</Button>
+                    <Button size="sm" variant="outline" onClick={() => setConfirmOverwrite(false)}>Cancel</Button>
+                  </div>
+                )}
+              </div>
+
+              {feedback && <p className="text-sm text-muted-foreground">{feedback}</p>}
+
+            </CardContent>
+          </Card>
+
+          {/* Saved Sequences */}
+          {Object.keys(savedSequences).length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Saved Sequences</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {Object.keys(savedSequences).map(name => (
+                    <div key={name} className="flex items-center gap-1 bg-muted rounded-md px-2 py-1">
+                      <button onClick={() => playSaved(name)} disabled={sequencePlaying} className="text-sm hover:text-primary transition-colors disabled:opacity-50">
+                        {name}
+                      </button>
+                      <button onClick={() => loadIntoEditor(name)} title="Load into editor" className="text-muted-foreground hover:text-primary transition-colors">
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button onClick={() => deleteSaved(name)} className="text-muted-foreground hover:text-destructive transition-colors">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+        </div>
+      </div>
     </div>
   )
 }
