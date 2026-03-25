@@ -148,9 +148,12 @@ class HardwareController:
             if servo is None:
                 raise ValueError("Servo module not available for custom sequence")
             servo._notify_movement_start()
-            try:
+            def run_steps(steps):
                 for step in steps:
-                    if step.get("movement"):
+                    if step.get("repeat") is not None:
+                        for _ in range(step["repeat"]):
+                            run_steps(step.get("steps", []))
+                    elif step.get("movement"):
                         self.execute_movement(step["movement"], speed)
                     else:
                         servo.move_legs(
@@ -161,6 +164,9 @@ class HardwareController:
                         hold = step.get("hold_time", 0)
                         if hold > 0:
                             import time as _t; _t.sleep(hold)
+
+            try:
+                run_steps(steps)
                 servo.move_legs(50, 50, 50, 50, 0.8)
                 servo.disable_all_servos()
             finally:

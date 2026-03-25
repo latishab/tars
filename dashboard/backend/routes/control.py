@@ -32,22 +32,12 @@ class MoveLegRequest(BaseModel):
     right_leg: int
     speed: float
 
-class SequenceStep(BaseModel):
-    # If movement is set, execute a named movement instead of raw servo positions
-    movement: str | None = None
-    left_height: int = 50
-    right_height: int = 50
-    left_leg: int = 50
-    right_leg: int = 50
-    speed: float = 0.85
-    hold_time: float = 0.0
-
 class PlaySequenceRequest(BaseModel):
-    steps: list[SequenceStep]
+    steps: list[dict]
 
 class SaveSequenceRequest(BaseModel):
     name: str
-    steps: list[SequenceStep]
+    steps: list[dict]
     type: str = "movement"
     quick: bool = False
 
@@ -156,27 +146,34 @@ async def play_sequence(request: PlaySequenceRequest, req: Request):
     if servo.MOVING:
         raise HTTPException(409, "Robot is already moving")
 
-    servo.MOVING = True
-    servo._notify_movement_start()
-    try:
-        for step in request.steps:
-            if step.movement:
+    async def run_steps(steps):
+        for step in steps:
+            if step.get('repeat') is not None:
+                for _ in range(step['repeat']):
+                    await run_steps(step.get('steps', []))
+            elif step.get('movement'):
                 await asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda s=step: daemon.hardware_controller.execute_movement(s.movement)
+                    lambda s=step: daemon.hardware_controller.execute_movement(s['movement'])
                 )
+                if step.get('hold_time', 0) > 0:
+                    await asyncio.sleep(step['hold_time'])
             else:
                 await asyncio.get_event_loop().run_in_executor(
                     None,
                     lambda s=step: servo.move_legs(
-                        s.left_height, s.right_height,
-                        s.left_leg, s.right_leg,
-                        s.speed
+                        s.get('left_height', 50), s.get('right_height', 50),
+                        s.get('left_leg', 50), s.get('right_leg', 50),
+                        s.get('speed', 0.85)
                     )
                 )
-            if step.hold_time > 0:
-                await asyncio.sleep(step.hold_time)
-        # return to neutral
+                if step.get('hold_time', 0) > 0:
+                    await asyncio.sleep(step['hold_time'])
+
+    servo.MOVING = True
+    servo._notify_movement_start()
+    try:
+        await run_steps(request.steps)
         await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: servo.move_legs(50, 50, 50, 50, 0.8)
@@ -201,7 +198,7 @@ async def save_sequence(request: SaveSequenceRequest):
             data = {}
 
     existing = data.get(request.name, {})
-    data[request.name] = {**existing, "type": request.type, "quick": request.quick, "steps": [step.dict() for step in request.steps]}
+    data[request.name] = {**existing, "type": request.type, "quick": request.quick, "steps": request.steps}
     SEQUENCES_FILE.write_text(json.dumps(data, indent=2))
     return {"status": "ok", "name": request.name}
 
@@ -240,8 +237,7 @@ async def play_saved_sequence(name: str, req: Request):
         raise HTTPException(404, f"Sequence '{name}' not found")
 
     entry = data[name]
-    steps_data = entry["steps"] if isinstance(entry, dict) else entry
-    steps = [SequenceStep(**s) for s in steps_data]
+    steps = entry["steps"] if isinstance(entry, dict) else entry
     return await play_sequence(PlaySequenceRequest(steps=steps), req)
 
 @router.get("/movement-steps/{name}")
@@ -340,13 +336,13 @@ async def get_movement_steps(name: str):
                     result.extend(extract_steps(block, variables))
                 continue
 
-            # `for _ in range(N):` loop
+            # `for _ in range(N):` loop — preserve as repeat block
             range_m = re.search(r"for\s+\w+\s+in\s+range\((\d+)\)\s*:", line)
             if range_m:
                 repeat = int(range_m.group(1))
                 block, i = collect_block(lines, i + 1, indent)
-                for _ in range(repeat):
-                    result.extend(extract_steps(block, variables))
+                inner = extract_steps(block, variables)
+                result.append({"repeat": repeat, "steps": inner})
                 continue
 
             # `for a, b, c, d in varname[optional_slice]:` tuple-unpacking loop

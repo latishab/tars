@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Play, Plus, X, Zap, Pencil, Download, RotateCcw, Trash2, GripVertical } from 'lucide-react'
+import { Play, Plus, X, Zap, Pencil, Download, RotateCcw, Trash2, GripVertical, Repeat2 } from 'lucide-react'
 
 const DEFAULT_STEP = () => ({ left_height: 50, right_height: 50, left_leg: 50, right_leg: 50, speed: 0.85, hold_time: 0 })
+const DEFAULT_LOOP = () => ({ repeat: 2, steps: [DEFAULT_STEP()] })
 
 function PositionStepRow({ step, index, onUpdate, onDelete, onRelease, onGripPointerDown }) {
   const sliders = [
@@ -61,6 +62,48 @@ function MovementStepRow({ step, index, onDelete, onGripPointerDown }) {
   )
 }
 
+function LoopBlock({ loop, index, onUpdateRepeat, onUpdateInnerStep, onDeleteInnerStep, onAddInnerStep, onDelete, onGripPointerDown, onRelease }) {
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="flex items-center gap-2 px-2 py-1.5 bg-muted/50">
+        <div className="cursor-grab active:cursor-grabbing text-muted-foreground shrink-0" onPointerDown={onGripPointerDown}>
+          <GripVertical className="w-4 h-4" />
+        </div>
+        <Repeat2 className="w-4 h-4 text-muted-foreground shrink-0" />
+        <span className="text-xs text-muted-foreground">Repeat</span>
+        <input
+          type="number" min={1} max={20} value={loop.repeat}
+          onChange={e => onUpdateRepeat(index, Math.max(1, parseInt(e.target.value) || 1))}
+          className="w-14 h-6 text-xs text-center rounded border border-input bg-background font-mono"
+        />
+        <span className="text-xs text-muted-foreground">times</span>
+        <button onClick={() => onDelete(index)} className="ml-auto p-1 text-muted-foreground hover:text-destructive transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="p-2 space-y-2 pl-6">
+        {loop.steps.map((step, si) => (
+          <PositionStepRow
+            key={si}
+            step={step}
+            index={si}
+            onUpdate={(_, field, value) => onUpdateInnerStep(index, si, field, value)}
+            onDelete={() => onDeleteInnerStep(index, si)}
+            onRelease={onRelease}
+            onGripPointerDown={() => {}}
+          />
+        ))}
+        <button
+          onClick={() => onAddInnerStep(index)}
+          className="w-full text-xs text-muted-foreground hover:text-foreground border border-dashed border-border rounded py-1 transition-colors"
+        >
+          + step
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function SectionLabel({ children }) {
   return <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-1">{children}</div>
 }
@@ -97,8 +140,13 @@ function MovementBuilder() {
 
   const addPositionStep = () => setSteps(s => [...s, DEFAULT_STEP()])
   const addMovementStep = () => setSteps(s => [...s, { movement: selectedMovement, hold_time: 0 }])
+  const addLoop = () => setSteps(s => [...s, DEFAULT_LOOP()])
   const deleteStep = (i) => setSteps(s => s.filter((_, idx) => idx !== i))
   const updateStep = (i, field, value) => setSteps(s => s.map((step, idx) => idx === i ? { ...step, [field]: value } : step))
+  const updateLoopRepeat = (i, val) => setSteps(s => s.map((step, idx) => idx === i ? { ...step, repeat: val } : step))
+  const updateLoopInnerStep = (i, si, field, value) => setSteps(s => s.map((step, idx) => idx === i ? { ...step, steps: step.steps.map((inner, sidx) => sidx === si ? { ...inner, [field]: value } : inner) } : step))
+  const deleteLoopInnerStep = (i, si) => setSteps(s => s.map((step, idx) => idx === i ? { ...step, steps: step.steps.filter((_, sidx) => sidx !== si) } : step))
+  const addLoopInnerStep = (i) => setSteps(s => s.map((step, idx) => idx === i ? { ...step, steps: [...step.steps, DEFAULT_STEP()] } : step))
   const resetSteps = () => { setSteps([DEFAULT_STEP()]); setSequenceName(''); setFeedback('') }
 
   const handleDragStart = (e, i) => {
@@ -186,15 +234,18 @@ function MovementBuilder() {
     } catch (err) { console.error('Delete failed:', err) }
   }
 
+  const normalizeStep = (s) => {
+    if (s.repeat !== undefined) return { repeat: s.repeat, steps: (s.steps || []).map(normalizeStep) }
+    if (s.movement) return { movement: s.movement, hold_time: s.hold_time ?? 0 }
+    return { left_height: s.left_height ?? 50, right_height: s.right_height ?? 50, left_leg: s.left_leg ?? 50, right_leg: s.right_leg ?? 50, speed: s.speed ?? 0.85, hold_time: s.hold_time ?? 0 }
+  }
+
   const loadIntoEditor = (name) => {
     const loaded = savedSequences[name]
     if (!loaded) return
-    const steps = Array.isArray(loaded) ? loaded : (loaded.steps || [])
+    const rawSteps = Array.isArray(loaded) ? loaded : (loaded.steps || [])
     const type = Array.isArray(loaded) ? 'movement' : (loaded.type || 'movement')
-    setSteps(steps.map(s => s.movement
-      ? { movement: s.movement, hold_time: s.hold_time ?? 0 }
-      : { left_height: s.left_height, right_height: s.right_height, left_leg: s.left_leg, right_leg: s.right_leg, speed: s.speed, hold_time: s.hold_time ?? 0 }
-    ))
+    setSteps(rawSteps.map(normalizeStep))
     setSequenceName(name)
     setSeqType(type)
     setFeedback(`Loaded "${name}"`)
@@ -207,7 +258,7 @@ function MovementBuilder() {
       const res = await fetch(`/api/control/movement-steps/${encodeURIComponent(name)}`)
       if (res.ok) {
         const data = await res.json()
-        setSteps(data.steps)
+        setSteps((data.steps || []).map(normalizeStep))
         setSequenceName('')
         setFeedback(`Imported "${name}" — edit then save under a new name`)
       } else {
@@ -260,9 +311,11 @@ function MovementBuilder() {
                 className="cursor-default"
               >
                 <div className="text-xs text-muted-foreground mb-1">Step {i + 1}</div>
-                {step.movement
-                  ? <MovementStepRow step={step} index={i} onDelete={deleteStep} onGripPointerDown={() => { dragFromHandle.current = true }} />
-                  : <PositionStepRow step={step} index={i} onUpdate={updateStep} onDelete={deleteStep} onRelease={sendMoveLeg} onGripPointerDown={() => { dragFromHandle.current = true }} />
+                {step.repeat !== undefined
+                  ? <LoopBlock loop={step} index={i} onUpdateRepeat={updateLoopRepeat} onUpdateInnerStep={updateLoopInnerStep} onDeleteInnerStep={deleteLoopInnerStep} onAddInnerStep={addLoopInnerStep} onDelete={deleteStep} onGripPointerDown={() => { dragFromHandle.current = true }} onRelease={sendMoveLeg} />
+                  : step.movement
+                    ? <MovementStepRow step={step} index={i} onDelete={deleteStep} onGripPointerDown={() => { dragFromHandle.current = true }} />
+                    : <PositionStepRow step={step} index={i} onUpdate={updateStep} onDelete={deleteStep} onRelease={sendMoveLeg} onGripPointerDown={() => { dragFromHandle.current = true }} />
                 }
               </div>
             ))}
@@ -271,10 +324,16 @@ function MovementBuilder() {
           {/* Add steps */}
           <div className="space-y-2">
             <SectionLabel>Add Steps</SectionLabel>
-            <Button size="sm" variant="outline" onClick={addPositionStep} className="w-full">
-              <Plus className="w-4 h-4 mr-1" />
-              Add Position Step
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={addPositionStep} className="flex-1">
+                <Plus className="w-4 h-4 mr-1" />
+                Add Position Step
+              </Button>
+              <Button size="sm" variant="outline" onClick={addLoop} className="flex-1">
+                <Repeat2 className="w-4 h-4 mr-1" />
+                Add Loop
+              </Button>
+            </div>
             <div className="flex gap-1">
               <select
                 value={selectedMovement}
