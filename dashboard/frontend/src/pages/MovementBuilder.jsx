@@ -277,12 +277,20 @@ function MovementBuilder() {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center justify-between">
             <span>Sequence Editor</span>
-            <button
-              onClick={() => setLivePreview(v => !v)}
-              className={`text-xs px-2 py-1 rounded border transition-colors ${livePreview ? 'border-primary text-primary bg-primary/10' : 'border-input text-muted-foreground'}`}
-            >
-              {livePreview ? 'Live: on' : 'Live: off'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={resetSteps}
+                className="text-xs px-2 py-1 rounded border border-input text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => setLivePreview(v => !v)}
+                className={`text-xs px-2 py-1 rounded border transition-colors ${livePreview ? 'border-primary text-primary bg-primary/10' : 'border-input text-muted-foreground'}`}
+              >
+                {livePreview ? 'Live: on' : 'Live: off'}
+              </button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
