@@ -32,6 +32,9 @@ class MoveLegRequest(BaseModel):
     right_leg: int
     speed: float
 
+class VentilateRequest(BaseModel):
+    active: bool
+
 class PlaySequenceRequest(BaseModel):
     steps: list[dict]
 
@@ -131,6 +134,24 @@ async def move_legs(request: MoveLegRequest, req: Request):
     except Exception as e:
         logger.error(f"move-legs failed: {e}")
         raise HTTPException(500, str(e))
+
+@router.post("/ventilate")
+async def set_ventilate(request: VentilateRequest):
+    """Enter or exit ventilate pose."""
+    from modules.module_movements import ventilate_on, ventilate_off
+    from modules.module_cputemp import is_ventilating
+    loop = asyncio.get_event_loop()
+    if request.active:
+        await loop.run_in_executor(None, ventilate_on)
+    else:
+        await loop.run_in_executor(None, ventilate_off)
+    return {"status": "ok", "ventilating": is_ventilating()}
+
+@router.get("/ventilate")
+async def get_ventilate():
+    """Get current ventilate state."""
+    from modules.module_cputemp import is_ventilating
+    return {"ventilating": is_ventilating()}
 
 @router.post("/play-sequence")
 async def play_sequence(request: PlaySequenceRequest, req: Request):

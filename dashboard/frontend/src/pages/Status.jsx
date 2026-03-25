@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check } from 'lucide-react'
+import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check, Wind } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 function Status() {
   const [status, setStatus] = useState(null)
   const [error, setError] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [ventilating, setVentilating] = useState(false)
+  const [ventilateLoading, setVentilateLoading] = useState(false)
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -20,10 +22,34 @@ function Status() {
       }
     }
 
+    const fetchVentilate = async () => {
+      try {
+        const res = await fetch('/api/control/ventilate')
+        const data = await res.json()
+        setVentilating(data.ventilating)
+      } catch (_) {}
+    }
+
     fetchStatus()
+    fetchVentilate()
     const interval = setInterval(fetchStatus, 2000)
-    return () => clearInterval(interval)
+    const ventInterval = setInterval(fetchVentilate, 5000)
+    return () => { clearInterval(interval); clearInterval(ventInterval) }
   }, [])
+
+  const toggleVentilate = async () => {
+    setVentilateLoading(true)
+    try {
+      const res = await fetch('/api/control/ventilate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !ventilating }),
+      })
+      const data = await res.json()
+      setVentilating(data.ventilating)
+    } catch (_) {}
+    setVentilateLoading(false)
+  }
 
   if (error) {
     return (
@@ -122,6 +148,33 @@ function Status() {
                 {system.cpu_temp ? `${system.cpu_temp.toFixed(1)}C` : 'N/A'}
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Ventilation */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Wind className="w-5 h-5" />
+            Ventilation
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-muted-foreground">Status</div>
+              <div className={`text-xl font-semibold ${ventilating ? 'text-blue-500' : ''}`}>
+                {ventilating ? 'Active' : 'Off'}
+              </div>
+            </div>
+            <Button
+              variant={ventilating ? 'default' : 'outline'}
+              onClick={toggleVentilate}
+              disabled={ventilateLoading}
+            >
+              {ventilating ? 'Turn Off' : 'Turn On'}
+            </Button>
           </div>
         </CardContent>
       </Card>

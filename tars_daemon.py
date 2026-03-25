@@ -425,6 +425,14 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
         )
         logger.info("✓ Hardware controller initialized")
 
+        # Enter ventilate mode on startup if configured
+        from modules.module_config import load_config
+        from modules.module_movements import ventilate_on
+        _config = load_config()
+        if _config['MISC']['ventilate']:
+            logger.info("Ventilate mode enabled — positioning for airflow")
+            await asyncio.get_event_loop().run_in_executor(None, ventilate_on)
+
         # Start gRPC server (required for hardware control)
         if GRPC_AVAILABLE:
             try:

@@ -99,6 +99,4 @@ auto_shutdown = True
 # ============================================
 
 ventilate = False
-# Enable automatic ventilation pose
-# When True, robot periodically assumes a pose that improves airflow
-# Useful for preventing overheating during extended operation
+# When True, TARS enters ventilate pose on startup and auto-ventilates when CPU >= 60°C
