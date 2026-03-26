@@ -112,31 +112,31 @@ class WeatherAnimation:
 
         # Fonts
         try:
-            self.f_temp   = pygame.font.Font(str(_ASSETS / "astrolab.ttf"), 96)
-            self.f_unit   = pygame.font.Font(str(_ASSETS / "astrolab.ttf"), 28)
-            self.f_city   = pygame.font.Font(str(_ASSETS / "astrolab.ttf"), 24)
+            self.f_temp   = pygame.font.Font(str(_ASSETS / "astrolab.ttf"), 72)
+            self.f_unit   = pygame.font.Font(str(_ASSETS / "astrolab.ttf"), 32)
+            self.f_city   = pygame.font.Font(str(_ASSETS / "astrolab.ttf"), 28)
         except Exception:
-            self.f_temp   = pygame.font.SysFont("monospace", 96, bold=True)
-            self.f_unit   = pygame.font.SysFont("monospace", 28)
-            self.f_city   = pygame.font.SysFont("monospace", 24)
+            self.f_temp   = pygame.font.SysFont("monospace", 72, bold=True)
+            self.f_unit   = pygame.font.SysFont("monospace", 32)
+            self.f_city   = pygame.font.SysFont("monospace", 28)
 
         try:
-            self.f_label  = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 9)
-            self.f_value  = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 14)
-            self.f_cond   = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 11)
-            self.f_day    = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 10)
+            self.f_label  = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 13)
+            self.f_value  = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 16)
+            self.f_cond   = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 14)
+            self.f_day    = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 13)
         except Exception:
-            self.f_label  = pygame.font.SysFont("monospace", 9)
-            self.f_value  = pygame.font.SysFont("monospace", 14)
-            self.f_cond   = pygame.font.SysFont("monospace", 11)
-            self.f_day    = pygame.font.SysFont("monospace", 10)
+            self.f_label  = pygame.font.SysFont("monospace", 13)
+            self.f_value  = pygame.font.SysFont("monospace", 16)
+            self.f_cond   = pygame.font.SysFont("monospace", 14)
+            self.f_day    = pygame.font.SysFont("monospace", 13)
 
         try:
-            self.f_coord  = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 11)
-            self.f_meta   = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 10)
+            self.f_coord  = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 14)
+            self.f_meta   = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 13)
         except Exception:
-            self.f_coord  = pygame.font.SysFont("monospace", 11)
-            self.f_meta   = pygame.font.SysFont("monospace", 10)
+            self.f_coord  = pygame.font.SysFont("monospace", 14)
+            self.f_meta   = pygame.font.SysFont("monospace", 13)
 
         # State
         self._data    = None
