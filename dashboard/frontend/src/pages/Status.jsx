@@ -79,6 +79,7 @@ const APPS = [
   { name: 'eyes',     label: 'Eyes' },
   { name: 'spectrum', label: 'Spectrum' },
   { name: 'clock',    label: 'Clock' },
+  { name: 'weather',  label: 'Weather' },
 ]
 
 const SCREENSAVERS = [

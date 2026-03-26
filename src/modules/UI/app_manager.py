@@ -7,6 +7,7 @@ from typing import Optional
 from modules.modules_roboeyes import RoboEyes, Mood
 from modules.modules_spectrum import SpectrumVisualizer
 from modules.UI.apps.module_app_clock import ClockApp
+from modules.UI.apps.module_app_weather import WeatherApp
 
 
 class EyesApp:
@@ -74,6 +75,7 @@ AVAILABLE_APPS = {
     "eyes":     {"class": EyesApp,     "label": "Eyes"},
     "spectrum": {"class": SpectrumApp,  "label": "Spectrum"},
     "clock":    {"class": ClockApp,    "label": "Clock"},
+    "weather":  {"class": WeatherApp,  "label": "Weather"},
 }
 
 
