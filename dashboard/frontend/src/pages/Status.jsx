@@ -2,15 +2,21 @@ import { useState, useEffect } from 'react'
 import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check, Wind, Info, Monitor } from 'lucide-react'
 
 // ── Gauge bar ─────────────────────────────────────────────────────────────
-function GaugeBar({ value, max = 100, warn = 80, danger = 95, low = 20 }) {
+function batteryColor(level) {
+  if (level > 60) return 'hsl(141 70% 45%)'   // green
+  if (level > 20) return 'hsl(35 95% 50%)'    // orange
+  return 'hsl(0 80% 50%)'                      // red
+}
+
+function GaugeBar({ value, max = 100, warn = 80, danger = 95, low = 20, battery = false }) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100))
-  const color = value <= low
-    ? 'hsl(0 80% 50%)'
+  const color = battery
+    ? batteryColor(value)
     : value >= danger
-    ? 'hsl(0 80% 50%)'
-    : value >= warn
-    ? 'hsl(191 100% 46%)'
-    : 'hsl(191 100% 46%)'
+      ? 'hsl(0 80% 50%)'
+      : value >= warn
+        ? 'hsl(35 95% 50%)'
+        : 'hsl(191 100% 46%)'
   return (
     <div style={{ position: 'relative', height: 3, background: 'hsl(214 28% 11%)', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${pct}%`, background: color, transition: 'width 0.6s ease', boxShadow: `0 0 6px ${color}` }} />
@@ -270,7 +276,7 @@ export default function Status() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'center', marginBottom: 12 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 48, color: bat.level > 20 ? 'hsl(210 22% 90%)' : 'hsl(0 80% 60%)', lineHeight: 1 }}>{bat.level ?? '—'}</span>
+                  <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 48, color: batteryColor(bat.level ?? 0), lineHeight: 1 }}>{bat.level ?? '—'}</span>
                   <span style={{ fontSize: 14, color: 'hsl(214 14% 45%)', letterSpacing: '0.05em' }}>%</span>
                 </div>
                 <div style={{ fontSize: 9, letterSpacing: '0.15em', color: 'hsl(214 14% 40%)', marginTop: 2 }}>
@@ -284,7 +290,7 @@ export default function Status() {
                 <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 16, color: 'hsl(214 14% 55%)' }}>{bat.current != null ? `${Math.round(bat.current)}mA` : '—'}</div>
               </div>
             </div>
-            <GaugeBar value={bat.level ?? 0} max={100} low={20} warn={50} />
+            <GaugeBar value={bat.level ?? 0} max={100} battery />
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 9, letterSpacing: '0.1em', color: 'hsl(214 14% 30%)' }}>
               <span>0%</span><span>50%</span><span>100%</span>
             </div>
