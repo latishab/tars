@@ -77,9 +77,7 @@ const APPS = [
 
 const SCREENSAVERS = [
   { name: 'starfield',  label: 'Starfield' },
-  { name: 'hyperspace', label: 'Hyperspace' },
-  { name: 'defrag',     label: 'Defrag' },
-  { name: 'dream',      label: 'Dream' },
+  { name: 'endurance',  label: 'Endurance' },
 ]
 
 function DisplayPanel({ displayStatus, onSwitchApp, onActivateScreensaver, onDeactivateScreensaver, loading }) {
