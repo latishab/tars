@@ -119,27 +119,29 @@ function ControllerCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground mb-2">Face Buttons</p>
-          <div className="space-y-2">
-            {FACE_BUTTONS.map(({ key, label }) => (
-              <div key={key} className="flex items-center gap-3">
-                <span className="text-sm w-20 shrink-0 font-mono">{label}</span>
-                <MovementSelect btnKey={key} />
-              </div>
-            ))}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Face Buttons</p>
+            <div className="space-y-2">
+              {FACE_BUTTONS.map(({ key, label }) => (
+                <div key={key} className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground font-mono">{label}</span>
+                  <MovementSelect btnKey={key} />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="border-t pt-4">
-          <p className="text-sm font-medium text-muted-foreground mb-2">D-Pad</p>
-          <div className="space-y-2">
-            {DPAD_BUTTONS.map(({ key, label }) => (
-              <div key={key} className="flex items-center gap-3">
-                <span className="text-sm w-20 shrink-0">{label}</span>
-                <MovementSelect btnKey={key} />
-              </div>
-            ))}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">D-Pad</p>
+            <div className="space-y-2">
+              {DPAD_BUTTONS.map(({ key, label }) => (
+                <div key={key} className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                  <MovementSelect btnKey={key} />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 

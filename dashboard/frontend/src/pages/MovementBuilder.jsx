@@ -5,24 +5,31 @@ import TarsPreview from './TarsPreview'
 const DEFAULT_STEP = () => ({ left_height: 50, right_height: 50, left_leg: 50, right_leg: 50, speed: 0.85, hold_time: 0 })
 const DEFAULT_LOOP = () => ({ repeat: 2, steps: [DEFAULT_STEP()] })
 
-// ── Servo slider field ─────────────────────────────────────────────────────
+// ── Servo stepper field ────────────────────────────────────────────────────
 function ServoField({ field, label, min, max, step: stepVal, value, onChange, onRelease }) {
-  const pct = ((value - min) / (max - min) * 100).toFixed(1)
+  const isFloat = field === 'speed' || field === 'hold_time'
   const displayVal = field === 'speed' ? value.toFixed(2) : field === 'hold_time' ? value.toFixed(1) : value
+  const clamp = v => Math.max(min, Math.min(max, isFloat ? Math.round(v / stepVal) * stepVal : Math.round(v)))
+  const parse = v => isFloat ? parseFloat(v) : parseInt(v)
+
+  const step = (dir) => {
+    const next = clamp(value + dir * stepVal)
+    onChange(field, isFloat ? parseFloat(next.toFixed(2)) : next)
+  }
+
   return (
     <div className="servo-field">
-      <div className="servo-meta">
-        <span className="servo-label">{label}</span>
-        <span className="servo-value">{displayVal}</span>
+      <span className="servo-label">{label}</span>
+      <div className="servo-stepper">
+        <button className="servo-step-btn" onPointerDown={() => step(-1)} onPointerUp={onRelease}>−</button>
+        <input
+          type="number" min={min} max={max} step={stepVal} value={displayVal}
+          className="servo-step-input"
+          onChange={e => { const v = clamp(parse(e.target.value)); onChange(field, v) }}
+          onBlur={onRelease}
+        />
+        <button className="servo-step-btn" onPointerDown={() => step(1)} onPointerUp={onRelease}>+</button>
       </div>
-      <input
-        type="range" min={min} max={max} step={stepVal} value={value}
-        style={{ '--pct': `${pct}%` }}
-        onChange={e => onChange(field, field === 'speed' || field === 'hold_time' ? parseFloat(e.target.value) : parseInt(e.target.value))}
-        onMouseUp={onRelease}
-        onTouchEnd={onRelease}
-        className="servo-slider"
-      />
     </div>
   )
 }
