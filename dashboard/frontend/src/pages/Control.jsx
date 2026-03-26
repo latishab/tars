@@ -184,7 +184,7 @@ function Control() {
 
           <SectionLabel>Gestures</SectionLabel>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {[['wave_right','Wave R'],['wave_left','Wave L'],['bow','Bow'],['pose','Pose'],['laugh','Laugh'],['neutral_legs','Neutral']].map(([name, label]) => (
+            {[['wave_right','Wave R'],['wave_left','Wave L'],['bow','Bow'],['pose','Pose'],['laugh','Laugh'],['swing_legs','Swing Legs'],['neutral_legs','Neutral']].map(([name, label]) => (
               <CmdBtn key={name} label={label} onClick={() => exec(name)} disabled={executing !== null} />
             ))}
           </div>

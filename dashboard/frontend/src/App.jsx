@@ -18,7 +18,7 @@ const NAV = [
 ]
 
 function App() {
-  const [light, setLight] = useState(() => localStorage.getItem('tars-theme') === 'light')
+  const [light, setLight] = useState(() => { const l = localStorage.getItem('tars-theme') === 'light'; document.documentElement.setAttribute('data-theme', l ? 'light' : 'dark'); return l })
 
   useEffect(() => {
     localStorage.setItem("tars-theme", light ? "light" : "dark")

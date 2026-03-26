@@ -435,7 +435,7 @@ export default function TarsPreview({ steps, movementName = '', isLocomotion = f
     <div className="flex flex-col gap-2">
       <div
         ref={containerRef}
-        className="w-full rounded-lg overflow-hidden"
+        className="w-full rounded-lg overflow-hidden tars-no-invert"
         style={{ height: '320px', background: '#0a0a14' }}
       />
       <div className="flex gap-2">
