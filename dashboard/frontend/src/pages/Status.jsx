@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check, Wind, Info } from 'lucide-react'
+import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check, Wind, Info, Monitor } from 'lucide-react'
 
 // ── Gauge bar ─────────────────────────────────────────────────────────────
 function GaugeBar({ value, max = 100, warn = 80, danger = 95, low = 20 }) {
@@ -68,6 +68,104 @@ function Timestamp() {
   return <span style={{ fontFamily: "'Share Tech Mono', monospace", fontSize: 10, letterSpacing: '0.1em', color: 'hsl(214 14% 35%)' }}>{fmt(time)}</span>
 }
 
+// ── Display Panel ─────────────────────────────────────────────────────────
+const APPS = [
+  { name: 'eyes',     label: 'Eyes' },
+  { name: 'spectrum', label: 'Spectrum' },
+  { name: 'clock',    label: 'Clock' },
+]
+
+const SCREENSAVERS = [
+  { name: 'starfield',  label: 'Starfield' },
+  { name: 'hyperspace', label: 'Hyperspace' },
+  { name: 'defrag',     label: 'Defrag' },
+  { name: 'dream',      label: 'Dream' },
+]
+
+function DisplayPanel({ displayStatus, onSwitchApp, onActivateScreensaver, onDeactivateScreensaver, loading }) {
+  const activeApp = displayStatus?.active_app
+  const screensaverActive = displayStatus?.screensaver_active
+  const activeScreensaver = displayStatus?.active_screensaver
+
+  return (
+    <Panel title="Display Mode" icon={Monitor}>
+      {/* App section */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(214 14% 40%)', marginBottom: 8 }}>
+          APP
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {APPS.map(app => {
+            const isActive = !screensaverActive && activeApp === app.name
+            return (
+              <button
+                key={app.name}
+                onClick={() => onSwitchApp(app.name)}
+                disabled={loading}
+                className={`tars-btn ${isActive ? 'tars-btn-cyan' : 'tars-btn-ghost'}`}
+                style={{ fontSize: 10, letterSpacing: '0.12em', minWidth: 72 }}
+              >
+                {app.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div style={{ height: 1, background: 'hsl(214 28% 11%)', marginBottom: 14 }} />
+
+      {/* Screensaver section */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(214 14% 40%)' }}>
+            SCREENSAVER
+          </div>
+          {screensaverActive && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{
+                width: 5, height: 5, borderRadius: '50%',
+                background: 'hsl(191 100% 44%)',
+                boxShadow: '0 0 6px hsl(191 100% 44%)',
+                animation: 'tars-pulse-cyan 1.2s ease-in-out infinite',
+              }} />
+              <span style={{ fontSize: 9, letterSpacing: '0.14em', color: 'hsl(191 100% 55%)' }}>
+                {activeScreensaver ? activeScreensaver.toUpperCase() : 'ACTIVE'}
+              </span>
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          {SCREENSAVERS.map(ss => {
+            const isActive = screensaverActive && activeScreensaver === ss.name
+            return (
+              <button
+                key={ss.name}
+                onClick={() => onActivateScreensaver(ss.name)}
+                disabled={loading}
+                className={`tars-btn ${isActive ? 'tars-btn-cyan' : 'tars-btn-ghost'}`}
+                style={{ fontSize: 10, letterSpacing: '0.12em', minWidth: 78 }}
+              >
+                {ss.label}
+              </button>
+            )
+          })}
+          {screensaverActive && (
+            <button
+              onClick={onDeactivateScreensaver}
+              disabled={loading}
+              className="tars-btn tars-btn-ghost"
+              style={{ fontSize: 10, letterSpacing: '0.12em', color: 'hsl(0 80% 60%)', borderColor: 'hsl(0 80% 30% / 0.4)' }}
+            >
+              Deactivate
+            </button>
+          )}
+        </div>
+      </div>
+    </Panel>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────
 export default function Status() {
   const [status, setStatus] = useState(null)
@@ -75,6 +173,8 @@ export default function Status() {
   const [copied, setCopied] = useState(false)
   const [ventilating, setVentilating] = useState(false)
   const [ventLoading, setVentLoading] = useState(false)
+  const [displayStatus, setDisplayStatus] = useState(null)
+  const [displayLoading, setDisplayLoading] = useState(false)
 
   useEffect(() => {
     const fetch_ = async () => {
@@ -85,10 +185,15 @@ export default function Status() {
       try { const r = await fetch('/api/control/ventilate'); const d = await r.json(); setVentilating(d.ventilating) }
       catch {}
     }
-    fetch_(); fetchVent()
+    const fetchDisplay = async () => {
+      try { const r = await fetch('/api/display/status'); if (r.ok) setDisplayStatus(await r.json()) }
+      catch {}
+    }
+    fetch_(); fetchVent(); fetchDisplay()
     const t1 = setInterval(fetch_, 2000)
     const t2 = setInterval(fetchVent, 5000)
-    return () => { clearInterval(t1); clearInterval(t2) }
+    const t3 = setInterval(fetchDisplay, 2000)
+    return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3) }
   }, [])
 
   const toggleVent = async () => {
@@ -96,6 +201,33 @@ export default function Status() {
     try { const r = await fetch('/api/control/ventilate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ active: !ventilating }) }); setVentilating((await r.json()).ventilating) }
     catch {}
     setVentLoading(false)
+  }
+
+  const switchApp = async (name) => {
+    setDisplayLoading(true)
+    try {
+      const r = await fetch('/api/display/apps/launch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) })
+      if (r.ok) setDisplayStatus(prev => prev ? { ...prev, active_app: name, screensaver_active: false, active_screensaver: null } : prev)
+    } catch {}
+    setDisplayLoading(false)
+  }
+
+  const activateScreensaver = async (name) => {
+    setDisplayLoading(true)
+    try {
+      const r = await fetch('/api/display/screensavers/activate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) })
+      if (r.ok) { const d = await r.json(); setDisplayStatus(prev => prev ? { ...prev, screensaver_active: true, active_screensaver: d.active_screensaver ?? name } : prev) }
+    } catch {}
+    setDisplayLoading(false)
+  }
+
+  const deactivateScreensaver = async () => {
+    setDisplayLoading(true)
+    try {
+      const r = await fetch('/api/display/screensavers/deactivate', { method: 'POST' })
+      if (r.ok) setDisplayStatus(prev => prev ? { ...prev, screensaver_active: false, active_screensaver: null } : prev)
+    } catch {}
+    setDisplayLoading(false)
   }
 
   const copyToClipboard = (text) => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) }
@@ -168,6 +300,17 @@ export default function Status() {
               <MetricTile label="Core Temp" value={sys.cpu_temp?.toFixed(1)} unit="°C" gauge={sys.cpu_temp} gaugeMax={85} warn={65} danger={80} />
             </div>
           </Panel>
+
+          {/* ── Display Mode ─────────────────────────────────────────── */}
+          {displayStatus && (
+            <DisplayPanel
+              displayStatus={displayStatus}
+              onSwitchApp={switchApp}
+              onActivateScreensaver={activateScreensaver}
+              onDeactivateScreensaver={deactivateScreensaver}
+              loading={displayLoading}
+            />
+          )}
 
           {/* ── Ventilation ──────────────────────────────────────────── */}
           <Panel title="Thermal Management" icon={Wind}>
