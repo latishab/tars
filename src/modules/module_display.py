@@ -308,7 +308,12 @@ class DisplayManager:
             dt = min(current_time - last_time, 0.05)  # cap at 50 ms to prevent animation jumps
             last_time = current_time
 
-            portrait_surface.fill(self.bg_color)
+            # OpenGL screensavers manage their own flip — skip the pygame blit pipeline
+            active_anim = self.screensaver_mgr.get_active_animation() if screensaver_active else None
+            opengl_mode = screensaver_active and active_anim and getattr(active_anim, "uses_opengl", False)
+
+            if not opengl_mode:
+                portrait_surface.fill(self.bg_color)
 
             if screensaver_active:
                 self.screensaver_mgr.render()
@@ -316,12 +321,12 @@ class DisplayManager:
                 self.screensaver_mgr.check_timeout()
                 self.app_mgr.render(dt)
 
-            self.status_bar.draw(portrait_surface)
-            self._draw_log_overlay(portrait_surface)
-
-            rotated = pygame.transform.rotozoom(portrait_surface, 270, 1.0)
-            screen.blit(rotated, (0, 0))
-            pygame.display.flip()
+            if not opengl_mode:
+                self.status_bar.draw(portrait_surface)
+                self._draw_log_overlay(portrait_surface)
+                rotated = pygame.transform.rotozoom(portrait_surface, 270, 1.0)
+                screen.blit(rotated, (0, 0))
+                pygame.display.flip()
             clock.tick(60)
 
             now = time.time()

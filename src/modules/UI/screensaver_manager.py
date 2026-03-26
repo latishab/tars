@@ -55,6 +55,9 @@ class ScreensaverManager:
     def get_active_name(self) -> Optional[str]:
         return self._active_name
 
+    def get_active_animation(self):
+        return self._animation
+
     def get_available(self) -> list:
         return list(AVAILABLE_ANIMATIONS.keys())
 

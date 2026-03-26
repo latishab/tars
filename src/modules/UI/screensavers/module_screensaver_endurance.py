@@ -247,6 +247,8 @@ def create_sky_sphere(radius=50, segments=32):
 
 
 class EnduranceAnimation:
+    uses_opengl = True  # signals the render loop to skip its own blit/flip
+
     def __init__(self, screen, width, height, show_time=False, rotation=0):
         self.screen = screen
         self.width = width
