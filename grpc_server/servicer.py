@@ -418,3 +418,40 @@ class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):
         if self.webrtc and hasattr(self.webrtc, 'mic_track') and self.webrtc.mic_track:
             muted = self.webrtc.mic_track._muted
         return tars_pb2.MicMuteResponse(muted=muted)
+
+    def LaunchApp(self, request, context):
+        """Switch display to a named app (eyes/spectrum/clock)."""
+        if self.display is None:
+            return tars_pb2.AppResponse(success=False, error="Display not available")
+        success = self.display.launch_app(request.name)
+        if not success:
+            return tars_pb2.AppResponse(success=False, error=f"Unknown app: {request.name}")
+        logger.info(f"gRPC LaunchApp: {request.name}")
+        return tars_pb2.AppResponse(success=True)
+
+    def ListApps(self, request, context):
+        """List available display apps."""
+        apps = []
+        if self.display:
+            for a in self.display.get_available_apps():
+                apps.append(tars_pb2.AppInfo(name=a["name"], label=a["label"]))
+        return tars_pb2.AppListResponse(apps=apps)
+
+    def ActivateScreensaver(self, request, context):
+        """Force-activate a screensaver by name (or random if name is empty)."""
+        if self.display:
+            name = request.name if request.name else None
+            self.display.activate_screensaver(name)
+            logger.info(f"gRPC ActivateScreensaver: {name or 'random'}")
+        return tars_pb2.Empty()
+
+    def DeactivateScreensaver(self, request, context):
+        """Deactivate screensaver, returning to active app."""
+        if self.display:
+            self.display.deactivate_screensaver()
+        return tars_pb2.Empty()
+
+    def ListScreensavers(self, request, context):
+        """List available screensavers."""
+        names = self.display.get_available_screensavers() if self.display else []
+        return tars_pb2.ScreensaverListResponse(names=names)

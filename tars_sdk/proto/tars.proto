@@ -20,6 +20,11 @@ service TarsService {
   // Display Control
   rpc SetEmotion(EmotionRequest) returns (Empty);
   rpc SetEyeState(EyeStateRequest) returns (Empty);
+  rpc LaunchApp(AppRequest) returns (AppResponse);
+  rpc ListApps(Empty) returns (AppListResponse);
+  rpc ActivateScreensaver(ScreensaverActivateRequest) returns (Empty);
+  rpc DeactivateScreensaver(Empty) returns (Empty);
+  rpc ListScreensavers(Empty) returns (ScreensaverListResponse);
 
   // Camera
   rpc CaptureCamera(CaptureRequest) returns (CaptureResponse);
@@ -40,8 +45,8 @@ service TarsService {
 message Empty {}
 
 message HealthResponse {
-  string status = 1;           // "running" or "starting"
-  string version = 2;          // Daemon version
+  string status = 1;
+  string version = 2;
   bool grpc_available = 3;
   bool webrtc_available = 4;
   bool webrtc_connected = 5;
@@ -59,54 +64,54 @@ message HardwareStatus {
 }
 
 message VersionResponse {
-  string version = 1;             // Semantic version "0.2.0"
-  string git_commit = 2;          // Git commit hash (short)
-  string build_date = 3;          // Build date ISO format
-  string python_version = 4;      // Python version
-  string platform = 5;            // Platform info
-  string minimum_client = 6;      // Minimum compatible client version
+  string version = 1;
+  string git_commit = 2;
+  string build_date = 3;
+  string python_version = 4;
+  string platform = 5;
+  string minimum_client = 6;
 }
 
 message UpdateCheckResponse {
   bool update_available = 1;
   string current_version = 2;
   string latest_version = 3;
-  string severity = 4;            // "none", "optional", "recommended", "required"
-  string release_notes = 5;       // Brief release notes
-  string pypi_url = 6;            // PyPI package URL
-  string github_url = 7;          // GitHub release URL
+  string severity = 4;
+  string release_notes = 5;
+  string pypi_url = 6;
+  string github_url = 7;
 }
 
 message MoveRequest {
-  string movement = 1;  // "wave", "nod", "shake_head", etc.
-  float speed = 2;      // 0.0-1.0, default 1.0
+  string movement = 1;
+  float speed = 2;
 }
 
 message MoveResponse {
   bool success = 1;
-  float duration = 2;   // How long the movement takes
-  string error = 3;     // Error message if failed
+  float duration = 2;
+  string error = 3;
 }
 
 message EmotionRequest {
-  string emotion = 1;   // "happy", "sad", "angry", "surprised", "neutral"
+  string emotion = 1;
 }
 
 message EyeStateRequest {
-  string state = 1;     // "idle", "listening", "thinking", "speaking"
+  string state = 1;
 }
 
 message CaptureRequest {
-  int32 width = 1;      // Optional, default 640
-  int32 height = 2;     // Optional, default 480
-  int32 quality = 3;    // JPEG quality 1-100, default 80
+  int32 width = 1;
+  int32 height = 2;
+  int32 quality = 3;
 }
 
 message CaptureResponse {
-  bytes image = 1;      // JPEG bytes
+  bytes image = 1;
   int32 width = 2;
   int32 height = 3;
-  string format = 4;    // "jpeg"
+  string format = 4;
 }
 
 message StatusResponse {
@@ -119,7 +124,7 @@ message StatusResponse {
 }
 
 message BatteryStatus {
-  int32 level = 1;      // 0-100
+  int32 level = 1;
   bool charging = 2;
   float voltage = 3;
   float current = 4;
@@ -128,11 +133,11 @@ message BatteryStatus {
 message MovementStatus {
   bool moving = 1;
   string movement = 2;
-  float progress = 3;   // 0.0-1.0
+  float progress = 3;
 }
 
 message AudioLevelRequest {
-  float level = 1;      // 0.0-1.0
+  float level = 1;
 }
 
 message AudioLevelResponse {
@@ -145,4 +150,31 @@ message MicMuteRequest {
 
 message MicMuteResponse {
   bool muted = 1;
+}
+
+// Display app and screensaver messages
+message AppRequest {
+  string name = 1;
+}
+
+message AppResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message AppInfo {
+  string name = 1;
+  string label = 2;
+}
+
+message AppListResponse {
+  repeated AppInfo apps = 1;
+}
+
+message ScreensaverActivateRequest {
+  string name = 1;
+}
+
+message ScreensaverListResponse {
+  repeated string names = 1;
 }
