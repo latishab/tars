@@ -440,12 +440,12 @@ export default function TarsPreview({ steps, movementName = '', isLocomotion = f
       />
       <div className="flex gap-2">
         {!playing ? (
-          <Button size="sm" onClick={play} variant="outline" className="flex-1">
+          <Button size="sm" onClick={play} className="flex-1">
             <Play className="w-4 h-4 mr-1" />
             Preview
           </Button>
         ) : (
-          <Button size="sm" variant="outline" onClick={stop} className="flex-1">
+          <Button size="sm" onClick={stop} className="flex-1">
             <Square className="w-4 h-4 mr-1" />
             Stop Preview
           </Button>

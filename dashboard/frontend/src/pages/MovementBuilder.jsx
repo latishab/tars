@@ -409,7 +409,7 @@ function MovementBuilder() {
 
           {/* 3D Preview */}
           <Panel title="3D Preview" badge={previewMovementName ? previewMovementName.toUpperCase() : 'EDITOR'}>
-            <div className="tars-no-invert"><TarsPreview steps={steps} movementName={previewMovementName} isLocomotion={previewIsLocomotion} /></div>
+            <TarsPreview steps={steps} movementName={previewMovementName} isLocomotion={previewIsLocomotion} />
           </Panel>
 
           {/* Execution */}
