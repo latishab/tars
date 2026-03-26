@@ -5,15 +5,15 @@ import { Input } from '@/components/ui/input'
 import { Download, RefreshCw, Wifi, AlertCircle, CheckCircle, Signal, Lock, WifiOff, Gamepad2 } from 'lucide-react'
 
 const FACE_BUTTONS = [
-  { key: 'BTN_SOUTH',    label: '✕ / A' },
-  { key: 'BTN_SOUTH+R1', label: '✕ / A + R1' },
-  { key: 'BTN_EAST',     label: '○ / B' },
-  { key: 'BTN_EAST+R1',  label: '○ / B + R1' },
-  { key: 'BTN_EAST+R2',  label: '○ / B + R2' },
-  { key: 'BTN_NORTH',    label: '△ / Y' },
-  { key: 'BTN_NORTH+R1', label: '△ / Y + R1' },
-  { key: 'BTN_WEST',     label: '□ / X' },
-  { key: 'BTN_WEST+R1',  label: '□ / X + R1' },
+  { key: 'BTN_SOUTH',    label: '✕ / A / B' },
+  { key: 'BTN_SOUTH+R1', label: '✕ / A / B + R1' },
+  { key: 'BTN_EAST',     label: '○ / B / A' },
+  { key: 'BTN_EAST+R1',  label: '○ / B / A + R1' },
+  { key: 'BTN_EAST+R2',  label: '○ / B / A + R2' },
+  { key: 'BTN_NORTH',    label: '△ / Y / X' },
+  { key: 'BTN_NORTH+R1', label: '△ / Y / X + R1' },
+  { key: 'BTN_WEST',     label: '□ / X / Y' },
+  { key: 'BTN_WEST+R1',  label: '□ / X / Y + R1' },
 ]
 
 const DPAD_BUTTONS = [
@@ -117,6 +117,7 @@ function ControllerCard() {
           <Gamepad2 className="w-5 h-5" />
           Controller
         </CardTitle>
+        <CardDescription className="text-xs">PS / Xbox / Nintendo (8BitDo)</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-0">
