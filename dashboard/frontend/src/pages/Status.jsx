@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check, Wind } from 'lucide-react'
+import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check, Wind, Info } from 'lucide-react'
 
 // ── Gauge bar ─────────────────────────────────────────────────────────────
 function GaugeBar({ value, max = 100, warn = 80, danger = 95, low = 20 }) {
@@ -9,8 +9,8 @@ function GaugeBar({ value, max = 100, warn = 80, danger = 95, low = 20 }) {
     : value >= danger
     ? 'hsl(0 80% 50%)'
     : value >= warn
-    ? 'hsl(36 100% 46%)'
-    : 'hsl(36 100% 46%)'
+    ? 'hsl(191 100% 46%)'
+    : 'hsl(191 100% 46%)'
   return (
     <div style={{ position: 'relative', height: 3, background: 'hsl(214 28% 11%)', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${pct}%`, background: color, transition: 'width 0.6s ease', boxShadow: `0 0 6px ${color}` }} />
@@ -21,7 +21,7 @@ function GaugeBar({ value, max = 100, warn = 80, danger = 95, low = 20 }) {
 // ── Metric tile ──────────────────────────────────────────────────────────
 function MetricTile({ label, value, unit, sub, gauge, gaugeLow, gaugeWarn, gaugeMax = 100 }) {
   return (
-    <div style={{ padding: '12px 14px', background: 'hsl(214 35% 5%)', border: '1px solid hsl(214 28% 11%)', borderLeft: '2px solid hsl(36 100% 46% / 0.25)' }}>
+    <div style={{ padding: '12px 14px', background: 'hsl(214 35% 5%)', border: '1px solid hsl(214 28% 11%)', borderLeft: '2px solid hsl(191 100% 46% / 0.25)' }}>
       <div style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(214 14% 40%)', marginBottom: 6 }}>{label}</div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 4 }}>
         <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 28, color: 'hsl(210 22% 88%)', lineHeight: 1 }}>{value ?? '—'}</span>
@@ -50,7 +50,7 @@ function Panel({ title, icon: Icon, children, action }) {
     <div className="tars-panel tars-panel-inner-br">
       <div className="tars-panel-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {Icon && <Icon size={12} style={{ color: 'hsl(36 100% 46% / 0.7)' }} />}
+          {Icon && <Icon size={12} style={{ color: 'hsl(191 100% 46% / 0.7)' }} />}
           <span className="tars-panel-title">{title}</span>
         </div>
         {action}
@@ -111,7 +111,7 @@ export default function Status() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid hsl(214 28% 11%)' }}>
         <div>
-          <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(36 100% 55%)' }}>SYSTEM TELEMETRY</div>
+          <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(191 100% 55%)' }}>SYSTEM TELEMETRY</div>
           <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 38%)', marginTop: 1 }}>TARS UNIT — LIVE READOUT</div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
@@ -149,7 +149,7 @@ export default function Status() {
               </div>
               <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <div style={{ fontSize: 9, letterSpacing: '0.12em', color: 'hsl(214 14% 40%)' }}>VOLTAGE</div>
-                <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 22, color: 'hsl(36 100% 55%)' }}>{bat.voltage != null ? `${bat.voltage.toFixed(2)}V` : '—'}</div>
+                <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 22, color: 'hsl(191 100% 55%)' }}>{bat.voltage != null ? `${bat.voltage.toFixed(2)}V` : '—'}</div>
                 <div style={{ fontSize: 9, letterSpacing: '0.12em', color: 'hsl(214 14% 40%)' }}>CURRENT</div>
                 <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 16, color: 'hsl(214 14% 55%)' }}>{bat.current != null ? `${Math.round(bat.current)}mA` : '—'}</div>
               </div>
@@ -196,8 +196,19 @@ export default function Status() {
           <Panel title="Network & Links" icon={Wifi}>
             {net.connection_mode && (
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 40%)', marginBottom: 6 }}>CONNECTION MODE</div>
-                <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 18, letterSpacing: '0.1em', color: 'hsl(36 100% 55%)', textTransform: 'uppercase', marginBottom: 6 }}>{net.connection_mode}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <span style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 40%)' }}>CONNECTION MODE</span>
+                  <div style={{ position: 'relative', display: 'inline-flex' }} className="tars-info-trigger">
+                    <Info size={10} style={{ color: 'hsl(191 100% 44% / 0.6)', cursor: 'default' }} />
+                    <div className="tars-info-tip">
+                      <div style={{ marginBottom: 4, color: 'hsl(191 100% 55%)', letterSpacing: '0.12em' }}>LOCAL</div>
+                      <div style={{ marginBottom: 8, color: 'hsl(214 14% 55%)' }}>Pi on the same LAN/WiFi — direct network access.</div>
+                      <div style={{ marginBottom: 4, color: 'hsl(191 100% 55%)', letterSpacing: '0.12em' }}>TAILSCALE</div>
+                      <div style={{ color: 'hsl(214 14% 55%)' }}>Routed via Tailscale VPN — works from anywhere.</div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 18, letterSpacing: '0.1em', color: 'hsl(191 100% 55%)', textTransform: 'uppercase', marginBottom: 6 }}>{net.connection_mode}</div>
                 {net.connection_mode === 'tailscale' && net.tailscale_ip && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'hsl(214 35% 5%)', border: '1px solid hsl(214 28% 12%)' }}>
                     <span style={{ flex: 1, fontSize: 11, letterSpacing: '0.06em', color: 'hsl(191 100% 55%)' }}>{net.tailscale_ip}</span>

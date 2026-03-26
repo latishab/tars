@@ -5,7 +5,7 @@
 /* ── Google Fonts ─────────────────────────────────────────────────────────── */
 /* Share Tech Mono (data readouts) + Rajdhani (headings) loaded in index.html  */
 
-/* ── TARS Dark Theme (always dark — no light mode) ──────────────────────── */
+/* ── TARS Theme ────────────────────────────────────────────────── */
 @layer base {
   :root {
     /* shadcn/ui CSS var mapping → TARS palette */
@@ -13,7 +13,7 @@
     --foreground:         210 22% 84%;   /* #c0ceda */
     --card:               216 40%  5%;   /* #07090f */
     --card-foreground:    210 22% 84%;
-    --primary:             36 100% 46%;  /* #eb8c00 amber */
+    --primary:             191 100% 44%;  /* #00c4e0 cyan */
     --primary-foreground: 214 45%  3%;
     --secondary:          214 28% 11%;
     --secondary-foreground: 210 22% 84%;
@@ -31,8 +31,10 @@
     --radius:             0rem;          /* sharp corners everywhere */
   }
 
-  /* Force always-dark — ignore prefers-color-scheme */
+  /* Base color scheme — overridden per user preference */
   html { color-scheme: dark; }
+/* Light mode: inverted via filter in App.jsx — suppress body noise texture */
+.light-mode-texture-reset { background-image: none; }
 
   * { @apply border-border; box-sizing: border-box; }
 
@@ -61,14 +63,14 @@
   position: absolute;
   width: 14px;
   height: 14px;
-  border-color: hsl(36 100% 46% / 0.7);
+  border-color: hsl(191 100% 46% / 0.7);
   border-style: solid;
   pointer-events: none;
   z-index: 1;
 }
 .tars-panel::before {
-  top: -1px; left: -1px;
-  border-width: 1px 0 0 1px;
+  top: -1px; right: -1px;
+  border-width: 1px 1px 0 0;
 }
 .tars-panel::after {
   bottom: -1px; right: -1px;
@@ -82,12 +84,12 @@
   position: absolute;
   width: 14px;
   height: 14px;
-  border-color: hsl(36 100% 46% / 0.7);
+  border-color: hsl(191 100% 46% / 0.7);
   border-style: solid;
   pointer-events: none;
 }
 .tars-panel-inner-br::before {
-  top: -1px; right: -1px;
+  top: -1px; left: auto; right: -1px;
   border-width: 1px 1px 0 0;
 }
 .tars-panel-inner-br::after {
@@ -110,7 +112,7 @@
   font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: hsl(36 100% 46%);
+  color: hsl(191 100% 46%);
 }
 
 .tars-panel-body {
@@ -123,8 +125,8 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: hsl(36 100% 46%);
-  box-shadow: 0 0 6px hsl(36 100% 46%);
+  background: hsl(191 100% 46%);
+  box-shadow: 0 0 6px hsl(191 100% 46%);
   animation: tars-pulse 2.4s ease-in-out infinite;
 }
 .tars-status-dot.active {
@@ -151,7 +153,7 @@
   font-size: 9px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: hsl(36 100% 46% / 0.7);
+  color: hsl(191 100% 46% / 0.7);
   margin-bottom: 6px;
 }
 
@@ -172,11 +174,11 @@
   padding: 10px;
   background: hsl(214 35% 6%);
   border: 1px solid hsl(214 28% 11%);
-  border-left: 2px solid hsl(36 100% 46% / 0.2);
+  border-left: 2px solid hsl(191 100% 46% / 0.2);
   transition: border-left-color 0.15s;
 }
 .tars-step-row:hover {
-  border-left-color: hsl(36 100% 46% / 0.55);
+  border-left-color: hsl(191 100% 46% / 0.55);
 }
 .tars-movement-row {
   display: flex;
@@ -215,7 +217,7 @@
 .servo-value {
   font-size: 11px;
   font-weight: 700;
-  color: hsl(36 100% 52%);
+  color: hsl(191 100% 52%);
   font-variant-numeric: tabular-nums;
 }
 
@@ -229,8 +231,8 @@
   outline: none;
   background: linear-gradient(
     to right,
-    hsl(36 100% 46%) 0%,
-    hsl(36 100% 46%) var(--pct, 50%),
+    hsl(191 100% 46%) 0%,
+    hsl(191 100% 46%) var(--pct, 50%),
     hsl(214 28% 13%) var(--pct, 50%),
     hsl(214 28% 13%) 100%
   );
@@ -239,13 +241,13 @@
   -webkit-appearance: none;
   width: 2px;
   height: 10px;
-  background: hsl(36 100% 70%);
+  background: hsl(191 100% 70%);
   cursor: ew-resize;
 }
 .servo-slider::-moz-range-thumb {
   width: 2px;
   height: 10px;
-  background: hsl(36 100% 70%);
+  background: hsl(191 100% 70%);
   border: none;
   cursor: ew-resize;
 }
@@ -318,16 +320,16 @@
 }
 
 .tars-btn-amber {
-  background: hsl(36 100% 46% / 0.12);
-  border-color: hsl(36 100% 46% / 0.6);
-  color: hsl(36 100% 60%);
+  background: hsl(191 100% 46% / 0.12);
+  border-color: hsl(191 100% 46% / 0.6);
+  color: hsl(191 100% 60%);
 }
 .tars-btn-amber:hover:not(:disabled) {
-  background: hsl(36 100% 46% / 0.22);
-  box-shadow: 0 0 10px hsl(36 100% 46% / 0.25);
+  background: hsl(191 100% 46% / 0.22);
+  box-shadow: 0 0 10px hsl(191 100% 46% / 0.25);
 }
 .tars-btn-amber:active:not(:disabled) {
-  background: hsl(36 100% 46% / 0.32);
+  background: hsl(191 100% 46% / 0.32);
 }
 
 .tars-btn-ghost {
@@ -336,8 +338,8 @@
   color: hsl(214 14% 55%);
 }
 .tars-btn-ghost:hover:not(:disabled) {
-  border-color: hsl(36 100% 46% / 0.5);
-  color: hsl(36 100% 60%);
+  border-color: hsl(191 100% 46% / 0.5);
+  color: hsl(191 100% 60%);
 }
 
 .tars-btn-cyan {
@@ -374,13 +376,13 @@
   color: hsl(210 22% 84%);
   background: hsl(214 35% 6%);
   border: 1px solid hsl(214 28% 13%);
-  border-bottom-color: hsl(36 100% 46% / 0.3);
+  border-bottom-color: hsl(191 100% 46% / 0.3);
   outline: none;
   transition: border-color 0.15s;
 }
 .tars-input:focus {
   border-color: hsl(214 28% 18%);
-  border-bottom-color: hsl(36 100% 46% / 0.8);
+  border-bottom-color: hsl(191 100% 46% / 0.8);
 }
 .tars-input::placeholder {
   color: hsl(214 14% 35%);
@@ -395,12 +397,12 @@
   color: hsl(210 22% 75%);
   background: hsl(214 35% 6%);
   border: 1px solid hsl(214 28% 13%);
-  border-bottom-color: hsl(36 100% 46% / 0.3);
+  border-bottom-color: hsl(191 100% 46% / 0.3);
   outline: none;
   cursor: pointer;
 }
 .tars-select:focus {
-  border-bottom-color: hsl(36 100% 46% / 0.8);
+  border-bottom-color: hsl(191 100% 46% / 0.8);
 }
 
 /* ── Saved sequence chips ───────────────────────────────────────────────── */
@@ -439,7 +441,7 @@
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: hsl(214 40% 4%); }
 ::-webkit-scrollbar-thumb { background: hsl(214 28% 16%); }
-::-webkit-scrollbar-thumb:hover { background: hsl(36 100% 46% / 0.4); }
+::-webkit-scrollbar-thumb:hover { background: hsl(191 100% 46% / 0.4); }
 
 /* ── Loop repeat input ──────────────────────────────────────────────────── */
 .tars-num-input {
@@ -481,3 +483,24 @@
   font-family: 'Share Tech Mono', monospace;
 }
 .tars-ch-label { color: hsl(210 22% 72%); }
+
+/* ── Info tooltip ─────────────────────────────────────────────────────────── */
+.tars-info-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 210px;
+  background: hsl(214 35% 7%);
+  border: 1px solid hsl(214 28% 14%);
+  padding: 8px 10px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  line-height: 1.7;
+  pointer-events: none;
+  z-index: 20;
+}
+.tars-info-trigger:hover .tars-info-tip {
+  display: block;
+}

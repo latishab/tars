@@ -16,15 +16,15 @@ function CmdBtn({ label, icon: Icon, onClick, disabled, active, variant = 'ghost
     border: '1px solid', transition: 'all 0.12s', opacity: disabled ? 0.45 : 1, ...style,
   }
   const variants = {
-    ghost:  { background: active ? 'hsl(36 100% 46% / 0.15)' : 'transparent', borderColor: active ? 'hsl(36 100% 46% / 0.6)' : 'hsl(214 28% 14%)', color: active ? 'hsl(36 100% 60%)' : 'hsl(214 14% 55%)' },
-    amber:  { background: 'hsl(36 100% 46% / 0.1)', borderColor: 'hsl(36 100% 46% / 0.5)', color: 'hsl(36 100% 60%)' },
+    ghost:  { background: active ? 'hsl(191 100% 46% / 0.15)' : 'transparent', borderColor: active ? 'hsl(191 100% 46% / 0.6)' : 'hsl(214 28% 14%)', color: active ? 'hsl(191 100% 60%)' : 'hsl(214 14% 55%)' },
+    amber:  { background: 'hsl(191 100% 46% / 0.1)', borderColor: 'hsl(191 100% 46% / 0.5)', color: 'hsl(191 100% 60%)' },
     cyan:   { background: active ? 'hsl(191 100% 44% / 0.18)' : 'hsl(191 100% 44% / 0.06)', borderColor: active ? 'hsl(191 100% 44% / 0.7)' : 'hsl(191 100% 44% / 0.25)', color: active ? 'hsl(191 100% 60%)' : 'hsl(191 100% 44% / 0.7)' },
     danger: { background: 'transparent', borderColor: 'hsl(0 80% 50% / 0.4)', color: 'hsl(0 80% 65%)' },
   }
   const s = { ...base, ...variants[variant] }
   return (
     <button style={s} onClick={onClick} disabled={disabled}
-      onMouseEnter={e => { if (!disabled) { e.currentTarget.style.background = variants[variant].background.replace('0.1','0.22').replace('0.06','0.18'); e.currentTarget.style.boxShadow = variant === 'amber' ? '0 0 8px hsl(36 100% 46% / 0.2)' : ''; }}}
+      onMouseEnter={e => { if (!disabled) { e.currentTarget.style.background = variants[variant].background.replace('0.1','0.22').replace('0.06','0.18'); e.currentTarget.style.boxShadow = variant === 'amber' ? '0 0 8px hsl(191 100% 46% / 0.2)' : ''; }}}
       onMouseLeave={e => { e.currentTarget.style.background = s.background; e.currentTarget.style.boxShadow = ''; }}
     >
       {Icon && <Icon size={14} />}
@@ -36,7 +36,7 @@ function CmdBtn({ label, icon: Icon, onClick, disabled, active, variant = 'ghost
 // ── Chip button (for emotions, eye states, sequences) ─────────────────────
 function Chip({ label, active, onClick, disabled, color = 'amber' }) {
   const colors = {
-    amber: { bg: active ? 'hsl(36 100% 46% / 0.18)' : 'hsl(214 35% 6%)', border: active ? 'hsl(36 100% 46% / 0.7)' : 'hsl(214 28% 12%)', text: active ? 'hsl(36 100% 60%)' : 'hsl(214 14% 55%)' },
+    amber: { bg: active ? 'hsl(191 100% 46% / 0.18)' : 'hsl(214 35% 6%)', border: active ? 'hsl(191 100% 46% / 0.7)' : 'hsl(214 28% 12%)', text: active ? 'hsl(191 100% 60%)' : 'hsl(214 14% 55%)' },
     cyan:  { bg: active ? 'hsl(191 100% 44% / 0.15)' : 'hsl(214 35% 6%)', border: active ? 'hsl(191 100% 44% / 0.6)' : 'hsl(214 28% 12%)', text: active ? 'hsl(191 100% 60%)' : 'hsl(214 14% 55%)' },
   }
   const c = colors[color]
@@ -51,7 +51,7 @@ function Chip({ label, active, onClick, disabled, color = 'amber' }) {
 }
 
 function SectionLabel({ children }) {
-  return <div style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(36 100% 46% / 0.65)', marginBottom: 8 }}>{children}</div>
+  return <div style={{ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(191 100% 46% / 0.65)', marginBottom: 8 }}>{children}</div>
 }
 
 function Panel({ title, children, style }) {
@@ -129,7 +129,7 @@ function Control() {
 
       {/* Header */}
       <div style={{ marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid hsl(214 28% 11%)' }}>
-        <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(36 100% 55%)' }}>COMMAND INTERFACE</div>
+        <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(191 100% 55%)' }}>COMMAND INTERFACE</div>
         <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 38%)', marginTop: 1 }}>TARS DIRECT CONTROL</div>
       </div>
 
@@ -160,11 +160,7 @@ function Control() {
 
           {/* Balance + Reset row */}
           <div style={{ borderTop: '1px solid hsl(214 28% 11%)', paddingTop: 10 }}>
-            <SectionLabel>Balance & Reset</SectionLabel>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {[['tilt_left','Tilt L'],['tilt_right','Tilt R'],['side_side','Side-Side'],['swing_legs','Swing']].map(([name, label]) => (
-                <CmdBtn key={name} label={label} onClick={() => exec(name)} disabled={executing !== null} style={{ flex: 1, minWidth: 60 }} />
-              ))}
               <CmdBtn label="Reset" icon={RotateCcw} onClick={resetPosition} disabled={executing !== null} variant="amber" style={{ flex: 1, minWidth: 60 }} />
             </div>
           </div>

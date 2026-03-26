@@ -168,7 +168,7 @@ export default function Expressions() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, paddingBottom: 12, borderBottom: '1px solid hsl(214 28% 11%)' }}>
         <div>
-          <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(36 100% 55%)' }}>EXPRESSION MATRIX</div>
+          <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(191 100% 55%)' }}>EXPRESSION MATRIX</div>
           <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 38%)', marginTop: 1 }}>TARS UNIT — FACIAL CONTROL</div>
           {activeCell && (
             <div style={{ fontSize: 9, letterSpacing: '0.15em', color: 'hsl(191 100% 55%)', marginTop: 4 }}>
@@ -223,16 +223,16 @@ export default function Expressions() {
                         textTransform: 'uppercase',
                         fontFamily: "'Share Tech Mono', monospace",
                         cursor: isExecuting ? 'wait' : 'pointer',
-                        background: isActive ? 'hsl(36 100% 46% / 0.15)' : isEditing ? 'hsl(191 100% 44% / 0.08)' : 'hsl(214 35% 5%)',
+                        background: isActive ? 'hsl(191 100% 46% / 0.15)' : isEditing ? 'hsl(191 100% 44% / 0.08)' : 'hsl(214 35% 5%)',
                         border: isActive
-                          ? '1px solid hsl(36 100% 46% / 0.6)'
+                          ? '1px solid hsl(191 100% 46% / 0.6)'
                           : isEditing
                           ? '1px solid hsl(191 100% 44% / 0.5)'
                           : hasGesture
                           ? '1px solid hsl(214 28% 16%)'
                           : '1px solid hsl(214 28% 11%)',
-                        borderLeft: isCustom && !isActive ? '2px solid hsl(36 100% 46% / 0.4)' : undefined,
-                        color: isActive ? 'hsl(36 100% 60%)' : isEditing ? 'hsl(191 100% 55%)' : entry ? 'hsl(210 22% 65%)' : 'hsl(214 14% 28%)',
+                        borderLeft: isCustom && !isActive ? '2px solid hsl(191 100% 46% / 0.4)' : undefined,
+                        color: isActive ? 'hsl(191 100% 60%)' : isEditing ? 'hsl(191 100% 55%)' : entry ? 'hsl(210 22% 65%)' : 'hsl(214 14% 28%)',
                         transition: 'all 0.15s ease',
                         textAlign: 'center',
                       }}
@@ -256,7 +256,7 @@ export default function Expressions() {
                         zIndex: 10,
                       }}
                     >
-                      <Pencil size={7} style={{ color: 'hsl(36 100% 46%)' }} />
+                      <Pencil size={7} style={{ color: 'hsl(191 100% 46%)' }} />
                     </button>
                   </div>
                 )

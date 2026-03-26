@@ -292,7 +292,7 @@ function MovementBuilder() {
       {/* ── Header bar ─────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid hsl(214 28% 11%)' }}>
         <div>
-          <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(36 100% 55%)' }}>
+          <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 18, letterSpacing: '0.15em', color: 'hsl(191 100% 55%)' }}>
             MOVEMENT BUILDER
           </div>
           <div style={{ fontSize: 9, letterSpacing: '0.2em', color: 'hsl(214 14% 38%)', marginTop: 1 }}>
@@ -432,7 +432,7 @@ function MovementBuilder() {
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, letterSpacing: '0.12em', color: 'hsl(214 14% 50%)', cursor: 'pointer' }}>
-                <input type="checkbox" checked={isQuick} onChange={e => setIsQuick(e.target.checked)} style={{ accentColor: 'hsl(36 100% 46%)' }} />
+                <input type="checkbox" checked={isQuick} onChange={e => setIsQuick(e.target.checked)} style={{ accentColor: 'hsl(191 100% 46%)' }} />
                 QUICK
               </label>
               <button className="tars-btn tars-btn-amber" onClick={saveSequence} style={{ marginLeft: 'auto' }}>
@@ -457,14 +457,14 @@ function MovementBuilder() {
                   <div key={name} className="tars-chip">
                     <button onClick={() => playSaved(name)} disabled={sequencePlaying}
                       style={{ fontSize: 10, letterSpacing: '0.06em', color: 'hsl(210 22% 70%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                      onMouseEnter={e => e.currentTarget.style.color = 'hsl(36 100% 60%)'}
+                      onMouseEnter={e => e.currentTarget.style.color = 'hsl(191 100% 60%)'}
                       onMouseLeave={e => e.currentTarget.style.color = 'hsl(210 22% 70%)'}
                     >
                       {name}
                     </button>
                     <button onClick={() => loadIntoEditor(name)} title="Load into editor"
                       style={{ color: 'hsl(214 14% 35%)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', display: 'flex' }}
-                      onMouseEnter={e => e.currentTarget.style.color = 'hsl(36 100% 55%)'}
+                      onMouseEnter={e => e.currentTarget.style.color = 'hsl(191 100% 55%)'}
                       onMouseLeave={e => e.currentTarget.style.color = 'hsl(214 14% 35%)'}
                     >
                       <Pencil size={10} />
