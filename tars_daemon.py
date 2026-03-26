@@ -15,9 +15,9 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Optional
 
-# Set SDL video driver for framebuffer access
-os.environ["SDL_VIDEODRIVER"] = "kmsdrm"
-os.environ["SDL_FBDEV"] = "/dev/fb0"
+# Set SDL video driver for Wayland (Pi OS Bookworm uses Wayland compositor)
+os.environ.setdefault("SDL_VIDEODRIVER", "wayland")
+os.environ.setdefault("WAYLAND_DISPLAY", "wayland-0")
 
 # Add src to path for module imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
