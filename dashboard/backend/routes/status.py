@@ -9,7 +9,10 @@ from fastapi import APIRouter, Request
 from loguru import logger
 from .wifi import wifi_manager
 
-_TAILSCALE_NET = ipaddress.ip_network("100.64.0.0/10")
+_TAILSCALE_NETS = (
+    ipaddress.ip_network("100.64.0.0/10"),       # Tailscale IPv4 (CGNAT)
+    ipaddress.ip_network("fd7a:115c:a1e0::/48"),  # Tailscale IPv6
+)
 
 router = APIRouter()
 
@@ -40,7 +43,8 @@ def _detect_connection_mode(client_ip: str | None, config: dict) -> str:
     """Return 'tailscale' if the client IP is in the Tailscale CGNAT range, else 'local'."""
     if client_ip:
         try:
-            if ipaddress.ip_address(client_ip) in _TAILSCALE_NET:
+            addr = ipaddress.ip_address(client_ip)
+            if any(addr in net for net in _TAILSCALE_NETS):
                 return "tailscale"
         except ValueError:
             pass
