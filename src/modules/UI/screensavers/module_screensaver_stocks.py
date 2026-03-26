@@ -306,7 +306,7 @@ class StocksAnimation:
         self.screen.blit(abs_s, (W - abs_s.get_width() - 16, by + bh + 5))
 
         # H / L / O row
-        hl_y = 140
+        hl_y = 156
         items = [
             ("H", _fmt_price(f["high"]),  (60, 190, 80),  (110, 230, 130)),
             ("L", _fmt_price(f["low"]),   (190, 50, 50),  (225, 90,  90)),
@@ -322,10 +322,10 @@ class StocksAnimation:
             cx += vs.get_width() + 20
 
         # Sparkline
-        self._draw_sparkline(f["chart"], col, 16, 160, W - 32, 85)
+        self._draw_sparkline(f["chart"], col, 16, 182, W - 32, 85)
 
         # Separator
-        pygame.draw.line(self.screen, (14, 22, 32), (16, 252), (W - 16, 252), 1)
+        pygame.draw.line(self.screen, (14, 22, 32), (16, 276), (W - 16, 276), 1)
 
     def _draw_sparkline(self, prices, col, x, y, w, h):
         if len(prices) < 2:
@@ -372,11 +372,11 @@ class StocksAnimation:
 
     def _draw_watchlist(self, watchlist):
         W   = self.width
-        Y0  = 260
+        Y0  = 302
         ROW = 74
 
         sec = self.f_label.render("W A T C H L I S T", True, (38, 58, 72))
-        self.screen.blit(sec, sec.get_rect(centerx=self.cx, top=Y0 - 14))
+        self.screen.blit(sec, sec.get_rect(centerx=self.cx, top=Y0 - 18))
 
         for i, item in enumerate(watchlist):
             y   = Y0 + i * ROW
