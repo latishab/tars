@@ -472,8 +472,8 @@ class StocksAnimation:
         sec = self.f_label.render("M A R K E T  N E W S", True, (38, 58, 72))
         self.screen.blit(sec, sec.get_rect(centerx=self.cx, top=label_y))
 
-        # First news row starts 14px below the label
-        Y0 = label_y + 20
+        # First news row starts below the label
+        Y0 = label_y + 32
 
         for i, item in enumerate(news):
             y = Y0 + i * ROW
