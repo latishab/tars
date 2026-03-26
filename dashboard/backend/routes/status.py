@@ -4,9 +4,12 @@ import psutil
 import platform
 from typing import Dict, Any
 
-from fastapi import APIRouter
+import ipaddress
+from fastapi import APIRouter, Request
 from loguru import logger
 from .wifi import wifi_manager
+
+_TAILSCALE_NET = ipaddress.ip_network("100.64.0.0/10")
 
 router = APIRouter()
 
@@ -33,7 +36,18 @@ def set_daemon_url(url: str):
     _daemon_url = url
 
 
-async def get_status_data() -> Dict[str, Any]:
+def _detect_connection_mode(client_ip: str | None, config: dict) -> str:
+    """Return 'tailscale' if the client IP is in the Tailscale CGNAT range, else 'local'."""
+    if client_ip:
+        try:
+            if ipaddress.ip_address(client_ip) in _TAILSCALE_NET:
+                return "tailscale"
+        except ValueError:
+            pass
+    return config.get("connection_mode", "local")
+
+
+async def get_status_data(client_ip: str | None = None) -> Dict[str, Any]:
     """Get current status data."""
     # Load config for network info
     config = {}
@@ -122,7 +136,7 @@ async def get_status_data() -> Dict[str, Any]:
             "grpc": True,  # If we're running, gRPC is available
         },
         "network": {
-            "connection_mode": config.get("connection_mode", "local"),
+            "connection_mode": _detect_connection_mode(client_ip, config),
             "tailscale_ip": config.get("tailscale_ip"),
             "wifi_mode": wifi_mode,
         },
@@ -130,9 +144,9 @@ async def get_status_data() -> Dict[str, Any]:
 
 
 @router.get("/")
-async def get_status():
+async def get_status(request: Request):
     """Get current robot status."""
-    return await get_status_data()
+    return await get_status_data(client_ip=request.client.host if request.client else None)
 
 
 @router.get("/camera")
