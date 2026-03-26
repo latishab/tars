@@ -5,15 +5,15 @@ import { Input } from '@/components/ui/input'
 import { Download, RefreshCw, Wifi, AlertCircle, CheckCircle, Signal, Lock, WifiOff, Gamepad2 } from 'lucide-react'
 
 const FACE_BUTTONS = [
-  { key: 'BTN_SOUTH',    label: '✕' },
-  { key: 'BTN_SOUTH+R1', label: '✕ + R1' },
-  { key: 'BTN_EAST',     label: '○' },
-  { key: 'BTN_EAST+R1',  label: '○ + R1' },
-  { key: 'BTN_EAST+R2',  label: '○ + R2' },
-  { key: 'BTN_NORTH',    label: '△' },
-  { key: 'BTN_NORTH+R1', label: '△ + R1' },
-  { key: 'BTN_WEST',     label: '□' },
-  { key: 'BTN_WEST+R1',  label: '□ + R1' },
+  { key: 'BTN_SOUTH',    label: '✕ / A' },
+  { key: 'BTN_SOUTH+R1', label: '✕ / A + R1' },
+  { key: 'BTN_EAST',     label: '○ / B' },
+  { key: 'BTN_EAST+R1',  label: '○ / B + R1' },
+  { key: 'BTN_EAST+R2',  label: '○ / B + R2' },
+  { key: 'BTN_NORTH',    label: '△ / Y' },
+  { key: 'BTN_NORTH+R1', label: '△ / Y + R1' },
+  { key: 'BTN_WEST',     label: '□ / X' },
+  { key: 'BTN_WEST+R1',  label: '□ / X + R1' },
 ]
 
 const DPAD_BUTTONS = [

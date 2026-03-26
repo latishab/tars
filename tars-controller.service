@@ -1,0 +1,22 @@
+[Unit]
+Description=TARS Bluetooth Controller
+After=tars.service bluetooth.target
+Wants=bluetooth.target
+
+[Service]
+Type=simple
+User=mac
+Group=mac
+WorkingDirectory=/home/mac/tars-daemon
+Environment="PYTHONPATH=/home/mac/tars-daemon/src"
+Environment="PATH=/home/mac/tars-daemon/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/home/mac/tars-daemon/venv/bin/python /home/mac/tars-daemon/src/modules/module_btcontroller.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tars-controller
+
+[Install]
+WantedBy=multi-user.target

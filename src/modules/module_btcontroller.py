@@ -33,7 +33,7 @@ controller_name = config["CONTROLS"]["controller_name"]
 invert_y = config["CONTROLS"].get("invert_y", False)
 gamepad_path = None
 
-_SETTINGS_FILE = Path(__file__).parent.parent / "state" / "settings.json"
+_SETTINGS_FILE = Path(__file__).parent.parent.parent / "state" / "settings.json"
 
 DEFAULT_MAPPINGS = {
     "BTN_SOUTH": "pose",
