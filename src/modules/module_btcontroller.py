@@ -26,6 +26,7 @@ from pathlib import Path
 
 from modules.module_config import load_config
 from modules.module_messageQue import queue_message
+import modules.module_servoctl  # must load before module_movements to resolve circular import
 import modules.module_movement_registry as registry
 
 config = load_config()
