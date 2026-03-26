@@ -9,8 +9,10 @@ import time
 import math
 import urllib.request
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from email.utils import parsedate_to_datetime
 
 _UI_DIR = Path(__file__).parent.parent
 _ASSETS = Path(__file__).parent.parent / "assets"
@@ -174,8 +176,42 @@ class StocksAnimation:
                 except Exception:
                     pass
 
+            # News headlines via Yahoo Finance RSS
+            news = []
+            try:
+                rss_url = ("https://feeds.finance.yahoo.com/rss/2.0/headline"
+                           "?s=SPY,AAPL,NVDA&region=US&lang=en-US")
+                rss_req  = urllib.request.Request(rss_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(rss_req, timeout=6) as resp:
+                    root = ET.fromstring(resp.read())
+                now_dt = datetime.now(timezone.utc)
+                for item in root.iter("item"):
+                    title = (item.findtext("title") or "").strip()
+                    pub   = item.findtext("pubDate") or ""
+                    src   = item.findtext("source") or "Yahoo Finance"
+                    if not title:
+                        continue
+                    age = ""
+                    try:
+                        pub_dt = parsedate_to_datetime(pub)
+                        delta  = now_dt - pub_dt
+                        mins   = int(delta.total_seconds() / 60)
+                        if mins < 60:
+                            age = f"{mins}m ago"
+                        elif mins < 1440:
+                            age = f"{mins // 60}h ago"
+                        else:
+                            age = f"{mins // 1440}d ago"
+                    except Exception:
+                        pass
+                    news.append({"title": title, "source": src, "age": age})
+                    if len(news) >= 2:
+                        break
+            except Exception:
+                pass
+
             now  = datetime.now(timezone.utc).strftime("%H:%M")
-            data = {"featured": featured, "watchlist": watchlist, "updated": now}
+            data = {"featured": featured, "watchlist": watchlist, "news": news, "updated": now}
 
             with self._lock:
                 self._data       = data
@@ -225,6 +261,7 @@ class StocksAnimation:
         self._draw_header(data)
         self._draw_featured(data["featured"])
         self._draw_watchlist(data["watchlist"])
+        self._draw_news(data.get("news", []))
         self._draw_ticker(data)
 
     # ── Loading / error ────────────────────────────────────────────────────
@@ -420,6 +457,41 @@ class StocksAnimation:
         pygame.draw.line(self.screen, (14, 22, 32),
                          (16, Y0 + len(watchlist) * ROW + 4),
                          (W - 16, Y0 + len(watchlist) * ROW + 4), 1)
+
+    # ── News headlines ─────────────────────────────────────────────────────
+
+    def _draw_news(self, news):
+        if not news:
+            return
+        W   = self.width
+        # Anchor just above the ticker strip (height - 62) with 2 rows of ~30px
+        Y0  = self.height - 62 - len(news) * 32 - 10
+        ROW = 32
+
+        sec = self.f_label.render("M A R K E T  N E W S", True, (38, 58, 72))
+        self.screen.blit(sec, sec.get_rect(centerx=self.cx, top=Y0 - 16))
+        pygame.draw.line(self.screen, (14, 22, 32), (16, Y0 - 4), (W - 16, Y0 - 4), 1)
+
+        for i, item in enumerate(news):
+            y = Y0 + i * ROW
+
+            # Bullet
+            bul = self.f_label.render("▸", True, _AMBER)
+            self.screen.blit(bul, (16, y + 2))
+
+            # Headline — truncate to fit available width
+            headline = item["title"]
+            max_w    = W - 52
+            hl_surf  = self.f_label.render(headline, True, (160, 178, 195))
+            while hl_surf.get_width() > max_w and len(headline) > 10:
+                headline = headline[:-4] + "…"
+                hl_surf  = self.f_label.render(headline, True, (160, 178, 195))
+            self.screen.blit(hl_surf, (30, y + 2))
+
+            # Source + age (below headline)
+            meta_str = f"{item['source']}  {item['age']}".strip()
+            meta_s   = self.f_meta.render(meta_str, True, (42, 62, 78))
+            self.screen.blit(meta_s, (30, y + 17))
 
     # ── Scrolling ticker ───────────────────────────────────────────────────
 
