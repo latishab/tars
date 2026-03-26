@@ -301,7 +301,7 @@ async def get_movement_steps(name: str):
 
     def extract_steps(lines, variables=None):
         """Extract move_legs steps, handling range loops, tuple-unpacking loops,
-        list variable assignments, and ARMS_PRESENT conditional branches."""
+        and list variable assignments."""
         if variables is None:
             variables = {}
         result = []
@@ -334,14 +334,11 @@ async def get_movement_steps(name: str):
                 i = j
                 continue
 
-            # `if` block — skip ARMS_PRESENT=True branches, process everything else
+            # `if` block — recurse into body
             if_m = re.match(r"\s*if\s+(.+):", line)
             if if_m:
-                condition = if_m.group(1)
                 block, i = collect_block(lines, i + 1, indent)
-                skip = "ARMS_PRESENT" in condition and "not" not in condition
-                if not skip:
-                    result.extend(extract_steps(block, variables))
+                result.extend(extract_steps(block, variables))
                 continue
 
             # `for _ in range(N):` loop — preserve as repeat block

@@ -143,16 +143,6 @@ def _execute_steps(steps: list) -> dict:
                 spd = step.get("speed", 0.85)
                 _sc.move_legs(lh, rh, ll, rl, spd)
 
-                if _sc.ARMS_PRESENT:
-                    lm  = step.get("left_main")
-                    lf  = step.get("left_forearm")
-                    lhv = step.get("left_hand")
-                    rm  = step.get("right_main")
-                    rf  = step.get("right_forearm")
-                    rhv = step.get("right_hand")
-                    if any(v is not None for v in [lm, lf, lhv, rm, rf, rhv]):
-                        _sc.move_arm(lm, lf, lhv, rm, rf, rhv, spd)
-
                 hold = step.get("hold_time", 0.0)
                 if hold > 0:
                     time.sleep(hold)
