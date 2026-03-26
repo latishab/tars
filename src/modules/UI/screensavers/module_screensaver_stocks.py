@@ -113,60 +113,66 @@ class StocksAnimation:
     def _kick_fetch(self):
         threading.Thread(target=self._fetch_data, daemon=True).start()
 
+    def _fetch_chart(self, symbol, interval="5m", range_="1d"):
+        """Fetch v8 chart — returns (meta, closes)."""
+        url = (
+            f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+            f"?interval={interval}&range={range_}"
+        )
+        raw    = _fetch_json(url)
+        result = raw["chart"]["result"][0]
+        meta   = result["meta"]
+        closes = result["indicators"]["quote"][0].get("close", [])
+        closes = [c for c in closes if c is not None]
+        return meta, closes
+
+    def _meta_to_quote(self, sym, meta, closes):
+        price  = meta.get("regularMarketPrice", 0.0)
+        prev   = meta.get("chartPreviousClose", price) or price
+        change = price - prev
+        pct    = (change / prev * 100) if prev else 0.0
+        return {
+            "symbol": sym,
+            "name":   meta.get("shortName", sym)[:22],
+            "price":  price,
+            "change": change,
+            "pct":    pct,
+            "high":   meta.get("regularMarketDayHigh", 0.0),
+            "low":    meta.get("regularMarketDayLow", 0.0),
+            "open":   meta.get("chartPreviousClose", 0.0),
+            "volume": meta.get("regularMarketVolume", 0),
+            "state":  meta.get("currentTradingPeriod", {}).get("regular", {}).get("timezone", ""),
+            "chart":  closes,
+        }
+
     def _fetch_data(self):
         try:
-            all_syms = [_FEATURED] + _WATCHLIST
-            url = (
-                "https://query1.finance.yahoo.com/v7/finance/quote"
-                f"?symbols={','.join(all_syms)}"
-                "&fields=symbol,shortName,regularMarketPrice,"
-                "regularMarketChangePercent,regularMarketChange,"
-                "regularMarketOpen,regularMarketDayHigh,regularMarketDayLow,"
-                "regularMarketVolume,marketState"
-            )
-            raw    = _fetch_json(url)
-            quotes = raw["quoteResponse"]["result"]
-            by_sym = {q["symbol"]: q for q in quotes}
+            # Featured: intraday sparkline (5m/1d)
+            f_meta, f_closes = self._fetch_chart(_FEATURED, "5m", "1d")
+            featured = self._meta_to_quote(_FEATURED, f_meta, f_closes)
 
-            # Featured intraday sparkline
-            chart_url = (
-                f"https://query1.finance.yahoo.com/v8/finance/chart/{_FEATURED}"
-                "?interval=5m&range=1d"
-            )
-            chart_raw  = _fetch_json(chart_url)
-            chart_res  = chart_raw["chart"]["result"][0]
-            closes     = chart_res["indicators"]["quote"][0].get("close", [])
-            closes     = [c for c in closes if c is not None]
+            # Detect market state from trading period timestamps
+            tp = f_meta.get("currentTradingPeriod", {})
+            now_ts = time.time()
+            reg = tp.get("regular", {})
+            if reg.get("start", 0) <= now_ts <= reg.get("end", 0):
+                featured["state"] = "REGULAR"
+            elif tp.get("pre", {}).get("start", 0) <= now_ts <= tp.get("pre", {}).get("end", 0):
+                featured["state"] = "PRE"
+            elif tp.get("post", {}).get("start", 0) <= now_ts <= tp.get("post", {}).get("end", 0):
+                featured["state"] = "POST"
+            else:
+                featured["state"] = "CLOSED"
 
+            # Watchlist: daily (1d/5d) — cheaper, still gives today's price
             watchlist = []
             for sym in _WATCHLIST:
-                q = by_sym.get(sym, {})
-                if not q:
-                    continue
-                watchlist.append({
-                    "symbol": sym,
-                    "name":   q.get("shortName", sym)[:18],
-                    "price":  q.get("regularMarketPrice", 0.0),
-                    "change": q.get("regularMarketChange", 0.0),
-                    "pct":    q.get("regularMarketChangePercent", 0.0),
-                    "high":   q.get("regularMarketDayHigh", 0.0),
-                    "low":    q.get("regularMarketDayLow", 0.0),
-                })
-
-            fq = by_sym.get(_FEATURED, {})
-            featured = {
-                "symbol": _FEATURED,
-                "name":   fq.get("shortName", _FEATURED)[:22],
-                "price":  fq.get("regularMarketPrice", 0.0),
-                "change": fq.get("regularMarketChange", 0.0),
-                "pct":    fq.get("regularMarketChangePercent", 0.0),
-                "high":   fq.get("regularMarketDayHigh", 0.0),
-                "low":    fq.get("regularMarketDayLow", 0.0),
-                "open":   fq.get("regularMarketOpen", 0.0),
-                "volume": fq.get("regularMarketVolume", 0),
-                "state":  fq.get("marketState", "CLOSED"),
-                "chart":  closes,
-            }
+                try:
+                    w_meta, _ = self._fetch_chart(sym, "1d", "5d")
+                    q = self._meta_to_quote(sym, w_meta, [])
+                    watchlist.append(q)
+                except Exception:
+                    pass
 
             now  = datetime.now(timezone.utc).strftime("%H:%M")
             data = {"featured": featured, "watchlist": watchlist, "updated": now}
