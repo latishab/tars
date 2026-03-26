@@ -1,5 +1,6 @@
 """
 Weather Screensaver — TARS display
+Atmospheric Recon HUD aesthetic.
 Fetches location via IP geolocation, weather via Open-Meteo (no API key needed).
 Data refreshes in a background thread so the render loop never blocks.
 """
@@ -7,14 +8,16 @@ import pygame
 import threading
 import time
 import math
+import random
 import urllib.request
 import json
 from pathlib import Path
 from datetime import datetime, timezone
 
-_UI_DIR = Path(__file__).parent.parent  # UI/ dir (contains mono.ttf)
+_UI_DIR   = Path(__file__).parent.parent           # UI/
+_ASSETS   = Path(__file__).parent.parent / "assets" # UI/assets/
 
-# ── WMO weather code descriptions ─────────────────────────────────────────
+# ── WMO weather codes ──────────────────────────────────────────────────────
 _WMO = {
     0:  ("CLEAR SKY",     "CLR"),
     1:  ("MAINLY CLEAR",  "CLR"),
@@ -38,21 +41,21 @@ _WMO = {
     85: ("SNOW SHOWERS",  "SNW"),
     86: ("HEAVY SNOW SHW","SNW"),
     95: ("THUNDERSTORM",  "TST"),
-    96: ("T-STORM + HAIL","TST"),
-    99: ("T-STORM + HAIL","TST"),
+    96: ("T-STORM/HAIL",  "TST"),
+    99: ("T-STORM/HAIL",  "TST"),
 }
 
-# Grouped condition → accent color (R, G, B)
-_CODE_COLOR = {
-    "CLR": (255, 200, 60),   # amber/yellow — sunny
-    "PCL": (180, 220, 255),  # light blue — partly cloudy
-    "OVC": (140, 160, 180),  # grey — overcast
-    "FOG": (120, 140, 140),  # muted teal — fog
-    "DRZ": (100, 200, 220),  # cyan drizzle
-    "RAN": ( 80, 160, 255),  # blue rain
-    "SNW": (220, 235, 255),  # white snow
-    "SHW": (100, 180, 255),  # shower blue
-    "TST": (220, 80,  255),  # purple storm
+# Condition color palettes — (primary, glow, dim)
+_PALETTE = {
+    "CLR": ((255, 200,  50), (255, 140,  0),  (80, 55,  5)),
+    "PCL": ((160, 210, 255), (80,  160, 220), (20, 40, 70)),
+    "OVC": ((120, 140, 165), (70,  90,  110), (20, 28, 38)),
+    "FOG": ((160, 180, 180), (80,  100, 100), (18, 25, 25)),
+    "DRZ": ((80,  200, 230), (40,  140, 180), (10, 35, 50)),
+    "RAN": ((60,  150, 255), (30,  90,  200), ( 8, 22, 55)),
+    "SNW": ((210, 230, 255), (140, 175, 220), (25, 35, 55)),
+    "SHW": ((80,  180, 255), (40,  110, 200), (10, 28, 55)),
+    "TST": ((210,  60, 255), (140,  20, 180), (35,  5, 55)),
 }
 
 _WEEKDAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
@@ -64,67 +67,107 @@ def _fetch_json(url, timeout=8):
         return json.loads(resp.read().decode())
 
 
+# ── Particle systems ───────────────────────────────────────────────────────
+
+class _RainParticle:
+    __slots__ = ('x', 'y', 'speed', 'length', 'alpha')
+    def __init__(self, w, h):
+        self.x = random.uniform(0, w)
+        self.y = random.uniform(-h, 0)
+        self.speed = random.uniform(8, 18)
+        self.length = random.randint(8, 22)
+        self.alpha = random.randint(60, 140)
+
+class _SnowParticle:
+    __slots__ = ('x', 'y', 'vx', 'vy', 'r', 'alpha', 'phase')
+    def __init__(self, w, h):
+        self.x = random.uniform(0, w)
+        self.y = random.uniform(-h, 0)
+        self.vx = random.uniform(-0.6, 0.6)
+        self.vy = random.uniform(0.8, 2.2)
+        self.r  = random.uniform(1.0, 3.5)
+        self.alpha = random.randint(80, 200)
+        self.phase = random.uniform(0, math.tau)
+
+class _SparkParticle:
+    __slots__ = ('x', 'y', 'vx', 'vy', 'life', 'max_life', 'r')
+    def __init__(self, w, h):
+        self.x = random.uniform(w * 0.2, w * 0.8)
+        self.y = random.uniform(h * 0.1, h * 0.5)
+        self.vx = random.uniform(-1.5, 1.5)
+        self.vy = random.uniform(-3.0, -0.5)
+        self.max_life = random.uniform(30, 80)
+        self.life = self.max_life
+        self.r = random.uniform(1.0, 2.5)
+
+
+# ── Main screensaver ───────────────────────────────────────────────────────
+
 class WeatherAnimation:
     def __init__(self, screen, width, height, show_time=False):
         self.screen = screen
-        self.width = width
+        self.width  = width
         self.height = height
+        self.cx     = width // 2
 
-        self.bg      = (5, 15, 20)
-        self.cyan    = (0, 230, 255)
-        self.dim     = (0, 70, 90)
-        self.muted   = (40, 80, 95)
-        self.white   = (210, 225, 235)
+        # Fonts
+        try:
+            self.f_temp   = pygame.font.Font(str(_ASSETS / "astrolab.ttf"), 96)
+            self.f_unit   = pygame.font.Font(str(_ASSETS / "astrolab.ttf"), 28)
+            self.f_city   = pygame.font.Font(str(_ASSETS / "astrolab.ttf"), 24)
+        except Exception:
+            self.f_temp   = pygame.font.SysFont("monospace", 96, bold=True)
+            self.f_unit   = pygame.font.SysFont("monospace", 28)
+            self.f_city   = pygame.font.SysFont("monospace", 24)
 
         try:
-            self.font_xl   = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 80)
-            self.font_lg   = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 36)
-            self.font_md   = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 22)
-            self.font_sm   = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 15)
-            self.font_xs   = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 12)
+            self.f_label  = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 9)
+            self.f_value  = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 14)
+            self.f_cond   = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 11)
+            self.f_day    = pygame.font.Font(str(_UI_DIR / "pixelmix.ttf"), 10)
         except Exception:
-            self.font_xl   = pygame.font.SysFont("monospace", 80)
-            self.font_lg   = pygame.font.SysFont("monospace", 36)
-            self.font_md   = pygame.font.SysFont("monospace", 22)
-            self.font_sm   = pygame.font.SysFont("monospace", 15)
-            self.font_xs   = pygame.font.SysFont("monospace", 12)
+            self.f_label  = pygame.font.SysFont("monospace", 9)
+            self.f_value  = pygame.font.SysFont("monospace", 14)
+            self.f_cond   = pygame.font.SysFont("monospace", 11)
+            self.f_day    = pygame.font.SysFont("monospace", 10)
 
-        # Weather data (written only by background thread)
-        self._data = None
-        self._error = None
+        try:
+            self.f_coord  = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 11)
+            self.f_meta   = pygame.font.Font(str(_UI_DIR / "mono.ttf"), 10)
+        except Exception:
+            self.f_coord  = pygame.font.SysFont("monospace", 11)
+            self.f_meta   = pygame.font.SysFont("monospace", 10)
+
+        # State
+        self._data    = None
+        self._error   = None
         self._loading = True
-        self._last_fetch = 0
-        self._fetch_interval = 600   # refresh every 10 min
-        self._lock = threading.Lock()
+        self._last_fetch   = 0
+        self._fetch_interval = 600
+        self._lock    = threading.Lock()
 
-        # Animated scan line
-        self._scan_y = 0
-        self._anim_t = 0.0
+        # Animation
+        self._t       = 0.0
+        self._ring_angle = 0.0
+        self._particles  = []
+        self._bg_surface = None  # cached static bg
 
-        # Kick first fetch immediately
         self._kick_fetch()
 
     def reset(self):
-        # Called by ScreensaverManager after __init__ — fetch already running, skip
-        pass
+        pass  # fetch already started in __init__
 
     def _kick_fetch(self):
-        t = threading.Thread(target=self._fetch_weather, daemon=True)
-        t.start()
+        threading.Thread(target=self._fetch_weather, daemon=True).start()
 
     def _fetch_weather(self):
         try:
-            # 1. IP geolocation
-            geo = _fetch_json("http://ip-api.com/json/?fields=city,country,countryCode,lat,lon,status")
+            geo = _fetch_json("http://ip-api.com/json/?fields=city,country,lat,lon,status")
             if geo.get("status") != "success":
                 raise RuntimeError("geolocation failed")
 
-            lat  = geo["lat"]
-            lon  = geo["lon"]
-            city = geo["city"]
-            country = geo["country"]
+            lat, lon = geo["lat"], geo["lon"]
 
-            # 2. Open-Meteo weather
             url = (
                 f"https://api.open-meteo.com/v1/forecast"
                 f"?latitude={lat}&longitude={lon}"
@@ -133,33 +176,29 @@ class WeatherAnimation:
                 f"&daily=weather_code,temperature_2m_max,temperature_2m_min"
                 f"&timezone=auto&forecast_days=4"
             )
-            w = _fetch_json(url)
+            w   = _fetch_json(url)
             cur = w["current"]
             daily = w["daily"]
 
-            code   = cur["weather_code"]
-            short  = _WMO.get(code, ("UNKNOWN", "??"))[1]
-            label  = _WMO.get(code, ("UNKNOWN", "??"))[0]
-            color  = _CODE_COLOR.get(short, self.cyan)
+            code  = cur["weather_code"]
+            short = _WMO.get(code, ("UNKNOWN", "??"))[1]
 
-            # Build 4-day forecast (skip today index 0 if we want tomorrow+)
             forecast = []
             for i in range(1, min(4, len(daily["time"]))):
-                day_code  = daily["weather_code"][i]
-                day_label = _WMO.get(day_code, ("??", "??"))[1]
-                day_color = _CODE_COLOR.get(day_label, self.cyan)
-                dt_obj    = datetime.fromisoformat(daily["time"][i])
+                dc    = daily["weather_code"][i]
+                ds    = _WMO.get(dc, ("??", "??"))[1]
+                dt_obj = datetime.fromisoformat(daily["time"][i])
                 forecast.append({
                     "day":   _WEEKDAYS[dt_obj.weekday()],
                     "hi":    round(daily["temperature_2m_max"][i]),
                     "lo":    round(daily["temperature_2m_min"][i]),
-                    "code":  day_label,
-                    "color": day_color,
+                    "short": ds,
+                    "label": _WMO.get(dc, ("??", "??"))[0],
                 })
 
             data = {
-                "city":     city,
-                "country":  country,
+                "city":     geo["city"],
+                "country":  geo["country"],
                 "lat":      lat,
                 "lon":      lon,
                 "temp":     round(cur["temperature_2m"]),
@@ -167,195 +206,442 @@ class WeatherAnimation:
                 "humidity": cur["relative_humidity_2m"],
                 "wind":     round(cur["wind_speed_10m"]),
                 "code":     code,
-                "label":    label,
-                "color":    color,
+                "short":    short,
+                "label":    _WMO.get(code, ("UNKNOWN", "??"))[0],
                 "forecast": forecast,
-                "updated":  datetime.now(timezone.utc).strftime("%H:%M UTC"),
+                "updated":  datetime.now(timezone.utc).strftime("%H:%M"),
             }
 
             with self._lock:
-                self._data = data
-                self._error = None
-                self._loading = False
+                self._data       = data
+                self._error      = None
+                self._loading    = False
                 self._last_fetch = time.time()
+                self._bg_surface = None  # invalidate cached bg
 
         except Exception as e:
             with self._lock:
-                self._error = str(e)[:40]
+                self._error   = str(e)[:44]
                 self._loading = False
 
+    # ── Update ────────────────────────────────────────────────────────────
+
     def update(self):
-        dt = 0.016
-        self._anim_t += dt
-        self._scan_y = (self._scan_y + 1) % self.height
+        self._t          += 0.016
+        self._ring_angle  = (self._ring_angle + 0.4) % 360
 
-        # Periodic refresh
         with self._lock:
-            since = time.time() - self._last_fetch
-            needs_fetch = (not self._loading) and (since >= self._fetch_interval)
+            short   = self._data["short"] if self._data else "CLR"
+            loading = self._loading
+            since   = time.time() - self._last_fetch
 
-        if needs_fetch:
+        if not loading and since >= self._fetch_interval:
             with self._lock:
                 self._loading = True
             self._kick_fetch()
 
-    def render(self):
-        self.screen.fill(self.bg)
-        self._draw_grid()
+        self._update_particles(short)
 
+    def _update_particles(self, short):
+        W, H = self.width, self.height
+        target = 0
+
+        if short in ("RAN", "SHW", "DRZ"):
+            target = 60
+            if len(self._particles) < target:
+                self._particles.append(_RainParticle(W, H))
+            for p in self._particles[:]:
+                p.y += p.speed
+                p.x += p.speed * 0.18
+                if p.y > H + 30:
+                    self._particles.remove(p)
+
+        elif short in ("SNW",):
+            target = 55
+            if len(self._particles) < target:
+                self._particles.append(_SnowParticle(W, H))
+            for p in self._particles[:]:
+                p.phase += 0.03
+                p.x += p.vx + math.sin(p.phase) * 0.4
+                p.y += p.vy
+                if p.y > H + 10:
+                    self._particles.remove(p)
+
+        elif short in ("TST",):
+            target = 18
+            if len(self._particles) < target:
+                self._particles.append(_SparkParticle(W, H))
+            for p in self._particles[:]:
+                p.x   += p.vx
+                p.y   += p.vy
+                p.vy  += 0.12
+                p.life -= 1
+                if p.life <= 0 or p.y > H:
+                    self._particles.remove(p)
+
+        else:
+            # Clear / other: slowly drain
+            if len(self._particles) > 0:
+                self._particles.pop()
+
+    # ── Render ────────────────────────────────────────────────────────────
+
+    def render(self):
         with self._lock:
             data    = self._data
             error   = self._error
             loading = self._loading
 
+        short   = data["short"] if data else "CLR"
+        palette = _PALETTE.get(short, _PALETTE["CLR"])
+        pri, glow, bg_tint = palette
+
+        # Background
+        self.screen.fill((4, 8, 16))
+        self._draw_bg_atmosphere(bg_tint)
+
         if loading and data is None:
-            self._draw_loading()
-        elif error and data is None:
+            self._draw_loading(pri)
+            return
+        if error and data is None:
             self._draw_error(error)
-        else:
-            self._draw_weather(data)
+            return
 
-    # ── Background grid ────────────────────────────────────────────────────
+        self._draw_particles(short, pri)
+        self._draw_top_chrome(data, pri)
+        self._draw_temp_ring(data, pri, glow)
+        self._draw_condition_badge(data, pri)
+        self._draw_stats(data, pri)
+        self._draw_forecast(data)
+        self._draw_footer(data)
 
-    def _draw_grid(self):
+    # ── Drawing primitives ────────────────────────────────────────────────
+
+    def _draw_bg_atmosphere(self, bg_tint):
+        """Soft radial atmosphere glow at top."""
+        r, g, b = bg_tint
+        for radius in range(260, 0, -20):
+            alpha = max(0, int(22 * (1 - radius / 260)))
+            s = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(s, (r, g, b, alpha), (radius, radius), radius)
+            self.screen.blit(s, (self.cx - radius, 120 - radius))
+
+    def _draw_particles(self, short, pri):
         surf = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-        grid_color = (0, 60, 80, 22)
-        step = 40
-        for x in range(0, self.width, step):
-            pygame.draw.line(surf, grid_color, (x, 0), (x, self.height))
-        for y in range(0, self.height, step):
-            pygame.draw.line(surf, grid_color, (0, y), (self.width, y))
-        # Animated horizontal scan line
-        scan_surf = pygame.Surface((self.width, 2), pygame.SRCALPHA)
-        scan_surf.fill((0, 230, 255, 18))
-        surf.blit(scan_surf, (0, self._scan_y))
+        r, g, b = pri
+
+        if short in ("RAN", "SHW", "DRZ"):
+            for p in self._particles:
+                alpha = min(255, p.alpha)
+                ex = p.x + p.length * 0.18
+                ey = p.y + p.length
+                pygame.draw.line(surf, (r, g, b, alpha),
+                                 (int(p.x), int(p.y)), (int(ex), int(ey)), 1)
+
+        elif short == "SNW":
+            for p in self._particles:
+                pygame.draw.circle(surf, (r, g, b, p.alpha),
+                                   (int(p.x), int(p.y)), max(1, int(p.r)))
+
+        elif short == "TST":
+            for p in self._particles:
+                fade = int(255 * (p.life / p.max_life))
+                pygame.draw.circle(surf, (r, g, b, fade),
+                                   (int(p.x), int(p.y)), max(1, int(p.r)))
+
         self.screen.blit(surf, (0, 0))
 
-    # ── Loading state ──────────────────────────────────────────────────────
+    def _draw_top_chrome(self, data, pri):
+        W = self.width
+        r, g, b = pri
+        dim = (r // 6, g // 6, b // 6)
+        dim2 = (r // 3, g // 3, b // 3)
 
-    def _draw_loading(self):
-        dots = "." * (int(self._anim_t * 2) % 4)
-        text = self.font_sm.render(f"ACQUIRING TELEMETRY{dots}", True, self.dim)
-        r = text.get_rect(center=(self.width // 2, self.height // 2))
-        self.screen.blit(text, r)
+        # Horizontal top line
+        pygame.draw.line(self.screen, dim2, (16, 32), (W - 16, 32), 1)
+
+        # Corner brackets — top left
+        pygame.draw.line(self.screen, pri, (14, 14), (34, 14), 2)
+        pygame.draw.line(self.screen, pri, (14, 14), (14, 28), 2)
+        # top right
+        pygame.draw.line(self.screen, pri, (W - 34, 14), (W - 14, 14), 2)
+        pygame.draw.line(self.screen, pri, (W - 14, 14), (W - 14, 28), 2)
+
+        # "ATMO RECON" label
+        lbl = self.f_label.render("ATMO  RECON", True, dim2)
+        self.screen.blit(lbl, (18, 11))
+
+        # Update time (top right)
+        upd = self.f_label.render(f"UPD {data['updated']} UTC", True, dim2)
+        self.screen.blit(upd, (W - upd.get_width() - 18, 11))
+
+        # City name
+        city_s = self.f_city.render(data["city"].upper(), True, (210, 225, 235))
+        self.screen.blit(city_s, city_s.get_rect(centerx=self.cx, top=40))
+
+        # Coordinates
+        lat_str = f"{data['lat']:.2f}{'N' if data['lat'] >= 0 else 'S'}  "
+        lon_str = f"{abs(data['lon']):.2f}{'E' if data['lon'] >= 0 else 'W'}"
+        coord_s = self.f_coord.render(lat_str + lon_str, True, dim2)
+        self.screen.blit(coord_s, coord_s.get_rect(centerx=self.cx, top=68))
+
+        # Separator
+        pygame.draw.line(self.screen, dim, (40, 87), (W - 40, 87), 1)
+
+    def _draw_temp_ring(self, data, pri, glow):
+        """Spinning segmented ring + giant temperature in center."""
+        CX, CY = self.cx, 220
+        R_OUTER = 130
+        R_INNER = 100
+        r, g, b   = pri
+        gr, gg, gb = glow
+
+        # Outer ambient glow ring
+        for dr in range(16, 0, -2):
+            alpha = int(18 * (1 - dr / 16))
+            s = pygame.Surface(((R_OUTER + dr) * 2, (R_OUTER + dr) * 2), pygame.SRCALPHA)
+            pygame.draw.circle(s, (r, g, b, alpha),
+                               (R_OUTER + dr, R_OUTER + dr), R_OUTER + dr, 1)
+            self.screen.blit(s, (CX - R_OUTER - dr, CY - R_OUTER - dr))
+
+        # Dim base ring
+        s = pygame.Surface((R_OUTER * 2 + 4, R_OUTER * 2 + 4), pygame.SRCALPHA)
+        pygame.draw.circle(s, (r // 8, g // 8, b // 8, 80),
+                           (R_OUTER + 2, R_OUTER + 2), R_OUTER, 1)
+        self.screen.blit(s, (CX - R_OUTER - 2, CY - R_OUTER - 2))
+
+        # Spinning arc segments
+        n_segs  = 24
+        gap_deg = 6
+        seg_deg = (360 / n_segs) - gap_deg
+        offset  = self._ring_angle
+
+        for i in range(n_segs):
+            start_deg = offset + i * (360 / n_segs)
+            brightness = 0.25 + 0.75 * (i / n_segs)  # trail fade
+            alpha = int(200 * brightness)
+            sr = int(r * brightness)
+            sg = int(g * brightness)
+            sb = int(b * brightness)
+            seg_surf_size = (R_OUTER + 4) * 2
+            ss = pygame.Surface((seg_surf_size, seg_surf_size), pygame.SRCALPHA)
+            pygame.draw.arc(
+                ss, (sr, sg, sb, alpha),
+                pygame.Rect(2, 2, R_OUTER * 2, R_OUTER * 2),
+                math.radians(start_deg),
+                math.radians(start_deg + seg_deg),
+                2,
+            )
+            self.screen.blit(ss, (CX - R_OUTER - 2, CY - R_OUTER - 2))
+
+        # Slower counter-rotating inner ring (dashes)
+        n_inner = 12
+        i_offset = -self._ring_angle * 0.4
+        for i in range(n_inner):
+            start_deg = i_offset + i * (360 / n_inner)
+            ss = pygame.Surface((R_INNER * 2 + 4, R_INNER * 2 + 4), pygame.SRCALPHA)
+            pygame.draw.arc(
+                ss, (gr, gg, gb, 70),
+                pygame.Rect(2, 2, R_INNER * 2, R_INNER * 2),
+                math.radians(start_deg),
+                math.radians(start_deg + 10),
+                1,
+            )
+            self.screen.blit(ss, (CX - R_INNER - 2, CY - R_INNER - 2))
+
+        # Temperature text
+        temp_val = str(data["temp"])
+        temp_s = self.f_temp.render(temp_val, True, (240, 248, 255))
+
+        # Glow behind text
+        for goff in range(6, 0, -2):
+            glow_s = self.f_temp.render(temp_val, True, (r, g, b))
+            glow_s.set_alpha(20 * goff)
+            gr_rect = glow_s.get_rect(center=(CX + goff, CY + goff))
+            self.screen.blit(glow_s, gr_rect)
+            gr_rect = glow_s.get_rect(center=(CX - goff, CY - goff))
+            self.screen.blit(glow_s, gr_rect)
+
+        temp_rect = temp_s.get_rect(center=(CX, CY))
+        self.screen.blit(temp_s, temp_rect)
+
+        # Degree + unit superscript
+        unit_s = self.f_unit.render("°C", True, (r, g, b))
+        self.screen.blit(unit_s, (temp_rect.right - 2, temp_rect.top + 10))
+
+        # Feels-like tag below temp (inside ring)
+        feels_str = f"FEELS  {data['feels']:+d}°" if data['feels'] < 0 else f"FEELS  {data['feels']}°"
+        feels_s = self.f_label.render(feels_str, True, (r // 2, g // 2, b // 2))
+        self.screen.blit(feels_s, feels_s.get_rect(centerx=CX, top=CY + 52))
+
+    def _draw_condition_badge(self, data, pri):
+        """Pulsing condition label below the ring."""
+        CY_BADGE = 368
+        r, g, b = pri
+        pulse = 0.65 + 0.35 * math.sin(self._t * 2.2)
+
+        label = data["label"].upper()
+
+        # Background pill
+        pill_w = min(self.width - 60, 280)
+        pill_h = 28
+        pill_x = self.cx - pill_w // 2
+        pill_y = CY_BADGE - pill_h // 2
+        pill_s = pygame.Surface((pill_w, pill_h), pygame.SRCALPHA)
+        pill_s.fill((r // 8, g // 8, b // 8, int(140 * pulse)))
+        # top/bottom border lines
+        pygame.draw.line(pill_s, (r, g, b, int(120 * pulse)),
+                         (0, 0), (pill_w, 0), 1)
+        pygame.draw.line(pill_s, (r, g, b, int(120 * pulse)),
+                         (0, pill_h - 1), (pill_w, pill_h - 1), 1)
+        self.screen.blit(pill_s, (pill_x, pill_y))
+
+        # Condition text
+        cond_s = self.f_cond.render(f"[ {label} ]", True, (r, g, b))
+        cond_s.set_alpha(int(200 + 55 * pulse))
+        self.screen.blit(cond_s, cond_s.get_rect(centerx=self.cx, centery=CY_BADGE))
+
+        # Divider
+        dim = (r // 6, g // 6, b // 6)
+        pygame.draw.line(self.screen, dim, (16, 390), (self.width - 16, 390), 1)
+
+    def _draw_stats(self, data, pri):
+        """3-column stats: humidity / wind — below condition."""
+        Y0 = 398
+        r, g, b = pri
+        dim = (r // 3, g // 3, b // 3)
+
+        cols = [
+            ("HUMIDITY", f"{data['humidity']}%"),
+            ("WIND",     f"{data['wind']} km/h"),
+            ("PRESSURE", "---"),        # placeholder; extend if needed
+        ]
+
+        col_w = self.width // 3
+        for i, (key, val) in enumerate(cols):
+            cx = i * col_w + col_w // 2
+
+            # Vertical separator (except first)
+            if i > 0:
+                pygame.draw.line(self.screen, dim,
+                                 (i * col_w, Y0 + 2), (i * col_w, Y0 + 54), 1)
+
+            k_s = self.f_label.render(key, True, (r // 4, g // 4, b // 4))
+            v_s = self.f_value.render(val, True, (r, g, b))
+            self.screen.blit(k_s, k_s.get_rect(centerx=cx, top=Y0 + 4))
+            self.screen.blit(v_s, v_s.get_rect(centerx=cx, top=Y0 + 20))
+
+        # Bottom divider
+        pygame.draw.line(self.screen, dim, (16, Y0 + 62), (self.width - 16, Y0 + 62), 1)
+
+    def _draw_forecast(self, data):
+        """3-day forecast rows with temperature range bars."""
+        Y0   = 475
+        W    = self.width
+        pad  = 20
+        row_h = 78
+
+        # Section label
+        lbl_s = self.f_label.render("3 - D A Y  O U T L O O K", True, (30, 55, 70))
+        self.screen.blit(lbl_s, lbl_s.get_rect(centerx=self.cx, top=Y0))
+        Y0 += 16
+
+        for i, fc in enumerate(data["forecast"][:3]):
+            y = Y0 + i * row_h
+            short   = fc["short"]
+            palette = _PALETTE.get(short, _PALETTE["CLR"])
+            pri_fc, _, _ = palette
+            r, g, b  = pri_fc
+
+            # Row bg (alternating)
+            if i % 2 == 0:
+                bg = pygame.Surface((W - 32, row_h - 6), pygame.SRCALPHA)
+                bg.fill((r // 20, g // 20, b // 20, 60))
+                self.screen.blit(bg, (16, y + 2))
+
+            # Day name
+            day_s = self.f_day.render(fc["day"], True, (180, 200, 210))
+            self.screen.blit(day_s, (pad + 4, y + 14))
+
+            # Condition short
+            cond_s = self.f_day.render(fc["label"][:14].upper(), True, (r // 2, g // 2, b // 2))
+            self.screen.blit(cond_s, (pad + 4, y + 30))
+
+            # Hi temperature
+            hi_s = self.f_value.render(f"{fc['hi']}°", True, (r, g, b))
+            self.screen.blit(hi_s, (W - 90, y + 10))
+
+            # Lo temperature
+            lo_s = self.f_label.render(f"{fc['lo']}°", True, (r // 3, g // 3, b // 3))
+            self.screen.blit(lo_s, (W - 40, y + 14))
+
+            # Temperature range bar
+            bar_x  = 80
+            bar_w  = W - 80 - 110
+            bar_y  = y + 50
+            spread = max(1, fc["hi"] - fc["lo"])
+            fill   = int(bar_w * min(1.0, spread / 22.0))
+
+            # Track line
+            pygame.draw.line(self.screen, (r // 10, g // 10, b // 10),
+                             (bar_x, bar_y), (bar_x + bar_w, bar_y), 2)
+            # Fill glow (two passes: wide dim + narrow bright)
+            if fill > 0:
+                s_glow = pygame.Surface((fill, 6), pygame.SRCALPHA)
+                s_glow.fill((r, g, b, 35))
+                self.screen.blit(s_glow, (bar_x, bar_y - 2))
+                pygame.draw.line(self.screen, (r, g, b),
+                                 (bar_x, bar_y), (bar_x + fill, bar_y), 2)
+
+        # Divider after forecast
+        last_y = Y0 + 3 * row_h + 4
+        pygame.draw.line(self.screen, (10, 22, 32), (16, last_y), (W - 16, last_y), 1)
+
+    def _draw_footer(self, data):
+        """Country + update meta at bottom."""
+        W  = self.width
+        Y0 = self.height - 82
+
+        # Bottom corner brackets
+        dim2 = (30, 55, 70)
+        pygame.draw.line(self.screen, dim2, (14, self.height - 14), (34, self.height - 14), 2)
+        pygame.draw.line(self.screen, dim2, (14, self.height - 28), (14, self.height - 14), 2)
+        pygame.draw.line(self.screen, dim2, (W - 34, self.height - 14), (W - 14, self.height - 14), 2)
+        pygame.draw.line(self.screen, dim2, (W - 14, self.height - 28), (W - 14, self.height - 14), 2)
+
+        country_s = self.f_coord.render(data["country"].upper(), True, (50, 80, 95))
+        self.screen.blit(country_s, country_s.get_rect(centerx=self.cx, top=Y0))
+
+        meta_str = f"LAST FETCH  {data['updated']} UTC  ·  OPEN-METEO"
+        meta_s = self.f_meta.render(meta_str, True, (22, 40, 52))
+        self.screen.blit(meta_s, meta_s.get_rect(centerx=self.cx, top=Y0 + 20))
+
+    # ── Loading / error states ─────────────────────────────────────────────
+
+    def _draw_loading(self, pri=(0, 200, 220)):
+        r, g, b = pri
+        dots = "." * (int(self._t * 1.8) % 4)
+        CX, CY = self.cx, self.height // 2
+
+        # Spinning indicator
+        for i in range(8):
+            angle = math.radians(self._ring_angle + i * 45)
+            ix = CX + int(30 * math.cos(angle))
+            iy = CY - 60 + int(30 * math.sin(angle))
+            alpha = int(255 * (i / 8))
+            s = pygame.Surface((6, 6), pygame.SRCALPHA)
+            pygame.draw.circle(s, (r, g, b, alpha), (3, 3), 3)
+            self.screen.blit(s, (ix - 3, iy - 3))
+
+        lbl_s = self.f_cond.render(f"ACQUIRING DATA{dots}", True, (r // 3, g // 3, b // 3))
+        self.screen.blit(lbl_s, lbl_s.get_rect(centerx=CX, top=CY))
 
     def _draw_error(self, msg):
-        self._blit_center("WEATHER LINK LOST", self.font_sm, (220, 60, 60), self.height // 2 - 20)
-        self._blit_center(msg, self.font_xs, self.muted, self.height // 2 + 10)
-
-    # ── Main weather layout ────────────────────────────────────────────────
-
-    def _draw_weather(self, d):
-        cx = self.width // 2
-        color = d["color"]
-
-        # ── Header bar ────────────────────────────────────
-        pygame.draw.line(self.screen, self.dim, (16, 28), (self.width - 16, 28), 1)
-        label_surf = self.font_xs.render("TARS WEATHER", True, self.muted)
-        self.screen.blit(label_surf, (16, 14))
-        upd_surf = self.font_xs.render(d["updated"], True, self.muted)
-        self.screen.blit(upd_surf, (self.width - upd_surf.get_width() - 16, 14))
-
-        # ── Location ───────────────────────────────────────
-        city_surf = self.font_md.render(d["city"].upper(), True, self.white)
-        self.screen.blit(city_surf, city_surf.get_rect(centerx=cx, top=38))
-
-        country_surf = self.font_xs.render(
-            f"{d['country'].upper()}  {d['lat']:.2f}N {abs(d['lon']):.2f}{'W' if d['lon'] < 0 else 'E'}",
-            True, self.muted
-        )
-        self.screen.blit(country_surf, country_surf.get_rect(centerx=cx, top=66))
-
-        # ── Divider ────────────────────────────────────────
-        pygame.draw.line(self.screen, self.dim, (16, 90), (self.width - 16, 90), 1)
-
-        # ── Big temperature ────────────────────────────────
-        temp_str = f"{d['temp']:+d}" if d['temp'] < 0 else str(d['temp'])
-        temp_surf = self.font_xl.render(temp_str, True, color)
-        deg_surf  = self.font_lg.render("°C", True, tuple(max(0, c - 60) for c in color))
-        temp_x = cx - (temp_surf.get_width() + deg_surf.get_width()) // 2
-        self.screen.blit(temp_surf, (temp_x, 100))
-        self.screen.blit(deg_surf, (temp_x + temp_surf.get_width() + 2, 118))
-
-        # ── Condition ──────────────────────────────────────
-        # Animated bracket pulse
-        pulse = 0.5 + 0.5 * math.sin(self._anim_t * 2.0)
-        bracket_alpha = int(80 + 100 * pulse)
-        cond_surf = self.font_sm.render(f"[ {d['label']} ]", True, color)
-        cond_surf.set_alpha(180 + int(40 * pulse))
-        self.screen.blit(cond_surf, cond_surf.get_rect(centerx=cx, top=192))
-
-        # ── Stats row ──────────────────────────────────────
-        pygame.draw.line(self.screen, self.dim, (16, 225), (self.width - 16, 225), 1)
-
-        stats = [
-            ("FEELS", f"{d['feels']:+d}°" if d['feels'] < 0 else f"{d['feels']}°"),
-            ("HUMID", f"{d['humidity']}%"),
-            ("WIND",  f"{d['wind']}km/h"),
-        ]
-        col_w = self.width // 3
-        for i, (key, val) in enumerate(stats):
-            x = i * col_w + col_w // 2
-            k_surf = self.font_xs.render(key, True, self.muted)
-            v_surf = self.font_sm.render(val, True, self.cyan)
-            self.screen.blit(k_surf, k_surf.get_rect(centerx=x, top=234))
-            self.screen.blit(v_surf, v_surf.get_rect(centerx=x, top=252))
-
-        pygame.draw.line(self.screen, self.dim, (16, 280), (self.width - 16, 280), 1)
-
-        # ── Forecast ───────────────────────────────────────
-        forecast_y = 295
-        self._blit_label("3-DAY FORECAST", 295)
-        forecast_y = 315
-
-        row_h = 62
-        for i, fc in enumerate(d["forecast"][:3]):
-            y = forecast_y + i * row_h
-            fc_color = fc["color"]
-
-            # Row background on hover-ish alternation
-            if i % 2 == 0:
-                bg_s = pygame.Surface((self.width - 32, row_h - 4), pygame.SRCALPHA)
-                bg_s.fill((0, 40, 55, 40))
-                self.screen.blit(bg_s, (16, y))
-
-            # Day
-            day_surf = self.font_sm.render(fc["day"], True, self.white)
-            self.screen.blit(day_surf, (28, y + 12))
-
-            # Condition badge
-            badge_surf = self.font_xs.render(fc["code"], True, fc_color)
-            self.screen.blit(badge_surf, (badge_surf.get_rect(centerx=cx, top=y + 14)))
-
-            # Hi / Lo
-            hi_surf = self.font_sm.render(f"{fc['hi']}°", True, fc_color)
-            lo_surf = self.font_xs.render(f"{fc['lo']}°", True, self.muted)
-            self.screen.blit(hi_surf, (self.width - 80, y + 10))
-            self.screen.blit(lo_surf, (self.width - 36, y + 14))
-
-            # Mini temp bar
-            bar_w = 120
-            bar_x = cx - bar_w // 2
-            bar_y = y + 36
-            pygame.draw.line(self.screen, self.dim, (bar_x, bar_y), (bar_x + bar_w, bar_y), 2)
-            spread = max(1, fc['hi'] - fc['lo'])
-            fill_w = int(bar_w * min(1.0, spread / 20.0))
-            pygame.draw.line(self.screen, fc_color, (bar_x, bar_y), (bar_x + fill_w, bar_y), 2)
-
-        # ── Bottom border ──────────────────────────────────
-        pygame.draw.line(self.screen, self.dim,
-                         (16, forecast_y + 3 * row_h + 4),
-                         (self.width - 16, forecast_y + 3 * row_h + 4), 1)
-
-    # ── Helpers ────────────────────────────────────────────────────────────
-
-    def _blit_center(self, text, font, color, y):
-        surf = font.render(text, True, color)
-        self.screen.blit(surf, surf.get_rect(centerx=self.width // 2, top=y))
-
-    def _blit_label(self, text, y):
-        surf = self.font_xs.render(text, True, self.muted)
-        self.screen.blit(surf, (16, y))
+        CX, CY = self.cx, self.height // 2
+        e1 = self.f_cond.render("WEATHER LINK LOST", True, (180, 40, 40))
+        e2 = self.f_label.render(msg, True, (60, 30, 30))
+        self.screen.blit(e1, e1.get_rect(centerx=CX, top=CY - 14))
+        self.screen.blit(e2, e2.get_rect(centerx=CX, top=CY + 10))
 
     def cleanup(self):
-        pass
+        self._particles.clear()
