@@ -260,8 +260,8 @@ class StocksAnimation:
 
         self._draw_header(data)
         self._draw_featured(data["featured"])
-        self._draw_watchlist(data["watchlist"])
-        self._draw_news(data.get("news", []))
+        end_y = self._draw_watchlist(data["watchlist"])
+        self._draw_news(data.get("news", []), end_y)
         self._draw_ticker(data)
 
     # ── Loading / error ────────────────────────────────────────────────────
@@ -454,44 +454,47 @@ class StocksAnimation:
                 pygame.draw.lines(self.screen, col, False, pts, 1)
                 pygame.draw.circle(self.screen, col, pts[-1], 3)
 
+        divider_y = Y0 + len(watchlist) * ROW + 4
         pygame.draw.line(self.screen, (14, 22, 32),
-                         (16, Y0 + len(watchlist) * ROW + 4),
-                         (W - 16, Y0 + len(watchlist) * ROW + 4), 1)
+                         (16, divider_y), (W - 16, divider_y), 1)
+        return divider_y
 
     # ── News headlines ─────────────────────────────────────────────────────
 
-    def _draw_news(self, news):
+    def _draw_news(self, news, after_y):
         if not news:
             return
         W   = self.width
-        # Anchor just above the ticker strip (height - 62) with 2 rows of ~30px
-        Y0  = self.height - 62 - len(news) * 32 - 10
-        ROW = 32
+        ROW = 42   # enough room for headline + source line + gap between items
 
+        # Section label — 18px below the watchlist divider
+        label_y = after_y + 18
         sec = self.f_label.render("M A R K E T  N E W S", True, (38, 58, 72))
-        self.screen.blit(sec, sec.get_rect(centerx=self.cx, top=Y0 - 16))
-        pygame.draw.line(self.screen, (14, 22, 32), (16, Y0 - 4), (W - 16, Y0 - 4), 1)
+        self.screen.blit(sec, sec.get_rect(centerx=self.cx, top=label_y))
+
+        # First news row starts 14px below the label
+        Y0 = label_y + 20
 
         for i, item in enumerate(news):
             y = Y0 + i * ROW
 
             # Bullet
             bul = self.f_label.render("▸", True, _AMBER)
-            self.screen.blit(bul, (16, y + 2))
+            self.screen.blit(bul, (16, y))
 
-            # Headline — truncate to fit available width
+            # Headline — truncate to fit
             headline = item["title"]
             max_w    = W - 52
             hl_surf  = self.f_label.render(headline, True, (160, 178, 195))
             while hl_surf.get_width() > max_w and len(headline) > 10:
                 headline = headline[:-4] + "…"
                 hl_surf  = self.f_label.render(headline, True, (160, 178, 195))
-            self.screen.blit(hl_surf, (30, y + 2))
+            self.screen.blit(hl_surf, (30, y))
 
-            # Source + age (below headline)
+            # Source + age
             meta_str = f"{item['source']}  {item['age']}".strip()
             meta_s   = self.f_meta.render(meta_str, True, (42, 62, 78))
-            self.screen.blit(meta_s, (30, y + 17))
+            self.screen.blit(meta_s, (30, y + 16))
 
     # ── Scrolling ticker ───────────────────────────────────────────────────
 
