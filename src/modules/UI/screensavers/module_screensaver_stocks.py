@@ -164,12 +164,12 @@ class StocksAnimation:
             else:
                 featured["state"] = "CLOSED"
 
-            # Watchlist: daily (1d/5d) — cheaper, still gives today's price
+            # Watchlist: daily (1d/5d) — 5 daily closes for mini sparkline
             watchlist = []
             for sym in _WATCHLIST:
                 try:
-                    w_meta, _ = self._fetch_chart(sym, "1d", "5d")
-                    q = self._meta_to_quote(sym, w_meta, [])
+                    w_meta, w_closes = self._fetch_chart(sym, "1d", "5d")
+                    q = self._meta_to_quote(sym, w_meta, w_closes)
                     watchlist.append(q)
                 except Exception:
                     pass
@@ -397,19 +397,25 @@ class StocksAnimation:
             self.screen.blit(price_s, (W - price_s.get_width() - 16, y + 8))
             self.screen.blit(pct_s,   (W - pct_s.get_width() - 16,   y + 28))
 
-            # Day-range bar (center)
-            if item["high"] > item["low"] > 0 and item["price"] > 0:
-                bar_x = 145
-                bar_w = W - bar_x - 85
-                bar_y = y + 20
-                pygame.draw.line(self.screen, (16, 26, 36), (bar_x, bar_y), (bar_x + bar_w, bar_y), 4)
-                pos    = (item["price"] - item["low"]) / (item["high"] - item["low"])
-                pos    = max(0.0, min(1.0, pos))
-                fill_w = int(pos * bar_w)
-                if fill_w > 0:
-                    dim = (col[0] // 4, col[1] // 4, col[2] // 4)
-                    pygame.draw.line(self.screen, dim, (bar_x, bar_y), (bar_x + fill_w, bar_y), 4)
-                pygame.draw.circle(self.screen, col, (bar_x + fill_w, bar_y), 5)
+            # 5-day mini sparkline (center)
+            prices = item.get("chart", [])
+            if len(prices) >= 2:
+                sx  = 148
+                sw  = W - sx - 88
+                sh  = 30
+                sy  = y + (ROW - sh) // 2
+                lo  = min(prices)
+                hi  = max(prices)
+                rng = (hi - lo) or 1.0
+                pts = [
+                    (sx + int(j * sw / (len(prices) - 1)),
+                     sy + sh - int((p - lo) / rng * sh))
+                    for j, p in enumerate(prices)
+                ]
+                dim = (col[0] // 4, col[1] // 4, col[2] // 4)
+                pygame.draw.lines(self.screen, dim, False, pts, 3)
+                pygame.draw.lines(self.screen, col, False, pts, 1)
+                pygame.draw.circle(self.screen, col, pts[-1], 3)
 
         pygame.draw.line(self.screen, (14, 22, 32),
                          (16, Y0 + len(watchlist) * ROW + 4),
