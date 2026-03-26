@@ -292,14 +292,13 @@ class EnduranceAnimation:
         glEnable(GL_NORMALIZE)
         glShadeModel(GL_SMOOTH)
         
-        glViewport(0, 0, self.width, self.height)
+        # Use actual screen dimensions (not portrait surface) for OpenGL viewport
+        display_surface = pygame.display.get_surface()
+        actual_w, actual_h = display_surface.get_size() if display_surface else (self.width, self.height)
+        glViewport(0, 0, actual_w, actual_h)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        if self.is_portrait:
-            glRotatef(90, 0, 0, 1)
-            gluPerspective(45, self.height / self.width, 0.1, 100.0)
-        else:
-            gluPerspective(45, self.width / self.height, 0.1, 100.0)
+        gluPerspective(45, actual_w / actual_h, 0.1, 100.0)
         glMatrixMode(GL_MODELVIEW)
         
         glEnable(GL_LIGHTING)

@@ -104,7 +104,7 @@ class DisplayManager:
     def activate_screensaver(self, name: str = None):
         with self._lock:
             if self.screensaver_mgr:
-                self.screensaver_mgr.activate(name)
+                self.screensaver_mgr.activate(name, manual=True)
                 self.state.screensaver_active = True
 
     def deactivate_screensaver(self):

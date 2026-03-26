@@ -34,13 +34,14 @@ class ScreensaverManager:
         self._active_name: Optional[str] = None
         self._last_activity = time.time()
         self._last_cycle = time.time()
+        self._manually_activated = False
 
     # ── Public interface ──────────────────────────────────────────────────
 
     def reset_timer(self):
-        """Reset idle timer. Call on any user/AI activity."""
+        """Reset idle timer. Only auto-deactivates timeout-triggered screensavers."""
         self._last_activity = time.time()
-        if self._active:
+        if self._active and not self._manually_activated:
             self.deactivate()
 
     def check_timeout(self):
@@ -61,7 +62,7 @@ class ScreensaverManager:
     def get_available(self) -> list:
         return list(AVAILABLE_ANIMATIONS.keys())
 
-    def activate(self, name: str = None):
+    def activate(self, name: str = None, manual: bool = False):
         """Force-activate a screensaver by name, or pick one randomly."""
         chosen = name or self._pick_name()
         cls = AVAILABLE_ANIMATIONS.get(chosen)
@@ -73,6 +74,7 @@ class ScreensaverManager:
         self._animation.reset()
         self._active_name = chosen
         self._active = True
+        self._manually_activated = manual
         self._last_cycle = time.time()
 
     def deactivate(self):
