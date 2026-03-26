@@ -132,6 +132,7 @@ function ControllerCard() {
             </div>
           </div>
 
+          <div className="block sm:hidden h-px bg-border" />
           <div className="hidden sm:block w-px bg-border mx-4 self-stretch" />
 
           <div className="flex-1 min-w-0">
