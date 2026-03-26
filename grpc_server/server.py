@@ -13,6 +13,7 @@ from loguru import logger
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "tars_sdk" / "proto"))
 
 from tars_sdk.proto import tars_pb2_grpc
 from grpc_server.servicer import TarsServiceServicer
