@@ -21,7 +21,8 @@ function App() {
   const [light, setLight] = useState(() => localStorage.getItem('tars-theme') === 'light')
 
   useEffect(() => {
-    localStorage.setItem('tars-theme', light ? 'light' : 'dark')
+    localStorage.setItem("tars-theme", light ? "light" : "dark")
+    document.documentElement.setAttribute("data-theme", light ? "light" : "dark")
   }, [light])
 
   return (

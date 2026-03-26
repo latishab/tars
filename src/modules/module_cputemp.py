@@ -19,6 +19,7 @@ This license applies only to this file and does not override licenses of other f
 
 import threading
 import time
+from pathlib import Path
 from modules.module_messageQue import queue_message
 from modules.module_config import load_config
 
@@ -58,13 +59,16 @@ _stop_thermal_monitor = threading.Event()
 _reset_timer = threading.Event()
 _ventilate_threshold = 60.0
 _check_interval = 30
-_is_ventilating = False
 _ventilate_callback = None
 _last_movement_time = 0
 _movement_cooldown = 10
 
 CONFIG = load_config()
 _ventilate_enabled = CONFIG['MISC']['ventilate']
+
+_VENTILATE_STATE_FILE = Path('/tmp/tars_ventilate_state')
+# Restore state from previous run if the file exists
+_is_ventilating = _VENTILATE_STATE_FILE.exists()
 
 
 def set_cpu_temp_instance(instance):
@@ -84,6 +88,10 @@ def is_ventilating():
 def set_ventilating(state):
     global _is_ventilating
     _is_ventilating = state
+    if state:
+        _VENTILATE_STATE_FILE.touch()
+    elif _VENTILATE_STATE_FILE.exists():
+        _VENTILATE_STATE_FILE.unlink()
 
 
 def record_movement():

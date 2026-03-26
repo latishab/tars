@@ -402,7 +402,7 @@ function MovementBuilder() {
 
           {/* 3D Preview */}
           <Panel title="3D Preview" badge={previewMovementName ? previewMovementName.toUpperCase() : 'EDITOR'}>
-            <TarsPreview steps={steps} movementName={previewMovementName} isLocomotion={previewIsLocomotion} />
+            <div className="tars-no-invert"><TarsPreview steps={steps} movementName={previewMovementName} isLocomotion={previewIsLocomotion} /></div>
           </Panel>
 
           {/* Execution */}
@@ -426,8 +426,8 @@ function MovementBuilder() {
                 style={{ flex: 1, minWidth: 120 }}
               />
               <select value={seqType} onChange={e => setSeqType(e.target.value)} className="tars-select">
-                <option value="movement">Movement</option>
-                <option value="expression">Expression</option>
+                <option value="locomotion">Locomotion</option>
+                <option value="gesture">Gesture</option>
               </select>
             </div>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>

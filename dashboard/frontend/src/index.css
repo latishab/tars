@@ -504,3 +504,8 @@
 .tars-info-trigger:hover .tars-info-tip {
   display: block;
 }
+
+/* Counter-invert elements that must stay dark in light mode */
+[data-theme='light'] .tars-no-invert {
+  filter: invert(1) hue-rotate(180deg);
+}
