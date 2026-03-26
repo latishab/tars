@@ -455,7 +455,7 @@ class StocksAnimation:
             self._tick_surf = surf
             self._tick_w    = total_w
 
-        ty = self.height - 46
+        ty = self.height - 62
         strip = pygame.Surface((W, 26), pygame.SRCALPHA)
         strip.fill((7, 11, 17, 210))
         self.screen.blit(strip, (0, ty))
