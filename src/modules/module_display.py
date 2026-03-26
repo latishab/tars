@@ -55,6 +55,7 @@ class DisplayManager:
 
         self.bg_color = (13, 17, 23)
         self._last_fps_print = 0.0
+        self._gl_texture_id = None
 
         from collections import deque
         self._log_lines: deque = deque(maxlen=3)
@@ -241,10 +242,17 @@ class DisplayManager:
 
         screen = pygame.display.set_mode(
             (screen_w, screen_h),
-            pygame.FULLSCREEN | pygame.NOFRAME
+            pygame.OPENGL | pygame.DOUBLEBUF | pygame.FULLSCREEN
         )
         pygame.display.set_caption("TARS")
         pygame.mouse.set_visible(False)
+
+        # Initialize OpenGL clear color
+        try:
+            from OpenGL.GL import glClearColor
+            glClearColor(0.0, 0.0, 0.0, 1.0)
+        except ImportError:
+            pass
 
         # Portrait surface (480x800), rotated 270 for landscape output
         portrait_surface = pygame.Surface((self.width, self.height))
@@ -324,9 +332,7 @@ class DisplayManager:
             if not opengl_mode:
                 self.status_bar.draw(portrait_surface)
                 self._draw_log_overlay(portrait_surface)
-                rotated = pygame.transform.rotozoom(portrait_surface, 270, 1.0)
-                screen.blit(rotated, (0, 0))
-                pygame.display.flip()
+                self._render_surface_to_gl(portrait_surface, screen_w, screen_h)
             clock.tick(60)
 
             now = time.time()
@@ -334,6 +340,69 @@ class DisplayManager:
                 self._last_fps_print = now
 
         pygame.quit()
+
+    def _render_surface_to_gl(self, surface, screen_w, screen_h):
+        """Upload a pygame surface as an OpenGL texture and display it fullscreen."""
+        try:
+            from OpenGL.GL import (
+                glClear, glClearColor, GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT,
+                glDisable, glEnable, GL_DEPTH_TEST, GL_LIGHTING,
+                GL_TEXTURE_2D, GL_BLEND, glBlendFunc, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                glMatrixMode, GL_PROJECTION, GL_MODELVIEW, glPushMatrix, glPopMatrix,
+                glLoadIdentity, glOrtho, glBindTexture, glTexParameteri,
+                GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER, GL_LINEAR,
+                glTexImage2D, GL_RGBA, GL_UNSIGNED_BYTE, glColor4f,
+                glBegin, glEnd, GL_QUADS, glTexCoord2f, glVertex2f, glGenTextures,
+                glPolygonMode, GL_FRONT_AND_BACK, GL_FILL
+            )
+        except ImportError:
+            return
+
+        # Rotate portrait→landscape (270° = 90° CCW)
+        rotated = pygame.transform.rotate(surface, 270)
+        tex_w, tex_h = rotated.get_size()
+        texture_data = pygame.image.tostring(rotated, "RGBA", True)
+
+        if self._gl_texture_id is None:
+            self._gl_texture_id = glGenTextures(1)
+
+        glDisable(GL_DEPTH_TEST)
+        glDisable(GL_LIGHTING)
+        glEnable(GL_TEXTURE_2D)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+
+        glMatrixMode(GL_PROJECTION)
+        glPushMatrix()
+        glLoadIdentity()
+        glOrtho(0, screen_w, 0, screen_h, -1, 1)
+
+        glMatrixMode(GL_MODELVIEW)
+        glPushMatrix()
+        glLoadIdentity()
+
+        glBindTexture(GL_TEXTURE_2D, self._gl_texture_id)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex_w, tex_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_data)
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glColor4f(1.0, 1.0, 1.0, 1.0)
+
+        glBegin(GL_QUADS)
+        glTexCoord2f(0, 0); glVertex2f(0, 0)
+        glTexCoord2f(1, 0); glVertex2f(screen_w, 0)
+        glTexCoord2f(1, 1); glVertex2f(screen_w, screen_h)
+        glTexCoord2f(0, 1); glVertex2f(0, screen_h)
+        glEnd()
+
+        glMatrixMode(GL_PROJECTION)
+        glPopMatrix()
+        glMatrixMode(GL_MODELVIEW)
+        glPopMatrix()
+
+        pygame.display.flip()
 
     def _draw_log_overlay(self, surface):
         if not self._log_lines or not self._log_font:
