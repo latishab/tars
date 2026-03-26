@@ -122,6 +122,7 @@ backRightLeg = int(config["SERVO"]["backRightLeg"]) + perfectRightLegOffset
 
 MOVING = False
 HOLD = -1
+ARMS_PRESENT = config["SERVO"].getboolean("arms_present", fallback=False)
 
 if not servo_positions:
     print("[SERVO] No saved positions - initializing to neutral estimates")
