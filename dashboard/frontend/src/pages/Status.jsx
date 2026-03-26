@@ -85,6 +85,7 @@ const SCREENSAVERS = [
   { name: 'starfield',  label: 'Starfield' },
   { name: 'endurance',  label: 'Endurance' },
   { name: 'weather',    label: 'Weather' },
+  { name: 'stocks',     label: 'Stocks' },
 ]
 
 function DisplayPanel({ displayStatus, onSwitchApp, onActivateScreensaver, onDeactivateScreensaver, loading }) {

@@ -9,11 +9,13 @@ from typing import Optional
 from modules.UI.screensavers.module_screensaver_starfield import StarfieldAnimation
 from modules.UI.screensavers.module_screensaver_endurance import EnduranceAnimation
 from modules.UI.screensavers.module_screensaver_weather import WeatherAnimation
+from modules.UI.screensavers.module_screensaver_stocks import StocksAnimation
 
 AVAILABLE_ANIMATIONS = {
     "starfield":  StarfieldAnimation,
     "endurance":  EnduranceAnimation,
     "weather":    WeatherAnimation,
+    "stocks":     StocksAnimation,
 }
 
 
