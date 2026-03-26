@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check, Wind, Info, Monitor } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Battery, Cpu, Thermometer, Wifi, Radio, Copy, Check, Wind, Info, Monitor, CloudSun } from 'lucide-react'
 
 // ── Gauge bar ─────────────────────────────────────────────────────────────
 function batteryColor(level) {
@@ -171,6 +171,162 @@ function DisplayPanel({ displayStatus, onSwitchApp, onActivateScreensaver, onDea
   )
 }
 
+// ── Weather helpers ────────────────────────────────────────────────────────
+const WMO_LABEL = {
+  0:'CLEAR SKY',1:'MAINLY CLEAR',2:'PARTLY CLOUDY',3:'OVERCAST',
+  45:'FOG',48:'ICING FOG',
+  51:'LIGHT DRIZZLE',53:'DRIZZLE',55:'HEAVY DRIZZLE',
+  61:'LIGHT RAIN',63:'RAIN',65:'HEAVY RAIN',
+  71:'LIGHT SNOW',73:'SNOW',75:'HEAVY SNOW',77:'SNOW GRAINS',
+  80:'RAIN SHOWERS',81:'SHOWERS',82:'HEAVY SHOWERS',
+  85:'SNOW SHOWERS',86:'HEAVY SNOW SHOWERS',
+  95:'THUNDERSTORM',96:'T-STORM + HAIL',99:'T-STORM + HAIL',
+}
+const WMO_COLOR = {
+  0:'hsl(42 100% 62%)',1:'hsl(42 100% 62%)',2:'hsl(200 60% 65%)',3:'hsl(214 14% 50%)',
+  45:'hsl(180 20% 55%)',48:'hsl(180 20% 55%)',
+  51:'hsl(191 80% 55%)',53:'hsl(191 80% 55%)',55:'hsl(191 80% 55%)',
+  61:'hsl(210 80% 60%)',63:'hsl(210 80% 60%)',65:'hsl(210 80% 60%)',
+  71:'hsl(220 40% 80%)',73:'hsl(220 40% 80%)',75:'hsl(220 40% 80%)',77:'hsl(220 40% 80%)',
+  80:'hsl(210 70% 62%)',81:'hsl(210 70% 62%)',82:'hsl(210 70% 62%)',
+  85:'hsl(220 40% 80%)',86:'hsl(220 40% 80%)',
+  95:'hsl(280 70% 65%)',96:'hsl(280 70% 65%)',99:'hsl(280 70% 65%)',
+}
+const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT']
+
+async function fetchWeather() {
+  const geo = await fetch('http://ip-api.com/json/?fields=city,country,lat,lon,status').then(r => r.json())
+  if (geo.status !== 'success') throw new Error('geolocation failed')
+  const { lat, lon, city, country } = geo
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+    + `&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m`
+    + `&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4`
+  const w = await fetch(url).then(r => r.json())
+  const cur = w.current
+  const daily = w.daily
+  return {
+    city, country, lat, lon,
+    temp: Math.round(cur.temperature_2m),
+    feels: Math.round(cur.apparent_temperature),
+    humidity: cur.relative_humidity_2m,
+    wind: Math.round(cur.wind_speed_10m),
+    code: cur.weather_code,
+    forecast: [1,2,3].map(i => ({
+      day: DAYS[new Date(daily.time[i]).getDay()],
+      code: daily.weather_code[i],
+      hi: Math.round(daily.temperature_2m_max[i]),
+      lo: Math.round(daily.temperature_2m_min[i]),
+    })),
+    updatedAt: Date.now(),
+  }
+}
+
+// ── Weather Panel ──────────────────────────────────────────────────────────
+function WeatherPanel() {
+  const [wx, setWx] = useState(null)
+  const [wxErr, setWxErr] = useState(null)
+  const [wxLoading, setWxLoading] = useState(true)
+  const timerRef = useRef(null)
+
+  const load = async () => {
+    setWxLoading(true)
+    try { setWx(await fetchWeather()); setWxErr(null) }
+    catch (e) { setWxErr(e.message) }
+    setWxLoading(false)
+  }
+
+  useEffect(() => {
+    load()
+    timerRef.current = setInterval(load, 10 * 60 * 1000)
+    return () => clearInterval(timerRef.current)
+  }, [])
+
+  const labelStyle = { fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(214 14% 40%)' }
+  const mutedStyle = { fontSize: 9, letterSpacing: '0.1em', color: 'hsl(214 14% 38%)' }
+
+  return (
+    <Panel title="Weather" icon={CloudSun} action={
+      <button onClick={load} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 9, letterSpacing: '0.12em', color: 'hsl(214 14% 38%)', padding: '2px 0' }}>
+        {wxLoading ? '…' : 'REFRESH'}
+      </button>
+    }>
+      {wxLoading && !wx && (
+        <div style={{ ...mutedStyle, padding: '12px 0', textAlign: 'center' }}>ACQUIRING…</div>
+      )}
+      {wxErr && !wx && (
+        <div style={{ fontSize: 9, letterSpacing: '0.12em', color: 'hsl(0 80% 55%)', padding: '8px 0' }}>LINK LOST — {wxErr}</div>
+      )}
+      {wx && (() => {
+        const condColor = WMO_COLOR[wx.code] ?? 'hsl(191 100% 46%)'
+        const condLabel = WMO_LABEL[wx.code] ?? 'UNKNOWN'
+        return (
+          <>
+            {/* Location + condition */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+              <div>
+                <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 20, letterSpacing: '0.08em', color: 'hsl(210 22% 88%)' }}>
+                  {wx.city}
+                </div>
+                <div style={mutedStyle}>{wx.country} · {wx.lat.toFixed(2)}N {Math.abs(wx.lon).toFixed(2)}{wx.lon < 0 ? 'W' : 'E'}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 700, fontSize: 36, color: condColor, lineHeight: 1 }}>
+                  {wx.temp}°
+                </div>
+                <div style={{ fontSize: 9, letterSpacing: '0.1em', color: condColor, marginTop: 2 }}>{condLabel}</div>
+              </div>
+            </div>
+
+            {/* Stats row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6, marginBottom: 12 }}>
+              {[
+                ['FEELS', `${wx.feels}°`],
+                ['HUMIDITY', `${wx.humidity}%`],
+                ['WIND', `${wx.wind} km/h`],
+              ].map(([k, v]) => (
+                <div key={k} style={{ padding: '8px 10px', background: 'hsl(214 35% 5%)', border: '1px solid hsl(214 28% 11%)', borderLeft: '2px solid hsl(191 100% 46% / 0.2)' }}>
+                  <div style={labelStyle}>{k}</div>
+                  <div style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 18, color: 'hsl(191 100% 55%)', marginTop: 2 }}>{v}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: 1, background: 'hsl(214 28% 11%)', marginBottom: 10 }} />
+
+            {/* 3-day forecast */}
+            <div style={{ ...labelStyle, marginBottom: 8 }}>3-DAY FORECAST</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {wx.forecast.map(fc => {
+                const fc_color = WMO_COLOR[fc.code] ?? 'hsl(191 100% 46%)'
+                const fc_label = WMO_LABEL[fc.code] ?? '??'
+                const spread = Math.max(1, fc.hi - fc.lo)
+                const barPct = Math.min(100, (spread / 20) * 100)
+                return (
+                  <div key={fc.day} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', background: 'hsl(214 35% 5%)' }}>
+                    <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 13, color: 'hsl(210 22% 70%)', width: 28 }}>{fc.day}</span>
+                    <div style={{ flex: 1, height: 2, background: 'hsl(214 28% 11%)', borderRadius: 1, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${barPct}%`, background: fc_color, boxShadow: `0 0 4px ${fc_color}` }} />
+                    </div>
+                    <span style={{ fontSize: 9, letterSpacing: '0.08em', color: fc_color, width: 90, textAlign: 'right' }}>{fc_label}</span>
+                    <span style={{ fontFamily: 'Rajdhani, sans-serif', fontWeight: 600, fontSize: 14, color: fc_color, width: 28, textAlign: 'right' }}>{fc.hi}°</span>
+                    <span style={{ ...mutedStyle, width: 24, textAlign: 'right' }}>{fc.lo}°</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Updated */}
+            <div style={{ ...mutedStyle, marginTop: 8, textAlign: 'right' }}>
+              UPDATED {new Date(wx.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </>
+        )
+      })()}
+    </Panel>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────
 export default function Status() {
   const [status, setStatus] = useState(null)
@@ -316,6 +472,9 @@ export default function Status() {
               loading={displayLoading}
             />
           )}
+
+          {/* ── Weather ──────────────────────────────────────────────── */}
+          <WeatherPanel />
 
           {/* ── Ventilation ──────────────────────────────────────────── */}
           <Panel title="Thermal Management" icon={Wind}>
