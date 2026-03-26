@@ -2,7 +2,160 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Download, RefreshCw, Wifi, AlertCircle, CheckCircle, Signal, Lock, WifiOff } from 'lucide-react'
+import { Download, RefreshCw, Wifi, AlertCircle, CheckCircle, Signal, Lock, WifiOff, Gamepad2 } from 'lucide-react'
+
+const FACE_BUTTONS = [
+  { key: 'BTN_SOUTH',    label: '✕' },
+  { key: 'BTN_SOUTH+R1', label: '✕ + R1' },
+  { key: 'BTN_EAST',     label: '○' },
+  { key: 'BTN_EAST+R1',  label: '○ + R1' },
+  { key: 'BTN_EAST+R2',  label: '○ + R2' },
+  { key: 'BTN_NORTH',    label: '△' },
+  { key: 'BTN_NORTH+R1', label: '△ + R1' },
+  { key: 'BTN_WEST',     label: '□' },
+  { key: 'BTN_WEST+R1',  label: '□ + R1' },
+]
+
+const DPAD_BUTTONS = [
+  { key: 'DPAD_UP',       label: 'Up' },
+  { key: 'DPAD_UP+L2',    label: 'Up + L2' },
+  { key: 'DPAD_DOWN',     label: 'Down' },
+  { key: 'DPAD_DOWN+L2',  label: 'Down + L2' },
+  { key: 'DPAD_LEFT',     label: 'Left' },
+  { key: 'DPAD_LEFT+L2',  label: 'Left + L2' },
+  { key: 'DPAD_RIGHT',    label: 'Right' },
+  { key: 'DPAD_RIGHT+L2', label: 'Right + L2' },
+]
+
+const DEFAULT_MAPPINGS = {
+  BTN_SOUTH: 'pose', 'BTN_SOUTH+R1': 'wave_right',
+  BTN_EAST: 'bow', 'BTN_EAST+R1': 'wave_left', 'BTN_EAST+R2': 'side_side',
+  BTN_NORTH: 'laugh', 'BTN_NORTH+R1': 'tilt_right',
+  BTN_WEST: 'wiggle', 'BTN_WEST+R1': 'tilt_left',
+  DPAD_UP: 'walk_forward', 'DPAD_UP+L2': 'step_forward',
+  DPAD_DOWN: 'walk_backward', 'DPAD_DOWN+L2': 'step_backward',
+  DPAD_LEFT: 'turn_left_slow', 'DPAD_LEFT+L2': 'turn_left',
+  DPAD_RIGHT: 'turn_right_slow', 'DPAD_RIGHT+L2': 'turn_right',
+}
+
+function ControllerCard() {
+  const [mappings, setMappings] = useState(DEFAULT_MAPPINGS)
+  const [movements, setMovements] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.controller?.mappings) setMappings(data.controller.mappings)
+      })
+      .catch(console.error)
+
+    fetch('/api/control/movements')
+      .then(r => r.json())
+      .then(data => setMovements(data.movements || []))
+      .catch(console.error)
+  }, [])
+
+  const locomotion = movements.filter(m => m.type === 'locomotion')
+  const gestures = movements.filter(m => m.type === 'gesture')
+
+  const handleChange = (key, value) => {
+    setMappings(prev => ({ ...prev, [key]: value }))
+    setSaved(false)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ controller: { mappings } }),
+      })
+      setSaved(true)
+    } catch (err) {
+      console.error('Failed to save controller mappings:', err)
+    }
+    setSaving(false)
+  }
+
+  const handleReset = () => {
+    setMappings(DEFAULT_MAPPINGS)
+    setSaved(false)
+  }
+
+  const MovementSelect = ({ btnKey }) => (
+    <select
+      value={mappings[btnKey] || ''}
+      onChange={e => handleChange(btnKey, e.target.value)}
+      className="bg-background border border-border rounded px-2 py-1 text-sm flex-1 min-w-0"
+    >
+      <option value="">— none —</option>
+      {locomotion.length > 0 && (
+        <optgroup label="Locomotion">
+          {locomotion.map(m => (
+            <option key={m.name} value={m.name}>{m.name}</option>
+          ))}
+        </optgroup>
+      )}
+      {gestures.length > 0 && (
+        <optgroup label="Gesture">
+          {gestures.map(m => (
+            <option key={m.name} value={m.name}>{m.name}</option>
+          ))}
+        </optgroup>
+      )}
+    </select>
+  )
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Gamepad2 className="w-5 h-5" />
+          Controller
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-2">Face Buttons</p>
+          <div className="space-y-2">
+            {FACE_BUTTONS.map(({ key, label }) => (
+              <div key={key} className="flex items-center gap-3">
+                <span className="text-sm w-20 shrink-0 font-mono">{label}</span>
+                <MovementSelect btnKey={key} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <p className="text-sm font-medium text-muted-foreground mb-2">D-Pad</p>
+          <div className="space-y-2">
+            {DPAD_BUTTONS.map(({ key, label }) => (
+              <div key={key} className="flex items-center gap-3">
+                <span className="text-sm w-20 shrink-0">{label}</span>
+                <MovementSelect btnKey={key} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-2 border-t">
+          <Button variant="outline" size="sm" onClick={handleReset}>
+            Reset Defaults
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : null}
+            {saved ? 'Saved' : 'Save'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 function SettingsPage() {
   const [version, setVersion] = useState(null)
@@ -355,6 +508,9 @@ function SettingsPage() {
           </Card>
         </div>
       )}
+
+      {/* Controller Mappings */}
+      <ControllerCard />
 
       {/* WiFi */}
       <Card>

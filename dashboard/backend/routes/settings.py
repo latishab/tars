@@ -32,6 +32,27 @@ DEFAULT_SETTINGS = {
         "hostname": "tars",
         "mdns_enabled": True,
     },
+    "controller": {
+        "mappings": {
+            "BTN_SOUTH": "pose",
+            "BTN_SOUTH+R1": "wave_right",
+            "BTN_EAST": "bow",
+            "BTN_EAST+R1": "wave_left",
+            "BTN_EAST+R2": "side_side",
+            "BTN_NORTH": "laugh",
+            "BTN_NORTH+R1": "tilt_right",
+            "BTN_WEST": "wiggle",
+            "BTN_WEST+R1": "tilt_left",
+            "DPAD_UP": "walk_forward",
+            "DPAD_UP+L2": "step_forward",
+            "DPAD_DOWN": "walk_backward",
+            "DPAD_DOWN+L2": "step_backward",
+            "DPAD_LEFT": "turn_left_slow",
+            "DPAD_LEFT+L2": "turn_left",
+            "DPAD_RIGHT": "turn_right_slow",
+            "DPAD_RIGHT+L2": "turn_right",
+        }
+    },
 }
 
 
@@ -67,6 +88,7 @@ class SettingsUpdate(BaseModel):
     audio: Optional[Dict[str, Any]] = None
     movement: Optional[Dict[str, Any]] = None
     network: Optional[Dict[str, Any]] = None
+    controller: Optional[Dict[str, Any]] = None
 
 
 @router.get("/settings")
@@ -88,6 +110,10 @@ async def update_settings(update: SettingsUpdate):
         settings["movement"].update(update.movement)
     if update.network:
         settings["network"].update(update.network)
+    if update.controller:
+        if "controller" not in settings:
+            settings["controller"] = DEFAULT_SETTINGS["controller"].copy()
+        settings["controller"].update(update.controller)
 
     save_settings(settings)
 

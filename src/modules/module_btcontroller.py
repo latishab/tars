@@ -19,8 +19,10 @@ entire project or repository in which it may be included.
 
 
 import evdev
+import json
 import time
 from evdev import InputDevice, list_devices
+from pathlib import Path
 
 from modules.module_config import load_config
 from modules.module_messageQue import queue_message
@@ -30,6 +32,68 @@ config = load_config()
 controller_name = config["CONTROLS"]["controller_name"]
 invert_y = config["CONTROLS"].get("invert_y", False)
 gamepad_path = None
+
+_SETTINGS_FILE = Path(__file__).parent.parent / "state" / "settings.json"
+
+DEFAULT_MAPPINGS = {
+    "BTN_SOUTH": "pose",
+    "BTN_SOUTH+R1": "wave_right",
+    "BTN_EAST": "bow",
+    "BTN_EAST+R1": "wave_left",
+    "BTN_EAST+R2": "side_side",
+    "BTN_NORTH": "laugh",
+    "BTN_NORTH+R1": "tilt_right",
+    "BTN_WEST": "wiggle",
+    "BTN_WEST+R1": "tilt_left",
+    "DPAD_UP": "walk_forward",
+    "DPAD_UP+L2": "step_forward",
+    "DPAD_DOWN": "walk_backward",
+    "DPAD_DOWN+L2": "step_backward",
+    "DPAD_LEFT": "turn_left_slow",
+    "DPAD_LEFT+L2": "turn_left",
+    "DPAD_RIGHT": "turn_right_slow",
+    "DPAD_RIGHT+L2": "turn_right",
+}
+
+BUTTON_NAMES = {
+    evdev.ecodes.BTN_SOUTH: "BTN_SOUTH",
+    evdev.ecodes.BTN_EAST: "BTN_EAST",
+    evdev.ecodes.BTN_NORTH: "BTN_NORTH",
+    evdev.ecodes.BTN_WEST: "BTN_WEST",
+}
+
+_mappings_cache = None
+_mappings_mtime = None
+
+
+def _load_mappings():
+    global _mappings_cache, _mappings_mtime
+    try:
+        mtime = _SETTINGS_FILE.stat().st_mtime
+        if mtime != _mappings_mtime:
+            with open(_SETTINGS_FILE) as f:
+                data = json.load(f)
+            _mappings_cache = data.get("controller", {}).get("mappings", DEFAULT_MAPPINGS)
+            _mappings_mtime = mtime
+    except Exception:
+        _mappings_cache = DEFAULT_MAPPINGS
+    return _mappings_cache or DEFAULT_MAPPINGS
+
+
+def _resolve_face_button(btn_name, mappings):
+    """Check R2 > R1 > bare for face button, return movement name or None."""
+    if r2_held and (v := mappings.get(f"{btn_name}+R2")):
+        return v
+    if r1_held and (v := mappings.get(f"{btn_name}+R1")):
+        return v
+    return mappings.get(btn_name)
+
+
+def _resolve_dpad(direction, mappings):
+    """Check L2 > bare for dpad direction, return movement name or None."""
+    if l2_held and (v := mappings.get(f"{direction}+L2")):
+        return v
+    return mappings.get(direction)
 
 l2_held = False
 r1_held = False
@@ -120,31 +184,12 @@ def start_controls():
                     r2_held = (event.value == 1)
                 
                 if event.value == 1:
-                    if event.code == evdev.ecodes.BTN_SOUTH:
-                        if r1_held:
-                            execute_movement("wave_right")
-                        else:
-                            execute_movement("pose")
-
-                    elif event.code == evdev.ecodes.BTN_EAST:
-                        if r2_held:
-                            execute_movement("side_side")
-                        elif r1_held:
-                            execute_movement("wave_left")
-                        else:
-                            execute_movement("bow")
-
-                    elif event.code == evdev.ecodes.BTN_NORTH:
-                        if r1_held:
-                            execute_movement("tilt_right")
-                        else:
-                            execute_movement("laugh")
-
-                    elif event.code == evdev.ecodes.BTN_WEST:
-                        if r1_held:
-                            execute_movement("tilt_left")
-                        else:
-                            execute_movement("wiggle")
+                    btn_name = BUTTON_NAMES.get(event.code)
+                    if btn_name:
+                        mappings = _load_mappings()
+                        movement = _resolve_face_button(btn_name, mappings)
+                        if movement:
+                            execute_movement(movement)
 
             elif event.type == evdev.ecodes.EV_ABS:
                 current_time = time.time()
@@ -165,19 +210,16 @@ def start_controls():
                     if new_state != dpad_state["y"]:
                         dpad_state["y"] = new_state
                         last_dpad_time = current_time
-                        #queue_message(f"DEBUG: Y state changed to {new_state}")
-                        
+                        mappings = _load_mappings()
                         if new_state < 0:
-                            if l2_held:
-                                execute_movement("step_forward")
-                            else:
-                                execute_movement("walk_forward")
+                            movement = _resolve_dpad("DPAD_UP", mappings)
                         elif new_state > 0:
-                            if l2_held:
-                                execute_movement("step_backward")
-                            else:
-                                execute_movement("walk_backward")
-                
+                            movement = _resolve_dpad("DPAD_DOWN", mappings)
+                        else:
+                            movement = None
+                        if movement:
+                            execute_movement(movement)
+
                 elif event.code in [evdev.ecodes.ABS_HAT0X, evdev.ecodes.ABS_X]:
                     if dpad_state["y"] != 0:
                         continue
@@ -186,18 +228,15 @@ def start_controls():
                     if new_state != dpad_state["x"]:
                         dpad_state["x"] = new_state
                         last_dpad_time = current_time
-                        #queue_message(f"DEBUG: X state changed to {new_state}")
-                        
+                        mappings = _load_mappings()
                         if new_state < 0:
-                            if l2_held:
-                                execute_movement("turn_left")
-                            else:
-                                execute_movement("turn_left_slow")
+                            movement = _resolve_dpad("DPAD_LEFT", mappings)
                         elif new_state > 0:
-                            if l2_held:
-                                execute_movement("turn_right")
-                            else:
-                                execute_movement("turn_right_slow")
+                            movement = _resolve_dpad("DPAD_RIGHT", mappings)
+                        else:
+                            movement = None
+                        if movement:
+                            execute_movement(movement)
 
     except (OSError, IOError) as e:
         queue_message(f"Controller disconnected: {e}")
