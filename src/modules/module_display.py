@@ -298,28 +298,31 @@ class DisplayManager:
                     elif event.key == pygame.K_c:
                         self.launch_app("clock")
 
+            # Snapshot rendering state under lock, then draw outside it.
+            # This prevents HTTP/gRPC threads from inflating dt by blocking here.
+            with self._lock:
+                screensaver_active = self.screensaver_mgr.is_active()
+                self.state.screensaver_active = screensaver_active
+
             current_time = time.time()
-            dt = current_time - last_time
+            dt = min(current_time - last_time, 0.05)  # cap at 50 ms to prevent animation jumps
             last_time = current_time
 
             portrait_surface.fill(self.bg_color)
 
-            with self._lock:
-                if self.screensaver_mgr.is_active():
-                    self.state.screensaver_active = True
-                    self.screensaver_mgr.render()
-                else:
-                    self.state.screensaver_active = False
-                    self.screensaver_mgr.check_timeout()
-                    self.app_mgr.render(dt)
+            if screensaver_active:
+                self.screensaver_mgr.render()
+            else:
+                self.screensaver_mgr.check_timeout()
+                self.app_mgr.render(dt)
 
-                self.status_bar.draw(portrait_surface)
-                self._draw_log_overlay(portrait_surface)
+            self.status_bar.draw(portrait_surface)
+            self._draw_log_overlay(portrait_surface)
 
             rotated = pygame.transform.rotozoom(portrait_surface, 270, 1.0)
             screen.blit(rotated, (0, 0))
             pygame.display.flip()
-            clock.tick(target_fps)
+            clock.tick(60)
 
             now = time.time()
             if now - self._last_fps_print >= 5.0:
