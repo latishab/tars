@@ -7,15 +7,11 @@ import random
 from typing import Optional
 
 from modules.UI.screensavers.module_screensaver_starfield import StarfieldAnimation
-from modules.UI.screensavers.module_screensaver_hyperspace import HyperspaceAnimation
-from modules.UI.screensavers.module_screensaver_defrag import DefragAnimation
-from modules.UI.screensavers.module_screensaver_dream import DreamAnimation
+from modules.UI.screensavers.module_screensaver_endurance import EnduranceAnimation
 
 AVAILABLE_ANIMATIONS = {
     "starfield":  StarfieldAnimation,
-    "hyperspace": HyperspaceAnimation,
-    "defrag":     DefragAnimation,
-    "dream":      DreamAnimation,
+    "endurance": EnduranceAnimation,
 }
 
 

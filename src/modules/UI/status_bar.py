@@ -136,4 +136,4 @@ class StatusBar:
             wifi_color = _DIM
             active_bars = 0
 
-        _draw_wifi_icon(surface, wx, cy - 4, wifi_color, active_bars)
+        _draw_wifi_icon(surface, wx, cy - 6, wifi_color, active_bars)
