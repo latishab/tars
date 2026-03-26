@@ -400,8 +400,8 @@ class StocksAnimation:
             # 5-day mini sparkline (center)
             prices = item.get("chart", [])
             if len(prices) >= 2:
-                sx  = 158
                 sw  = 148
+                sx  = W - sw - 90
                 sh  = 30
                 sy  = y + (ROW - sh) // 2
                 lo  = min(prices)
