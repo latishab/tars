@@ -22,8 +22,8 @@ _AMBER = (200, 145,  30)
 _DIM   = (38,   55,  70)
 _BG    = (5,    7,   12)
 
-_FEATURED  = "SPY"
-_WATCHLIST = ["QQQ", "AAPL", "NVDA", "TSLA", "META", "AMZN"]
+_FEATURED  = "SPUS"
+_WATCHLIST = ["SPWO", "GLD", "NVDA", "AAPL"]
 
 
 def _fetch_json(url, timeout=8):
