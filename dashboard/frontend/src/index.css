@@ -260,6 +260,13 @@
 .servo-step-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .servo-step-input:focus { outline: none; border-color: hsl(191 100% 44% / 0.6); }
 
+/* Compact steppers when in 6-column layout */
+@media (min-width: 720px) {
+  .servo-stepper { height: 28px; }
+  .servo-step-btn { width: 22px; font-size: 13px; }
+  .servo-step-input { font-size: 11px; }
+}
+
 /* ── Loop block ──────────────────────────────────────────────────────────── */
 .tars-loop-block {
   border: 1px solid hsl(191 100% 44% / 0.2);
