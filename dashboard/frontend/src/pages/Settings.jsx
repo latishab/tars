@@ -119,25 +119,27 @@ function ControllerCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-          <div>
+        <div className="flex gap-0">
+          <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Face Buttons</p>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {FACE_BUTTONS.map(({ key, label }) => (
-                <div key={key} className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground font-mono">{label}</span>
+                <div key={key} className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground font-mono w-14 shrink-0 text-right">{label}</span>
                   <MovementSelect btnKey={key} />
                 </div>
               ))}
             </div>
           </div>
 
-          <div>
+          <div className="w-px bg-border mx-4 self-stretch" />
+
+          <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">D-Pad</p>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {DPAD_BUTTONS.map(({ key, label }) => (
-                <div key={key} className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">{label}</span>
+                <div key={key} className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground w-14 shrink-0 text-right">{label}</span>
                   <MovementSelect btnKey={key} />
                 </div>
               ))}
