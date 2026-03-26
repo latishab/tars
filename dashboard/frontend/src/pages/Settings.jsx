@@ -119,7 +119,7 @@ function ControllerCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-0">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-0">
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Face Buttons</p>
             <div className="space-y-1.5">
@@ -132,7 +132,7 @@ function ControllerCard() {
             </div>
           </div>
 
-          <div className="w-px bg-border mx-4 self-stretch" />
+          <div className="hidden sm:block w-px bg-border mx-4 self-stretch" />
 
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">D-Pad</p>
