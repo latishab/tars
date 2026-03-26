@@ -4,17 +4,26 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Download, RefreshCw, Wifi, AlertCircle, CheckCircle, Signal, Lock, WifiOff, Gamepad2 } from 'lucide-react'
 
-const FACE_BUTTONS = [
-  { key: 'BTN_SOUTH',    label: '✕ / A / B' },
-  { key: 'BTN_SOUTH+R1', label: '✕ / A / B + R1' },
-  { key: 'BTN_EAST',     label: '○ / B / A' },
-  { key: 'BTN_EAST+R1',  label: '○ / B / A + R1' },
-  { key: 'BTN_EAST+R2',  label: '○ / B / A + R2' },
-  { key: 'BTN_NORTH',    label: '△ / Y / X' },
-  { key: 'BTN_NORTH+R1', label: '△ / Y / X + R1' },
-  { key: 'BTN_WEST',     label: '□ / X / Y' },
-  { key: 'BTN_WEST+R1',  label: '□ / X / Y + R1' },
-]
+const BUTTON_LABELS = {
+  playstation: { BTN_SOUTH: '✕', BTN_EAST: '○', BTN_NORTH: '△', BTN_WEST: '□' },
+  xbox:        { BTN_SOUTH: 'A', BTN_EAST: 'B', BTN_NORTH: 'Y', BTN_WEST: 'X' },
+  nintendo:    { BTN_SOUTH: 'B', BTN_EAST: 'A', BTN_NORTH: 'X', BTN_WEST: 'Y' },
+}
+
+function buildFaceButtons(layout) {
+  const l = BUTTON_LABELS[layout] || BUTTON_LABELS.nintendo
+  return [
+    { key: 'BTN_SOUTH',    label: l.BTN_SOUTH },
+    { key: 'BTN_SOUTH+R1', label: `${l.BTN_SOUTH} + R1` },
+    { key: 'BTN_EAST',     label: l.BTN_EAST },
+    { key: 'BTN_EAST+R1',  label: `${l.BTN_EAST} + R1` },
+    { key: 'BTN_EAST+R2',  label: `${l.BTN_EAST} + R2` },
+    { key: 'BTN_NORTH',    label: l.BTN_NORTH },
+    { key: 'BTN_NORTH+R1', label: `${l.BTN_NORTH} + R1` },
+    { key: 'BTN_WEST',     label: l.BTN_WEST },
+    { key: 'BTN_WEST+R1',  label: `${l.BTN_WEST} + R1` },
+  ]
+}
 
 const DPAD_BUTTONS = [
   { key: 'DPAD_UP',       label: 'Up' },
@@ -43,6 +52,8 @@ function ControllerCard() {
   const [movements, setMovements] = useState([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [layout, setLayout] = useState('nintendo')
+  const [controllerName, setControllerName] = useState('')
 
   useEffect(() => {
     fetch('/api/settings')
@@ -55,6 +66,14 @@ function ControllerCard() {
     fetch('/api/control/movements')
       .then(r => r.json())
       .then(data => setMovements(data.movements || []))
+      .catch(console.error)
+
+    fetch('/api/settings/controller-layout')
+      .then(r => r.json())
+      .then(data => {
+        if (data.layout) setLayout(data.layout)
+        if (data.name) setControllerName(data.name)
+      })
       .catch(console.error)
   }, [])
 
@@ -117,14 +136,16 @@ function ControllerCard() {
           <Gamepad2 className="w-5 h-5" />
           Controller
         </CardTitle>
-        <CardDescription className="text-xs">PS / Xbox / Nintendo (8BitDo)</CardDescription>
+        {controllerName && (
+          <CardDescription className="text-xs">{controllerName}</CardDescription>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-0">
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Face Buttons</p>
             <div className="space-y-1.5">
-              {FACE_BUTTONS.map(({ key, label }) => (
+              {buildFaceButtons(layout).map(({ key, label }) => (
                 <div key={key} className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground font-mono w-14 shrink-0 text-right">{label}</span>
                   <MovementSelect btnKey={key} />

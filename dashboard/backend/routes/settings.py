@@ -8,6 +8,30 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from loguru import logger
 
+_CONFIG_FILE = Path(__file__).parent.parent.parent.parent / "src" / "config.ini"
+
+
+def _detect_layout(name: str) -> str:
+    """Detect controller layout from device name."""
+    n = name.lower()
+    if any(k in n for k in ("dualshock", "dualsense", "wireless controller", "sony", "playstation")):
+        return "playstation"
+    if any(k in n for k in ("xbox", "microsoft", "xinput")):
+        return "xbox"
+    # Nintendo Switch Pro Controller, 8BitDo in Switch mode, etc.
+    return "nintendo"
+
+
+def _get_controller_name() -> str:
+    """Read controller_name from config.ini."""
+    try:
+        import configparser
+        cfg = configparser.ConfigParser()
+        cfg.read(_CONFIG_FILE)
+        return cfg.get("CONTROLS", "controller_name", fallback="")
+    except Exception:
+        return ""
+
 router = APIRouter()
 
 # Settings file path
@@ -118,3 +142,23 @@ async def update_settings(update: SettingsUpdate):
     save_settings(settings)
 
     return {"success": True, "settings": settings}
+
+
+@router.get("/settings/controller-layout")
+async def get_controller_layout():
+    """Return detected controller layout based on connected device."""
+    try:
+        from evdev import list_devices, InputDevice
+        controller_name = _get_controller_name()
+        for path in list_devices():
+            try:
+                dev = InputDevice(path)
+                if controller_name.lower() in dev.name.lower():
+                    return {"name": dev.name, "layout": _detect_layout(dev.name)}
+            except Exception:
+                continue
+    except ImportError:
+        pass
+    # Fallback: use config name
+    name = _get_controller_name()
+    return {"name": name, "layout": _detect_layout(name) if name else "nintendo"}
