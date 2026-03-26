@@ -1,39 +1,27 @@
 """
 TARS Display Manager
-Coordinates between eyes and spectrum modes
+App-based display: eyes / spectrum / clock as switchable apps.
+Screensavers activate on idle timeout.
 """
-
-# Configure SDL for Wayland
-import os
-os.environ["SDL_VIDEODRIVER"] = "wayland"
-os.environ.setdefault("WAYLAND_DISPLAY", "wayland-0")
-os.environ.setdefault("XDG_RUNTIME_DIR", "/run/user/1000")
-
 import pygame
 import threading
 import time
-from enum import Enum
 from typing import Optional
 from dataclasses import dataclass
 import sys
 from pathlib import Path
 
-# Add src directory to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from modules.modules_roboeyes import RoboEyes, Mood, EyeState
-from modules.modules_spectrum import SpectrumVisualizer
-
-
-class DisplayMode(Enum):
-    EYES = "eyes"
-    SPECTRUM = "spectrum"
-    OFF = "off"
+from modules.UI.app_manager import AppManager
+from modules.UI.screensaver_manager import ScreensaverManager
+from modules.UI.status_bar import StatusBar
 
 
 @dataclass
 class DisplayState:
-    mode: DisplayMode = DisplayMode.EYES
+    active_app: str = "eyes"
+    screensaver_active: bool = False
     eye_state: str = "idle"
     emotion: str = "neutral"
     audio_level: float = 0.0
@@ -43,13 +31,13 @@ class DisplayState:
     face_y: float = 0.0
     battery_percentage: Optional[float] = None
     battery_charging: bool = False
-    wifi_mode: str = "unknown"  # hotspot, wlan, disconnected
+    wifi_mode: str = "unknown"
     wifi_ssid: Optional[str] = None
     battery_voltage: Optional[float] = None
 
 
 class DisplayManager:
-    """Manages TARS display - switches between eyes and spectrum"""
+    """Manages TARS display — app-based with screensaver idle support."""
 
     def __init__(self, width: int = 480, height: int = 800):
         self.width = width
@@ -58,27 +46,21 @@ class DisplayManager:
         self._thread: Optional[threading.Thread] = None
         self._lock = threading.Lock()
 
-        # State
         self.state = DisplayState()
+
+        # Managers (init in _run after pygame is ready)
+        self.app_mgr: Optional[AppManager] = None
+        self.screensaver_mgr: Optional[ScreensaverManager] = None
+        self.status_bar: Optional[StatusBar] = None
+
+        self.bg_color = (13, 17, 23)
         self._last_fps_print = 0.0
 
-        # Modules (initialized in _run)
-        self.eyes: Optional[RoboEyes] = None
-        self.spectrum: Optional[SpectrumVisualizer] = None
-
-        # Colors
-        self.bg_color = (13, 17, 23)  # #0d1117
-
-        # Camera log overlay
         from collections import deque
         self._log_lines: deque = deque(maxlen=3)
-        self._log_font = None  # lazy-init after pygame.init()
-
-        # WiFi icons (loaded in _run to avoid pygame init issues)
-        self.wifi_icons = {}
+        self._log_font = None
 
     def start(self):
-        """Start display thread"""
         if self.running:
             return
         self.running = True
@@ -86,29 +68,69 @@ class DisplayManager:
         self._thread.start()
 
     def stop(self):
-        """Stop display"""
         self.running = False
         if self._thread:
             self._thread.join(timeout=2.0)
 
-    # ========== Mode Control ==========
+    # ── Activity reset ─────────────────────────────────────────────────────
 
-    def set_mode(self, mode: str):
+    def _reset_activity(self):
+        if self.screensaver_mgr:
+            self.screensaver_mgr.reset_timer()
+
+    # ── App Control ────────────────────────────────────────────────────────
+
+    def launch_app(self, name: str) -> bool:
         with self._lock:
-            self.state.mode = DisplayMode(mode)
+            if self.screensaver_mgr and self.screensaver_mgr.is_active():
+                self.screensaver_mgr.deactivate()
+            if self.app_mgr:
+                result = self.app_mgr.launch(name)
+                if result:
+                    self.state.active_app = name
+                    if self.status_bar:
+                        self.status_bar.set_app(name)
+                return result
+            return False
 
-    # ========== Eyes Control ==========
+    def get_available_apps(self) -> list:
+        if self.app_mgr:
+            return self.app_mgr.get_available()
+        from modules.UI.app_manager import AVAILABLE_APPS
+        return [{"name": k, "label": v["label"]} for k, v in AVAILABLE_APPS.items()]
+
+    # ── Screensaver Control ────────────────────────────────────────────────
+
+    def activate_screensaver(self, name: str = None):
+        with self._lock:
+            if self.screensaver_mgr:
+                self.screensaver_mgr.activate(name)
+                self.state.screensaver_active = True
+
+    def deactivate_screensaver(self):
+        with self._lock:
+            if self.screensaver_mgr:
+                self.screensaver_mgr.deactivate()
+                self.state.screensaver_active = False
+
+    def get_available_screensavers(self) -> list:
+        if self.screensaver_mgr:
+            return self.screensaver_mgr.get_available()
+        from modules.UI.screensaver_manager import AVAILABLE_ANIMATIONS
+        return list(AVAILABLE_ANIMATIONS.keys())
+
+    # ── Eyes Control ───────────────────────────────────────────────────────
 
     def set_eye_state(self, state: str):
-        """Set eye state: idle, listening, thinking, speaking"""
         with self._lock:
             self.state.eye_state = state
-            if self.eyes:
-                self.eyes.set_state(state)
+            self._reset_activity()
+            if self.app_mgr:
+                app = self.app_mgr.get_active_app()
+                if hasattr(app, 'set_eye_state'):
+                    app.set_eye_state(state)
 
     def set_emotion(self, emotion: str):
-        """Set emotion: neutral, happy, sad, angry, excited, afraid, sideeye_left, sideeye_right, sleepy"""
-        # Backward compatibility aliases
         emotion_map = {
             "default": "neutral",
             "tired": "sleepy",
@@ -126,82 +148,93 @@ class DisplayManager:
             "startled": "surprised",
         }
         emotion = emotion_map.get(emotion.lower(), emotion.lower())
-        
+
         with self._lock:
             self.state.emotion = emotion
-            if self.eyes:
-                self.eyes.set_mood(Mood[emotion.upper()])
+            self._reset_activity()
+            if self.app_mgr:
+                app = self.app_mgr.get_active_app()
+                if not hasattr(app, 'set_emotion'):
+                    # Switch to eyes so the emotion is visible
+                    if self.screensaver_mgr and self.screensaver_mgr.is_active():
+                        self.screensaver_mgr.deactivate()
+                    self.app_mgr.launch('eyes')
+                    self.state.active_app = 'eyes'
+                    if self.status_bar:
+                        self.status_bar.set_app('eyes')
+                    app = self.app_mgr.get_active_app()
+                if hasattr(app, 'set_emotion'):
+                    app.set_emotion(emotion)
 
     def set_look(self, x: float, y: float):
-        """Set eye look direction (-1 to 1)"""
         with self._lock:
-            if self.eyes:
-                self.eyes.set_look(x, y)
+            if self.app_mgr:
+                app = self.app_mgr.get_active_app()
+                if hasattr(app, 'set_look'):
+                    app.set_look(x, y)
 
     def blink(self):
-        """Trigger blink"""
         with self._lock:
-            if self.eyes:
-                self.eyes.blink()
+            if self.app_mgr:
+                app = self.app_mgr.get_active_app()
+                if hasattr(app, 'blink'):
+                    app.blink()
 
-    # ========== Audio ==========
+    # ── Audio ──────────────────────────────────────────────────────────────
 
     def set_audio_level(self, level: float, source: str):
-        """Update audio level for visualization"""
         with self._lock:
             self.state.audio_level = level
             self.state.audio_source = source
+            self._reset_activity()
+            if self.app_mgr:
+                app = self.app_mgr.get_active_app()
+                if hasattr(app, 'set_audio_level'):
+                    app.set_audio_level(level, source)
 
-            if self.eyes:
-                self.eyes.set_audio_level(level, source)
-            if self.spectrum:
-                self.spectrum.set_level(level, source)
-
-    # ========== Face Tracking ==========
+    # ── Face Tracking ──────────────────────────────────────────────────────
 
     def set_face_position(self, x: int, y: int, frame_w: int, frame_h: int, detected: bool):
-        """Update face position for eye tracking"""
         with self._lock:
             self.state.face_detected = detected
-
-            if detected and self.eyes:
-                # Convert face position to look direction with amplified range
-                look_x = (x / frame_w - 0.5) * 4
-                look_y = (y / frame_h - 0.5) * 3
-                look_x = max(-1.0, min(1.0, look_x))
-                look_y = max(-1.0, min(1.0, look_y))
-
+            if detected and self.app_mgr:
+                look_x = max(-1.0, min(1.0, (x / frame_w - 0.5) * 4))
+                look_y = max(-1.0, min(1.0, (y / frame_h - 0.5) * 3))
                 self.state.face_x = look_x
                 self.state.face_y = look_y
-                self.eyes.set_look(look_x, look_y)
+                app = self.app_mgr.get_active_app()
+                if hasattr(app, 'set_look'):
+                    app.set_look(look_x, look_y)
 
-    # ========== Battery ==========
+    # ── Battery / WiFi ─────────────────────────────────────────────────────
 
     def set_battery_status(self, percentage: float, voltage: float, charging: bool = False):
-        """Update battery status for display"""
         with self._lock:
             self.state.battery_percentage = percentage
             self.state.battery_voltage = voltage
             self.state.battery_charging = charging
-
-    # ========== WiFi ==========
+            if self.status_bar:
+                self.status_bar.set_battery(percentage, charging)
 
     def set_wifi_status(self, mode: str, ssid: str = None):
-        """Update WiFi status for display"""
         with self._lock:
             self.state.wifi_mode = mode
             self.state.wifi_ssid = ssid
-    # ========== Main Loop ==========
+            if self.status_bar:
+                self.status_bar.set_wifi(mode)
+
+    # ── Camera log ─────────────────────────────────────────────────────────
+
+    def add_camera_log(self, text):
+        self._log_lines.append(text)
+
+    # ── Main Loop ──────────────────────────────────────────────────────────
 
     def _run(self):
-        """Main display loop - renders portrait content rotated onto landscape screen"""
         pygame.init()
-        
-        # Initialize video subsystem explicitly
         pygame.display.init()
         self._log_font = pygame.font.SysFont("monospace", 18)
 
-        # Physical screen is 800x480 landscape (DSI panel mounted vertically)
         display_info = pygame.display.Info()
         screen_w = display_info.current_w
         screen_h = display_info.current_h
@@ -213,160 +246,86 @@ class DisplayManager:
         pygame.display.set_caption("TARS")
         pygame.mouse.set_visible(False)
 
-        # Render to portrait surface (480x800), then rotate for landscape screen
+        # Portrait surface (480x800), rotated 270 for landscape output
         portrait_surface = pygame.Surface((self.width, self.height))
 
-        # Initialize modules with portrait dimensions
-        self.eyes = RoboEyes(self.width, self.height)
-        self.spectrum = SpectrumVisualizer(self.width, self.height)
-
-        # Load and scale WiFi icons
-        icon_size = 26  # Scale down from 250x250 to 26x26
-        assets_path = Path(__file__).parent.parent / "assets"
+        # Load UI config
         try:
-            self.wifi_icons["wlan"] = pygame.transform.scale(
-                pygame.image.load(str(assets_path / "wifi-blue.png")), (icon_size, icon_size)
-            )
-            self.wifi_icons["hotspot"] = pygame.transform.scale(
-                pygame.image.load(str(assets_path / "wifi-yellow.png")), (icon_size, icon_size)
-            )
-            self.wifi_icons["disconnected"] = pygame.transform.scale(
-                pygame.image.load(str(assets_path / "wifi-gray.png")), (icon_size, icon_size)
-            )
-        except Exception as e:
-            print(f"Warning: Failed to load WiFi icons: {e}")
-            self.wifi_icons = {}
+            from modules.module_config import load_config
+            ui_cfg = load_config().get('UI', {})
+        except Exception:
+            ui_cfg = {}
+
+        default_app      = ui_cfg.get('default_app', 'eyes')
+        screensaver_timer = ui_cfg.get('screensaver_timer', 300)
+        screensaver_cycle = ui_cfg.get('screensaver_cycle_interval', 300)
+        screensaver_list  = ui_cfg.get('screensaver_list', ['random'])
+        show_time         = ui_cfg.get('show_time', True)
+        target_fps        = ui_cfg.get('target_fps', 30)
+
+        # Init managers
+        self.app_mgr = AppManager(portrait_surface, self.width, self.height)
+        self.app_mgr.launch(default_app)
+        self.state.active_app = default_app
+
+        self.screensaver_mgr = ScreensaverManager(
+            portrait_surface, self.width, self.height,
+            timeout=screensaver_timer,
+            screensaver_list=screensaver_list,
+            cycle_interval=screensaver_cycle,
+            show_time=show_time,
+        )
+
+        self.status_bar = StatusBar(portrait_surface, self.width, self.height)
+        self.status_bar.set_app(default_app)
 
         clock = pygame.time.Clock()
         last_time = time.time()
 
         while self.running:
-            # Events
             for event in pygame.event.get():
-                # Only exit on ESC key or screen tap, ignore QUIT events
                 if event.type == pygame.QUIT:
-                    continue  # Ignore window close events from Wayland
+                    continue
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    # Tap screen to exit
                     self.running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         self.running = False
                     elif event.key == pygame.K_e:
-                        self.set_mode("eyes")
+                        self.launch_app("eyes")
                     elif event.key == pygame.K_s:
-                        self.set_mode("spectrum")
+                        self.launch_app("spectrum")
+                    elif event.key == pygame.K_c:
+                        self.launch_app("clock")
 
-            # Delta time
             current_time = time.time()
             dt = current_time - last_time
             last_time = current_time
 
-            # Draw to portrait surface
             portrait_surface.fill(self.bg_color)
 
             with self._lock:
-                if self.state.mode == DisplayMode.EYES:
-                    self.eyes.update(dt)
-                    self.eyes.draw(portrait_surface)
-                elif self.state.mode == DisplayMode.SPECTRUM:
-                    self.spectrum.update(dt)
-                    self.spectrum.draw(portrait_surface)
+                if self.screensaver_mgr.is_active():
+                    self.state.screensaver_active = True
+                    self.screensaver_mgr.render()
+                else:
+                    self.state.screensaver_active = False
+                    self.screensaver_mgr.check_timeout()
+                    self.app_mgr.render(dt)
 
-                self._draw_wifi_indicator(portrait_surface)
-                self._draw_battery_indicator(portrait_surface)
+                self.status_bar.draw(portrait_surface)
                 self._draw_log_overlay(portrait_surface)
 
-            # Rotate portrait (480x800) -> landscape (800x480) and blit to screen
-            # Using rotozoom with scale=1.0 is faster than rotate()
             rotated = pygame.transform.rotozoom(portrait_surface, 270, 1.0)
             screen.blit(rotated, (0, 0))
-
             pygame.display.flip()
-            clock.tick(60)
-            
-            # FPS monitoring (print every 5 seconds)
+            clock.tick(target_fps)
+
             now = time.time()
             if now - self._last_fps_print >= 5.0:
-                fps = clock.get_fps()
-                if fps < 55:  # Only print if below target
-                    pass  # FPS logged at debug level
                 self._last_fps_print = now
 
         pygame.quit()
-
-    def _draw_battery_indicator(self, screen: pygame.Surface):
-        """Draw battery status in top-right corner"""
-        if self.state.battery_percentage is None:
-            return
-
-        # Position: top-right with margin
-        margin = 15
-        width = 60
-        height = 25
-        x = self.width - width - margin
-        y = margin
-
-        # Battery percentage
-        percentage = max(0, min(100, self.state.battery_percentage))
-
-        # Colors based on charge level
-        if self.state.battery_charging:
-            color = (100, 200, 100)  # Green when charging
-        elif percentage > 50:
-            color = (100, 200, 100)  # Green
-        elif percentage > 20:
-            color = (255, 200, 0)    # Yellow
-        else:
-            color = (255, 50, 50)    # Red
-
-        # Draw battery outline
-        pygame.draw.rect(screen, (200, 200, 200), (x, y, width, height), 2)
-
-        # Draw battery terminal (little nub on right)
-        pygame.draw.rect(screen, (200, 200, 200), (x + width, y + 7, 3, 11))
-
-        # Draw fill level
-        fill_width = int((width - 4) * (percentage / 100))
-        if fill_width > 0:
-            pygame.draw.rect(screen, color, (x + 2, y + 2, fill_width, height - 4))
-
-        # Draw percentage text
-        font = pygame.font.Font(None, 18)
-        text = f"{int(percentage)}%"
-        text_surface = font.render(text, True, (255, 255, 255))
-        text_rect = text_surface.get_rect(center=(x + width // 2, y + height // 2))
-        screen.blit(text_surface, text_rect)
-
-        # Draw charging indicator if charging
-        if self.state.battery_charging:
-            bolt_font = pygame.font.Font(None, 20)
-            bolt = bolt_font.render("⚡", True, (255, 255, 100))
-            screen.blit(bolt, (x - 15, y + 2))
-
-
-    def _draw_wifi_indicator(self, screen: pygame.Surface):
-        """Draw WiFi status indicator in top-left corner"""
-        if not self.wifi_icons:
-            return  # Icons not loaded yet
-
-        # Position: top-left with margin
-        margin = 15
-
-        # Select icon based on WiFi mode
-        if self.state.wifi_mode == "hotspot":
-            icon = self.wifi_icons.get("hotspot")
-        elif self.state.wifi_mode == "wlan":
-            icon = self.wifi_icons.get("wlan")
-        else:
-            icon = self.wifi_icons.get("disconnected")
-
-        # Draw icon if available
-        if icon:
-            screen.blit(icon, (margin, margin))
-
-    def add_camera_log(self, text):
-        self._log_lines.append(text)
 
     def _draw_log_overlay(self, surface):
         if not self._log_lines or not self._log_font:
@@ -376,7 +335,7 @@ class DisplayManager:
         pad = 6
         lines = list(self._log_lines)
         total_h = len(lines) * line_h + pad * 2
-        y_start = self.height - total_h
+        y_start = self.height - total_h - 28  # above status bar
         bg = _pg.Surface((self.width, total_h), _pg.SRCALPHA)
         bg.fill((0, 0, 0, 160))
         surface.blit(bg, (0, y_start))
@@ -385,10 +344,13 @@ class DisplayManager:
             surface.blit(text_surf, (pad, y_start + pad + i * line_h))
 
     def get_status(self) -> dict:
-        """Get current display status"""
         with self._lock:
             return {
-                "mode": self.state.mode.value,
+                "active_app": self.state.active_app,
+                "screensaver_active": self.state.screensaver_active,
+                "active_screensaver": self.screensaver_mgr.get_active_name() if self.screensaver_mgr else None,
+                "available_apps": self.get_available_apps(),
+                "available_screensavers": self.get_available_screensavers(),
                 "eye_state": self.state.eye_state,
                 "emotion": self.state.emotion,
                 "audio_level": self.state.audio_level,
@@ -397,5 +359,5 @@ class DisplayManager:
                 "battery_percentage": self.state.battery_percentage,
                 "wifi_mode": self.state.wifi_mode,
                 "wifi_ssid": self.state.wifi_ssid,
-                "battery_charging": self.state.battery_charging
+                "battery_charging": self.state.battery_charging,
             }

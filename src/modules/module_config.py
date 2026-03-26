@@ -56,4 +56,13 @@ def load_config():
         "MISC": {
             "ventilate": config.getboolean('MISC', 'ventilate', fallback=False),
         },
+        "UI": {
+            "default_app": config.get('UI', 'default_app', fallback='eyes'),
+            "screensaver_timer": config.getint('UI', 'screensaver_timer', fallback=300),
+            "screensaver_cycle_interval": config.getint('UI', 'screensaver_cycle_interval', fallback=300),
+            "screensaver_list": [s.strip() for s in config.get('UI', 'screensaver_list', fallback='random').split(',')],
+            "show_time": config.getboolean('UI', 'show_time', fallback=True),
+            "ampm_format": config.getboolean('UI', 'ampm_format', fallback=True),
+            "target_fps": config.getint('UI', 'target_fps', fallback=30),
+        },
     }
