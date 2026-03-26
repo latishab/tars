@@ -360,20 +360,20 @@ class WeatherAnimation:
         # Horizontal top line
         pygame.draw.line(self.screen, dim2, (16, 32), (W - 16, 32), 1)
 
-        # Corner brackets — top left
-        pygame.draw.line(self.screen, pri, (14, 14), (34, 14), 2)
-        pygame.draw.line(self.screen, pri, (14, 14), (14, 28), 2)
+        # Corner brackets — top left (above text row)
+        pygame.draw.line(self.screen, pri, (8, 6), (28, 6), 2)
+        pygame.draw.line(self.screen, pri, (8, 6), (8, 20), 2)
         # top right
-        pygame.draw.line(self.screen, pri, (W - 34, 14), (W - 14, 14), 2)
-        pygame.draw.line(self.screen, pri, (W - 14, 14), (W - 14, 28), 2)
+        pygame.draw.line(self.screen, pri, (W - 28, 6), (W - 8, 6), 2)
+        pygame.draw.line(self.screen, pri, (W - 8, 6), (W - 8, 20), 2)
 
-        # "ATMO RECON" label
+        # "ATMO RECON" label — sits between the bracket verticals
         lbl = self.f_label.render("ATMO  RECON", True, dim2)
-        self.screen.blit(lbl, (18, 11))
+        self.screen.blit(lbl, (32, 10))
 
-        # Update time (top right)
+        # Update time (top right) — inset from right bracket
         upd = self.f_label.render(f"UPD {data['updated']} UTC", True, dim2)
-        self.screen.blit(upd, (W - upd.get_width() - 18, 11))
+        self.screen.blit(upd, (W - upd.get_width() - 32, 10))
 
         # City name
         city_s = self.f_city.render(data["city"].upper(), True, (210, 225, 235))
