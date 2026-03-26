@@ -383,10 +383,10 @@ class WeatherAnimation:
         lat_str = f"{data['lat']:.2f}{'N' if data['lat'] >= 0 else 'S'}  "
         lon_str = f"{abs(data['lon']):.2f}{'E' if data['lon'] >= 0 else 'W'}"
         coord_s = self.f_coord.render(lat_str + lon_str, True, dim2)
-        self.screen.blit(coord_s, coord_s.get_rect(centerx=self.cx, top=68))
+        self.screen.blit(coord_s, coord_s.get_rect(centerx=self.cx, top=82))
 
         # Separator
-        pygame.draw.line(self.screen, dim, (40, 87), (W - 40, 87), 1)
+        pygame.draw.line(self.screen, dim, (40, 102), (W - 40, 102), 1)
 
     def _draw_temp_ring(self, data, pri, glow):
         """Spinning segmented ring + giant temperature in center."""
@@ -526,7 +526,7 @@ class WeatherAnimation:
                 pygame.draw.line(self.screen, dim,
                                  (i * col_w, Y0 + 2), (i * col_w, Y0 + 54), 1)
 
-            k_s = self.f_label.render(key, True, (r // 4, g // 4, b // 4))
+            k_s = self.f_label.render(key, True, (r * 2 // 3, g * 2 // 3, b * 2 // 3))
             v_s = self.f_value.render(val, True, (r, g, b))
             self.screen.blit(k_s, k_s.get_rect(centerx=cx, top=Y0 + 4))
             self.screen.blit(v_s, v_s.get_rect(centerx=cx, top=Y0 + 20))
