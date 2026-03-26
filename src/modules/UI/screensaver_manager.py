@@ -8,10 +8,12 @@ from typing import Optional
 
 from modules.UI.screensavers.module_screensaver_starfield import StarfieldAnimation
 from modules.UI.screensavers.module_screensaver_endurance import EnduranceAnimation
+from modules.UI.screensavers.module_screensaver_weather import WeatherAnimation
 
 AVAILABLE_ANIMATIONS = {
     "starfield":  StarfieldAnimation,
-    "endurance": EnduranceAnimation,
+    "endurance":  EnduranceAnimation,
+    "weather":    WeatherAnimation,
 }
 
 

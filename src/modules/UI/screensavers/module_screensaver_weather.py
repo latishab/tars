@@ -1,5 +1,5 @@
 """
-Weather App — TARS display
+Weather Screensaver — TARS display
 Fetches location via IP geolocation, weather via Open-Meteo (no API key needed).
 Data refreshes in a background thread so the render loop never blocks.
 """
@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from datetime import datetime, timezone
 
-_UI_DIR = Path(__file__).parent.parent
+_UI_DIR = Path(__file__).parent.parent  # UI/ dir (contains mono.ttf)
 
 # ── WMO weather code descriptions ─────────────────────────────────────────
 _WMO = {
@@ -64,8 +64,8 @@ def _fetch_json(url, timeout=8):
         return json.loads(resp.read().decode())
 
 
-class WeatherApp:
-    def __init__(self, screen, width, height):
+class WeatherAnimation:
+    def __init__(self, screen, width, height, show_time=False):
         self.screen = screen
         self.width = width
         self.height = height
@@ -101,12 +101,12 @@ class WeatherApp:
         self._scan_y = 0
         self._anim_t = 0.0
 
-    def reset(self):
-        self._loading = True
-        self._data = None
-        self._error = None
-        self._last_fetch = 0
+        # Kick first fetch immediately
         self._kick_fetch()
+
+    def reset(self):
+        # Called by ScreensaverManager after __init__ — fetch already running, skip
+        pass
 
     def _kick_fetch(self):
         t = threading.Thread(target=self._fetch_weather, daemon=True)
@@ -184,9 +184,10 @@ class WeatherApp:
                 self._error = str(e)[:40]
                 self._loading = False
 
-    def update(self, dt=0.016):
+    def update(self):
+        dt = 0.016
         self._anim_t += dt
-        self._scan_y = (self._scan_y + int(dt * 60 + 0.5)) % self.height
+        self._scan_y = (self._scan_y + 1) % self.height
 
         # Periodic refresh
         with self._lock:
