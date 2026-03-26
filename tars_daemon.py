@@ -412,15 +412,13 @@ Currently no authentication. Deploy behind VPN (Tailscale recommended).
 
         # Initialize hardware controller (shared logic for HTTP and gRPC)
         from src.modules import module_servoctl
-        from grpc_server.servicer import MOVEMENT_MAP
-        
+
         self.hardware_controller = HardwareController(
             display=self.display,
             camera=self.camera,
             battery=self.battery,
             audio=self.audio,
             webrtc=self.webrtc,
-            movement_map=MOVEMENT_MAP,
             servo_module=module_servoctl
         )
         logger.info("✓ Hardware controller initialized")

@@ -26,35 +26,7 @@ from grpc_server.version_service import (
 )
 
 # Import existing modules
-from src.modules import module_movements
 from src.modules import module_servoctl
-
-
-# Movement mapping
-MOVEMENT_MAP = {
-    "step_forward": module_movements.step_forward,
-    "walk_forward": module_movements.walk_forward,
-    "step_backward": module_movements.step_backward,
-    "walk_backward": module_movements.walk_backward,
-    "turn_right": module_movements.turn_right,
-    "turn_right_slow": module_movements.turn_right_slow,
-    "turn_left": module_movements.turn_left,
-    "turn_left_slow": module_movements.turn_left_slow,
-    "pose": module_movements.pose,
-    "bow": module_movements.bow,
-    "tilt_right": module_movements.tilt_right,
-    "tilt_left": module_movements.tilt_left,
-    "side_side": module_movements.side_side,
-    "wave_right": module_movements.wave_right,
-    "wave_left": module_movements.wave_left,
-    "neutral_legs": module_movements.neutral_legs,
-    "laugh": module_movements.laugh,
-    "swing_legs": module_movements.swing_legs,
-    "tilt_quick_right": module_movements.tilt_quick_right,
-    "tilt_quick_left": module_movements.tilt_quick_left,
-    "wiggle": module_movements.wiggle,
-    "wave_short": module_movements.wave_short,
-}
 
 
 class TarsServiceServicer(tars_pb2_grpc.TarsServiceServicer):

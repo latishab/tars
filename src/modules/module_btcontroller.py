@@ -24,8 +24,7 @@ from evdev import InputDevice, list_devices
 
 from modules.module_config import load_config
 from modules.module_messageQue import queue_message
-from modules.module_movement_registry import MOVEMENTS
-import modules.module_movements as movements
+import modules.module_movement_registry as registry
 
 config = load_config()
 controller_name = config["CONTROLS"]["controller_name"]
@@ -42,8 +41,6 @@ DEBOUNCE_TIME = 0.1
 
 controller_search_notified = False
 
-def get_movement(name):
-    return getattr(movements, name, None)
 
 def find_controller(controller_name):
     global gamepad_path, controller_search_notified
@@ -76,10 +73,13 @@ def find_controller(controller_name):
     return None
 
 def execute_movement(name):
-    func = get_movement(name)
-    if func:
-        queue_message(f"CTRL: {MOVEMENTS[name]['name']}")
-        func()
+    info = registry.MOVEMENTS.get(name) or registry.get_custom().get(name)
+    label = info["name"] if info and "name" in info else name
+    queue_message(f"CTRL: {label}")
+    try:
+        registry.execute(name)
+    except (ValueError, RuntimeError) as e:
+        queue_message(f"CTRL: {e}")
 
 def start_controls():
     global gamepad_path, l2_held, r1_held, r2_held, dpad_state, last_dpad_time

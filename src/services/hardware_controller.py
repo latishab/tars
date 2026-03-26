@@ -3,13 +3,10 @@ Hardware controller with shared business logic.
 Both HTTP and gRPC APIs call these internal functions.
 """
 
-import json
 from pathlib import Path
 from typing import Optional, Dict, Any
 from modules.modules_roboeyes import Mood
 from loguru import logger
-
-_CUSTOM_SEQUENCES_FILE = Path(__file__).parent.parent / "custom_sequences.json"
 
 # Valid values - generated from Mood enum
 VALID_EMOTIONS = [mood.name.lower() for mood in Mood]
@@ -28,7 +25,6 @@ class HardwareController:
         battery=None,
         audio=None,
         webrtc=None,
-        movement_map=None,
         servo_module=None
     ):
         self.display = display
@@ -36,7 +32,6 @@ class HardwareController:
         self.battery = battery
         self.audio = audio
         self.webrtc = webrtc
-        self.movement_map = movement_map or {}
         self.servo_module = servo_module
     
     # === Display Control ===
@@ -132,64 +127,12 @@ class HardwareController:
     # === Movement ===
     
     def execute_movement(self, movement: str, speed: float = 1.0) -> Dict[str, Any]:
-        """Execute a movement. Custom sequences take priority over built-in movements."""
-        try:
-            with open(_CUSTOM_SEQUENCES_FILE) as f:
-                sequences = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            sequences = {}
-
-        if movement in sequences:
-            entry = sequences[movement]
-            steps = entry["steps"] if isinstance(entry, dict) else entry
-            import time
-            start = time.time()
-            servo = self.servo_module
-            if servo is None:
-                raise ValueError("Servo module not available for custom sequence")
-            servo._notify_movement_start()
-            def run_steps(steps):
-                for step in steps:
-                    if step.get("repeat") is not None:
-                        for _ in range(step["repeat"]):
-                            run_steps(step.get("steps", []))
-                    elif step.get("movement"):
-                        self.execute_movement(step["movement"], speed)
-                    else:
-                        servo.move_legs(
-                            step.get("left_height", 50), step.get("right_height", 50),
-                            step.get("left_leg", 50), step.get("right_leg", 50),
-                            step.get("speed", 0.85),
-                        )
-                        hold = step.get("hold_time", 0)
-                        if hold > 0:
-                            import time as _t; _t.sleep(hold)
-
-            try:
-                run_steps(steps)
-                servo.move_legs(50, 50, 50, 50, 0.8)
-                servo.disable_all_servos()
-            finally:
-                servo._notify_movement_end()
-            return {"success": True, "duration": time.time() - start, "movement": movement}
-
-        if movement not in self.movement_map:
-            raise ValueError(f"Unknown movement: {movement}")
-
-        import time
-        start_time = time.time()
-
-        movement_func = self.movement_map[movement]
-        movement_func()
-        
-        duration = time.time() - start_time
-        logger.info(f"Movement '{movement}' completed in {duration:.2f}s")
-        
-        return {
-            "success": True,
-            "duration": duration,
-            "movement": movement
-        }
+        """Execute a movement. Delegates to module_movement_registry which owns
+        dispatch, name normalization, and custom-sequence priority."""
+        from modules.module_movement_registry import execute as _execute
+        result = _execute(movement, speed)
+        logger.info(f"Movement '{result.get('movement', movement)}' completed ({result.get('source', '?')})")
+        return result
     
     def reset_position(self):
         """Reset robot to neutral position."""

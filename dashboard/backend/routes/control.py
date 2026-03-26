@@ -2,22 +2,12 @@
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from pathlib import Path
 from loguru import logger
 import asyncio
-import json
-import re
+
+import modules.module_movement_registry as registry
 
 router = APIRouter()
-
-def _normalize_name(name: str) -> str:
-    """Normalize sequence name to snake_case so 'Step Forward' == 'step_forward'."""
-    return re.sub(r'[^a-z0-9]+', '_', name.strip().lower()).strip('_')
-
-
-SEQUENCES_FILE = Path(__file__).parent.parent.parent.parent / "src" / "custom_sequences.json"
-
-from modules.module_movement_registry import MOVEMENTS as _MOVEMENT_REGISTRY
 
 class EmotionRequest(BaseModel):
     emotion: str
@@ -88,21 +78,9 @@ async def list_movements():
     overridden entries report the type from the sequences file.
     Returns: {"movements": [{"name": str, "type": str}, ...]}
     """
-    # Start from registry
-    entries: dict[str, str] = {k: v["type"] for k, v in _MOVEMENT_REGISTRY.items()}
-
-    # Sequences file may override type or add new named sequences
-    if SEQUENCES_FILE.exists():
-        try:
-            seqs = json.loads(SEQUENCES_FILE.read_text())
-            for name, entry in seqs.items():
-                if isinstance(entry, dict) and "type" in entry:
-                    entries[name] = entry["type"]
-        except Exception:
-            pass
-
+    merged = registry.get_merged()
     movements = sorted(
-        [{"name": k, "type": v} for k, v in entries.items()],
+        [{"name": k, "type": v["type"]} for k, v in merged.items()],
         key=lambda x: x["name"],
     )
     return {"movements": movements}
@@ -237,81 +215,61 @@ async def play_sequence(request: PlaySequenceRequest, req: Request):
 @router.post("/save-sequence")
 async def save_sequence(request: SaveSequenceRequest):
     """Save a named sequence to disk, normalizing the name to snake_case."""
-    name = _normalize_name(request.name)
-    data = {}
-    if SEQUENCES_FILE.exists():
-        try:
-            data = json.loads(SEQUENCES_FILE.read_text())
-        except Exception:
-            data = {}
-
-    existing = data.get(name, {})
-    data[name] = {**existing, "type": request.type, "quick": request.quick, "steps": request.steps}
-    SEQUENCES_FILE.write_text(json.dumps(data, indent=2))
-    return {"status": "ok", "name": request.name}
+    name = registry.save(request.name, request.steps, request.type, request.quick)
+    return {"status": "ok", "name": name}
 
 @router.get("/saved-sequences")
 async def get_saved_sequences():
     """Return all saved sequences."""
-    if not SEQUENCES_FILE.exists():
-        return {}
-    try:
-        return json.loads(SEQUENCES_FILE.read_text())
-    except Exception:
-        return {}
+    return registry.get_custom()
 
 @router.delete("/saved-sequences/{name}")
 async def delete_saved_sequence(name: str):
     """Delete a saved sequence by name (normalizes name)."""
-    if not SEQUENCES_FILE.exists():
-        raise HTTPException(404, "No sequences file")
-
-    key = _normalize_name(name)
-    data = json.loads(SEQUENCES_FILE.read_text())
-    if key not in data:
-        raise HTTPException(404, f"Sequence '{key}' not found")
-
-    del data[key]
-    SEQUENCES_FILE.write_text(json.dumps(data, indent=2))
+    try:
+        registry.delete(name)
+    except KeyError as e:
+        raise HTTPException(404, str(e))
     return {"status": "ok"}
 
 @router.post("/play-saved/{name}")
 async def play_saved_sequence(name: str, req: Request):
     """Play a saved sequence by name (normalizes name)."""
-    if not SEQUENCES_FILE.exists():
-        raise HTTPException(404, "No sequences file")
-
-    key = _normalize_name(name)
-    data = json.loads(SEQUENCES_FILE.read_text())
-    if key not in data:
-        raise HTTPException(404, f"Sequence '{key}' not found")
-
-    entry = data[key]
-    steps = entry["steps"] if isinstance(entry, dict) else entry
-    return await play_sequence(PlaySequenceRequest(steps=steps), req)
+    daemon = req.app.state.daemon
+    if not daemon.hardware_controller:
+        raise HTTPException(503, "Hardware controller not available")
+    try:
+        result = daemon.hardware_controller.execute_movement(name)
+        return result
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        logger.error(f"play-saved failed: {e}")
+        raise HTTPException(500, str(e))
 
 @router.get("/movement-steps/{name}")
 async def get_movement_steps(name: str):
     """Extract move_legs steps from a named movement function."""
-    # Custom sequences take priority over built-in movements
-    if SEQUENCES_FILE.exists():
-        sequences = json.loads(SEQUENCES_FILE.read_text())
-        if name in sequences:
-            entry = sequences[name]
-            steps = entry["steps"] if isinstance(entry, dict) else entry
-            return {"steps": steps}
-
+    import re
     from pathlib import Path as _Path
+    # Custom sequences take priority over built-in movements
+    key = registry.normalize_name(name)
+    custom = registry.get_custom()
+    if key in custom:
+        entry = custom[key]
+        steps = entry["steps"] if isinstance(entry, dict) else entry
+        return {"steps": steps}
+
     src = _Path(__file__).parent.parent.parent.parent / "src" / "modules" / "module_movements.py"
     if not src.exists():
         raise HTTPException(404, "module_movements.py not found")
 
     text = src.read_text()
 
-    # Find the function body
-    fn_match = re.search(r"^def " + re.escape(name) + r"\(.*?\):(.*?)(?=^def |\Z)", text, re.MULTILINE | re.DOTALL)
+    # Find the function body (search by normalized key)
+    fn_match = re.search(r"^def " + re.escape(key) + r"\(.*?\):(.*?)(?=^def |\Z)", text, re.MULTILINE | re.DOTALL)
     if not fn_match:
-        raise HTTPException(404, f"Movement '{name}' not found")
+        raise HTTPException(404, f"Movement '{key}' not found")
 
     body = fn_match.group(1)
 
@@ -450,12 +408,12 @@ async def get_movement_steps(name: str):
 
     # Follow delegation to impl functions (e.g. turn_left -> _turn_left_impl)
     if not steps:
-        impl_match = re.search(r"^def _" + re.escape(name) + r"_impl\(.*?\):(.*?)(?=^def |\Z)", text, re.MULTILINE | re.DOTALL)
+        impl_match = re.search(r"^def _" + re.escape(key) + r"_impl\(.*?\):(.*?)(?=^def |\Z)", text, re.MULTILINE | re.DOTALL)
         if impl_match:
             steps = extract_steps(impl_match.group(1).splitlines())
 
     if not steps:
-        raise HTTPException(422, f"No move_legs calls found in '{name}'")
+        raise HTTPException(422, f"No move_legs calls found in '{key}'")
 
-    return {"name": name, "steps": steps}
+    return {"name": key, "steps": steps}
 
