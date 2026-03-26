@@ -4,6 +4,7 @@ Bottom bar: active app name (left), wifi + battery (right).
 Aesthetic: amber/cyan, monospace, angular brackets.
 """
 import pygame
+import math
 from pathlib import Path
 from typing import Optional
 
@@ -15,6 +16,18 @@ _YELLOW = (200, 180, 40)
 _RED    = (200, 60, 60)
 
 BAR_HEIGHT = 28
+
+
+def _draw_wifi_icon(surface, cx, cy, color, active_bars=3):
+    """Draw a wifi icon centered at (cx, cy). active_bars: 0=none, 1=low, 2=mid, 3=full."""
+    dot_r = 2
+    pygame.draw.circle(surface, color if active_bars > 0 else _DIM, (cx, cy + 5), dot_r)
+
+    arcs = [(4, 2), (7, 1), (10, 1)]  # (radius, line_width)
+    for i, (r, lw) in enumerate(arcs):
+        c = color if (i + 1) <= active_bars else _DIM
+        rect = pygame.Rect(cx - r, cy + 5 - r, r * 2, r * 2)
+        pygame.draw.arc(surface, c, rect, math.radians(35), math.radians(145), lw)
 
 
 class StatusBar:
@@ -108,19 +121,19 @@ class StatusBar:
             fill = int((icon_w - 4) * pct / 100)
             if fill > 0:
                 pygame.draw.rect(surface, bat_color, (bx + 2, by + 2, fill, icon_h - 4))
-            rx = bx - 8
+            rx = bx - 10
 
-        # WiFi indicator
+        # WiFi icon
+        icon_w = 22
+        wx = rx - icon_w // 2
         if self._wifi_mode == "wlan":
             wifi_color = _CYAN
-            wifi_text = "WLAN"
+            active_bars = 3
         elif self._wifi_mode == "hotspot":
             wifi_color = _AMBER
-            wifi_text = "AP"
+            active_bars = 3
         else:
             wifi_color = _DIM
-            wifi_text = "----"
+            active_bars = 0
 
-        wifi_surf = self._font_small.render(wifi_text, True, wifi_color)
-        rx -= wifi_surf.get_width()
-        surface.blit(wifi_surf, (rx, cy - wifi_surf.get_height() // 2))
+        _draw_wifi_icon(surface, wx, cy - 4, wifi_color, active_bars)
